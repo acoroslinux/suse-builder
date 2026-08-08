@@ -1,0 +1,10 @@
+{
+  "system": {
+    "hostname": "suse-live",
+    "locale": "en_US.UTF-8",
+    "iso_label": "OPENSUSE_LIVE"
+  },
+  "boot": {
+    "kernel_params": "root=live:CDLABEL=OPENSUSE_LIVE rd.live.image quiet splash"
+  }
+}

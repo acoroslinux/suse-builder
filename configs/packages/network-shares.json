@@ -1,0 +1,3 @@
+{
+  "packages": ["samba", "samba-client", "cifs-utils", "nfs-client", "avahi"]
+}

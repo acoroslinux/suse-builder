@@ -1,0 +1,4 @@
+{
+  "kernel": "kernel-lts",
+  "packages": ["kernel-default"]
+}

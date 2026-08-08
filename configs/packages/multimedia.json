@@ -1,0 +1,11 @@
+{
+  "packages": [
+    "vlc",
+    "ffmpeg-6",
+    "gstreamer-plugins-base",
+    "gstreamer-plugins-good",
+    "gstreamer-plugins-bad",
+    "gstreamer-plugins-ugly",
+    "gstreamer-plugins-libav"
+  ]
+}

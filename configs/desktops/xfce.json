@@ -1,0 +1,5 @@
+{
+  "desktop": "xfce",
+  "display_manager": "lightdm",
+  "packages": ["patterns-xfce-xfce", "lightdm"]
+}

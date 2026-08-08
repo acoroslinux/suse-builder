@@ -1,0 +1,5 @@
+{
+  "desktop": "lxqt",
+  "display_manager": "sddm",
+  "packages": ["patterns-lxqt-lxqt", "sddm"]
+}

@@ -1,0 +1,13 @@
+{
+  "packages": [
+    "patterns-base-base",
+    "sudo",
+    "bash",
+    "coreutils",
+    "iproute2",
+    "curl",
+    "wget",
+    "ca-certificates",
+    "kernel-firmware-all"
+  ]
+}

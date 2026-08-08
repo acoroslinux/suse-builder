@@ -1,0 +1,3 @@
+{
+  "packages": ["xorg-x11-server", "xterm", "feh", "picom", "dmenu"]
+}

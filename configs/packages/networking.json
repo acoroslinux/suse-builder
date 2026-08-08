@@ -1,0 +1,3 @@
+{
+  "packages": ["NetworkManager", "NetworkManager-applet", "iproute2", "curl", "wget"]
+}

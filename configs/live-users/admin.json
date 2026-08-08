@@ -1,0 +1,6 @@
+{
+  "live_user": {
+    "name": "admin",
+    "groups": ["wheel", "audio", "video"]
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "desktop": "kde",
+  "display_manager": "sddm",
+  "packages": ["patterns-kde-kde_plasma", "sddm"]
+}

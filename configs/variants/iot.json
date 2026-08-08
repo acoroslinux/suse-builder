@@ -1,0 +1,4 @@
+{
+  "variant": "iot",
+  "packages": ["NetworkManager", "openssh"]
+}

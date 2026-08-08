@@ -1,0 +1,14 @@
+{
+  "distro": "tumbleweed",
+  "distro_name": "openSUSE Tumbleweed (Rolling)",
+  "repos": [
+    {
+      "name": "repo-oss",
+      "url": "http://download.opensuse.org/tumbleweed/repo/oss/"
+    },
+    {
+      "name": "repo-non-oss",
+      "url": "http://download.opensuse.org/tumbleweed/repo/non-oss/"
+    }
+  ]
+}

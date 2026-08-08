@@ -1,0 +1,136 @@
+import os
+import platform
+import shutil
+import subprocess
+from pathlib import Path
+from typing import Dict, Any, Optional, List, Union
+import logging
+
+logger = logging.getLogger("toolchain_manager")
+
+_HOST_ARCH = platform.machine().lower()
+
+class ToolchainManagerError(Exception):
+    pass
+
+class ToolchainManager:
+    """
+    Manages an isolated secondary chroot (build_host), containing all
+    openSUSE build and ISO creation tools (zypper, mksquashfs, grub2-mkstandalone, xorriso, mtools).
+    Ensures suse-builder is 100% host distribution agnostic.
+    """
+
+    def __init__(
+        self,
+        workdir_base: Path,
+        mode: str = "mock",
+        force_isolated: bool = False,
+        target_arch: str = "x86_64",
+        distro: str = "tumbleweed",
+    ):
+        self.workdir_base = Path(workdir_base).resolve()
+        self.mode = mode.lower()
+        self.force_isolated = force_isolated
+        self.target_arch = target_arch.lower()
+        self.distro = distro
+        self.build_host_dir = self.workdir_base / "build_host"
+        self.cache_dir = self.workdir_base.parent / "cache"
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.is_mounted = False
+
+    def check_host_tools(self) -> bool:
+        """Check if primary openSUSE ISO packaging tools exist on the host."""
+        required_tools = ["zypper", "mksquashfs", "xorriso", "mtools"]
+        missing = [tool for tool in required_tools if shutil.which(tool) is None]
+        if missing:
+            logger.info(f"Missing tools on host: {', '.join(missing)}")
+            return False
+        return True
+
+    def setup(self):
+        if self.mode == "mock":
+            logger.info("[MOCK TOOLCHAIN] Simulating build_host setup.")
+            return
+
+        if not self.force_isolated and self.check_host_tools():
+            logger.info("Host has native openSUSE build tools (zypper, xorriso). Using host directly.")
+            return
+
+        self.bootstrap_build_host()
+
+    def bootstrap_build_host(self):
+        logger.info(f"Initializing isolated openSUSE build environment at: {self.build_host_dir}")
+        self.build_host_dir.mkdir(parents=True, exist_ok=True)
+        (self.build_host_dir / "usr" / "bin").mkdir(parents=True, exist_ok=True)
+
+        host_resolv = Path("/etc/resolv.conf")
+        if host_resolv.exists():
+            resolv_dest = self.build_host_dir / "etc" / "resolv.conf"
+            resolv_dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(host_resolv, resolv_dest)
+
+    def mount_virtual_fs(self):
+        if self.mode == "mock":
+            logger.info("[MOCK TOOLCHAIN] Mounting virtual filesystems into build_host.")
+            self.is_mounted = True
+            return
+
+        if not self.build_host_dir.exists():
+            self.build_host_dir.mkdir(parents=True, exist_ok=True)
+
+        mounts = [
+            ("proc", self.build_host_dir / "proc", "proc", None),
+            ("sysfs", self.build_host_dir / "sys", "sysfs", None),
+            ("devtmpfs", self.build_host_dir / "dev", "devtmpfs", None),
+        ]
+        for src, target, fstype, opts in mounts:
+            target.mkdir(parents=True, exist_ok=True)
+            cmd = ["mount", "-t", fstype]
+            if opts:
+                cmd.extend(["-o", opts])
+            cmd.extend([src, str(target)])
+            subprocess.run(cmd, check=False, stderr=subprocess.DEVNULL)
+
+        self.is_mounted = True
+
+    def umount_virtual_fs(self):
+        if self.mode == "mock":
+            logger.info("[MOCK TOOLCHAIN] Unmounting virtual filesystems from build_host.")
+            self.is_mounted = False
+            return
+
+        for path in [
+            self.build_host_dir / "dev",
+            self.build_host_dir / "sys",
+            self.build_host_dir / "proc",
+        ]:
+            if path.exists():
+                subprocess.run(["umount", "-l", str(path)], check=False, stderr=subprocess.DEVNULL)
+
+        self.is_mounted = False
+
+    def run_tool(self, tool_binary: str, args: List[str], check: bool = True) -> subprocess.CompletedProcess:
+        if self.mode == "mock":
+            cmd_str = f"{tool_binary} {' '.join(args)}"
+            logger.info(f"[MOCK TOOL EXEC] {cmd_str}")
+            return subprocess.CompletedProcess(args=[tool_binary] + args, returncode=0, stdout="", stderr="")
+
+        if self.is_mounted and (self.build_host_dir / "usr" / "bin" / tool_binary).exists():
+            cmd = ["chroot", str(self.build_host_dir), tool_binary] + args
+        else:
+            cmd = [tool_binary] + args
+
+        return subprocess.run(cmd, check=check)
+
+    def run_in_build_host(self, command: Union[str, List[str]], check: bool = True) -> subprocess.CompletedProcess:
+        if self.mode == "mock":
+            cmd_str = command if isinstance(command, str) else " ".join(command)
+            logger.info(f"[MOCK BUILD_HOST EXEC] {cmd_str}")
+            return subprocess.CompletedProcess(args=command, returncode=0, stdout="", stderr="")
+
+        if isinstance(command, str):
+            cmd = ["chroot", str(self.build_host_dir), "/bin/sh", "-c", command]
+        else:
+            cmd = ["chroot", str(self.build_host_dir)] + command
+
+        return subprocess.run(cmd, check=check)

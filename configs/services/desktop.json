@@ -1,0 +1,6 @@
+{
+  "services": {
+    "enable": ["display-manager"],
+    "disable": []
+  }
+}

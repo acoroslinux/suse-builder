@@ -1,0 +1,5 @@
+{
+  "desktop": "gnome",
+  "display_manager": "gdm",
+  "packages": ["patterns-gnome-gnome", "gdm"]
+}

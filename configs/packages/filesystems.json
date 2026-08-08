@@ -1,0 +1,3 @@
+{
+  "packages": ["e2fsprogs", "btrfsprogs", "xfsprogs", "dosfstools", "ntfs-3g", "exfatprogs"]
+}

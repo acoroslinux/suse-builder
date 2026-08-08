@@ -1,0 +1,14 @@
+{
+  "distro": "leap-15.6",
+  "distro_name": "openSUSE Leap 15.6 (Stable)",
+  "repos": [
+    {
+      "name": "repo-oss",
+      "url": "http://download.opensuse.org/distribution/leap/15.6/repo/oss/"
+    },
+    {
+      "name": "repo-non-oss",
+      "url": "http://download.opensuse.org/distribution/leap/15.6/repo/non-oss/"
+    }
+  ]
+}

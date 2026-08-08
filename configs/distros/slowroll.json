@@ -1,0 +1,10 @@
+{
+  "distro": "slowroll",
+  "distro_name": "openSUSE Slowroll",
+  "repos": [
+    {
+      "name": "repo-oss",
+      "url": "http://download.opensuse.org/slowroll/repo/oss/"
+    }
+  ]
+}

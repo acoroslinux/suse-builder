@@ -1,0 +1,3 @@
+{
+  "packages": ["qemu", "libvirt-daemon-config-network", "virt-manager"]
+}
