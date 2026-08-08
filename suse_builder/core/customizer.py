@@ -146,3 +146,16 @@ class SystemCustomizer:
         self.configure_flathub()
         self.configure_polkit_power()
         self.configure_calamares()
+        self.configure_artwork()
+
+    def configure_artwork(self):
+        """Install custom openSUSE Modern artwork."""
+        if self.chroot.mode == "mock":
+            return
+        bg_dir = self.target_root / "usr" / "share" / "backgrounds" / "suse-modern"
+        bg_dir.mkdir(parents=True, exist_ok=True)
+        from suse_builder.core.path_utils import resolve_from_project
+        artwork_src = resolve_from_project("artwork/wallpapers/suse-modern.jpg")
+        if artwork_src.exists():
+            import shutil
+            shutil.copy2(artwork_src, bg_dir / "suse-modern.jpg")
