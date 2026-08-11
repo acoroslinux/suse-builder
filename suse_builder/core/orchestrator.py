@@ -1,6 +1,8 @@
 import os
 import shutil
 import subprocess
+import json
+import hashlib
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from suse_builder.core.chroot_manager import ChrootManager
@@ -132,6 +134,20 @@ class BuildOrchestrator:
         if not report["valid"]:
             raise BuildOrchestratorError("Invalid build configuration: " + "; ".join(report["errors"]))
         name = output_name or f"suse-{self.distro}-{self.arch}"
+
+        current_fingerprint = self._effective_build_fingerprint()
+        previous_fingerprint = self._load_previous_build_fingerprint()
+        reuse_existing_rootfs = (
+            self.mode != "mock"
+            and not self.clean
+            and self.target_root.exists()
+            and previous_fingerprint is not None
+            and previous_fingerprint == current_fingerprint
+        )
+
+        if self.mode != "mock" and not self.clean and previous_fingerprint and previous_fingerprint != current_fingerprint:
+            logger.info("Build choices changed since previous run; forcing rootfs rebuild despite --no-clean.")
+
         if self.clean and self.mode != "mock":
             if os.geteuid() == 0:
                 unmount_all_under(resolve_from_project("workdir"))
@@ -153,7 +169,7 @@ class BuildOrchestrator:
             chroot.mount_virtual_fs()
 
             zypper = ZypperManager(chroot, self.config, toolchain=toolchain)
-            zypper.bootstrap_rootfs(self.distro, self.arch)
+            zypper.bootstrap_rootfs(self.distro, self.arch, reuse_existing=reuse_existing_rootfs)
             zypper.add_repositories()
             zypper.refresh()
 
@@ -183,6 +199,9 @@ class BuildOrchestrator:
 
             if self.generate_manifest and artifact and artifact.exists():
                 self._generate_checksums(artifact)
+
+            if self.mode != "mock":
+                self._save_build_fingerprint(current_fingerprint)
 
             output_dir = resolve_from_project("output")
             self._fix_output_permissions(output_dir)
@@ -245,3 +264,46 @@ class BuildOrchestrator:
         md5_path = artifact_path.with_name(f"{artifact_path.name}.md5")
         sha256_path.write_text(f"{sha256.hexdigest()}  {artifact_path.name}\n")
         md5_path.write_text(f"{md5.hexdigest()}  {artifact_path.name}\n")
+
+    def _state_file_path(self) -> Path:
+        return self.workdir / ".build_state.json"
+
+    def _effective_build_fingerprint(self) -> str:
+        # Keep only rootfs-affecting choices so no-clean reuse remains safe.
+        payload = {
+            "arch": self.arch,
+            "distro": self.distro,
+            "desktop": self.desktop,
+            "kernel": self.kernel,
+            "bootloader": self.bootloader,
+            "variant": self.variant,
+            "package_profiles": sorted(self.package_profiles),
+            "service_profiles": sorted(self.service_profiles),
+            "repo_profiles": sorted(self.repo_profiles),
+            "live_profile": self.live_profile,
+            "live_user": self.live_user,
+            "live_groups": sorted(self.live_groups),
+            "with_calamares": self.with_calamares,
+            "multimedia_codecs": self.multimedia_codecs,
+            "with_flathub": self.with_flathub,
+            "with_zram": self.with_zram,
+            "config": self.config,
+        }
+        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+        return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+    def _load_previous_build_fingerprint(self) -> Optional[str]:
+        state_file = self._state_file_path()
+        if not state_file.exists():
+            return None
+        try:
+            data = json.loads(state_file.read_text())
+            value = data.get("fingerprint")
+            return value if isinstance(value, str) and value else None
+        except Exception:
+            return None
+
+    def _save_build_fingerprint(self, fingerprint: str) -> None:
+        state_file = self._state_file_path()
+        state_file.parent.mkdir(parents=True, exist_ok=True)
+        state_file.write_text(json.dumps({"fingerprint": fingerprint}, indent=2, sort_keys=True))

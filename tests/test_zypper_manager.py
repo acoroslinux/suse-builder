@@ -105,6 +105,36 @@ class TestZypperManager:
         assert any("sed" in cmd for cmd in zypper_calls)
         assert any(cmd[:2] == ["tar", "czpf"] for cmd in tar_calls)
 
+    def test_bootstrap_reuses_existing_rootfs_with_no_clean(self, tmp_path, monkeypatch):
+        target_root = tmp_path / "chroot"
+        (target_root / "etc").mkdir(parents=True, exist_ok=True)
+        (target_root / "usr" / "bin").mkdir(parents=True, exist_ok=True)
+        (target_root / "etc" / "zypp").mkdir(parents=True, exist_ok=True)
+        (target_root / "etc" / "os-release").write_text("NAME=openSUSE\n")
+        (target_root / "usr" / "bin" / "rpm").write_text("")
+
+        chroot = ChrootManager(target_root, mode="real", arch="x86_64")
+        zypper = ZypperManager(chroot, config={})
+
+        zypper_calls = []
+        tar_calls = []
+
+        def fake_run_zypper(args, check=False):
+            zypper_calls.append(args)
+            return subprocess.CompletedProcess(args=args, returncode=0)
+
+        def fake_subprocess_run(cmd, *args, **kwargs):
+            tar_calls.append(cmd)
+            return subprocess.CompletedProcess(args=cmd, returncode=0)
+
+        monkeypatch.setattr(zypper, "_run_zypper", fake_run_zypper)
+        monkeypatch.setattr("suse_builder.core.zypper_manager.subprocess.run", fake_subprocess_run)
+
+        zypper.bootstrap_rootfs("tumbleweed", "x86_64", reuse_existing=True)
+
+        assert not zypper_calls
+        assert not tar_calls
+
     def test_clean_cache_runs_zypper_clean(self, tmp_path, monkeypatch):
         target_root = tmp_path / "chroot"
         chroot = ChrootManager(target_root, mode="real", arch="x86_64")
@@ -112,13 +142,58 @@ class TestZypperManager:
 
         calls = []
 
-        def fake_subprocess_run(cmd, *args, **kwargs):
-            calls.append(cmd)
-            return subprocess.CompletedProcess(args=cmd, returncode=0)
+        def fake_run_zypper(args, check=False):
+            calls.append(args)
+            return subprocess.CompletedProcess(args=args, returncode=0)
 
-        monkeypatch.setattr("suse_builder.core.zypper_manager.subprocess.run", fake_subprocess_run)
+        monkeypatch.setattr(zypper, "_run_zypper", fake_run_zypper)
 
         zypper.clean_cache()
 
         assert calls
-        assert calls[0][:4] == ["zypper", "--root", str(target_root), "clean"]
+        assert calls[0][:4] == ["--root", str(target_root), "clean", "--all"]
+
+    def test_run_zypper_uses_persistent_metadata_and_package_cache(self, tmp_path, monkeypatch):
+        target_root = tmp_path / "chroot"
+        chroot = ChrootManager(target_root, mode="real", arch="x86_64")
+        cache_root = tmp_path / "cache" / "x86_64" / "zypper"
+        zypper = ZypperManager(chroot, config={"system": {"zypper_cache": str(cache_root)}})
+
+        executed = []
+
+        def fake_subprocess_run(cmd, *args, **kwargs):
+            executed.append(cmd)
+            return subprocess.CompletedProcess(args=cmd, returncode=0)
+
+        monkeypatch.setattr("suse_builder.core.zypper_manager.subprocess.run", fake_subprocess_run)
+
+        zypper._run_zypper(["--root", str(target_root), "refresh"])
+
+        assert executed
+        cmd = executed[0]
+        assert cmd[0] == "zypper"
+        assert "--cache-dir" in cmd
+        assert "--pkg-cache-dir" in cmd
+        assert str(cache_root / "metadata") in cmd
+        assert str(cache_root / "packages") in cmd
+
+    def test_install_packages_falls_back_to_no_gpg_checks(self, tmp_path, monkeypatch):
+        target_root = tmp_path / "chroot"
+        chroot = ChrootManager(target_root, mode="real", arch="x86_64")
+        zypper = ZypperManager(chroot, config={})
+
+        calls = []
+
+        def fake_run_zypper(args, check=False):
+            calls.append(args)
+            if "--gpg-auto-import-keys" in args:
+                return subprocess.CompletedProcess(args=args, returncode=4)
+            return subprocess.CompletedProcess(args=args, returncode=0)
+
+        monkeypatch.setattr(zypper, "_run_zypper", fake_run_zypper)
+
+        zypper.install_packages(["vim"])
+
+        assert len(calls) == 2
+        assert "--gpg-auto-import-keys" in calls[0]
+        assert "--no-gpg-checks" in calls[1]

@@ -61,3 +61,18 @@ class TestOrchestrator:
     def test_multimedia_codecs_enable_packman(self):
         orch = make_orchestrator(multimedia_codecs=True)
         assert any(repo.get("name") == "packman" for repo in orch.config["repos"])
+
+    def test_fingerprint_changes_with_user_choices(self):
+        orch_a = make_orchestrator(multimedia_codecs=False, with_flathub=False)
+        orch_b = make_orchestrator(multimedia_codecs=True, with_flathub=True)
+
+        assert orch_a._effective_build_fingerprint() != orch_b._effective_build_fingerprint()
+
+    def test_fingerprint_state_roundtrip(self, tmp_path):
+        orch = make_orchestrator(tmp_path=tmp_path)
+        fingerprint = orch._effective_build_fingerprint()
+
+        assert orch._load_previous_build_fingerprint() is None
+        orch._save_build_fingerprint(fingerprint)
+
+        assert orch._load_previous_build_fingerprint() == fingerprint

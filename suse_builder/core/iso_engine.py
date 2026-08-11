@@ -112,7 +112,7 @@ class ISOEngine:
                 grub_cfg = self.iso_staging / "boot" / "grub2" / "grub.cfg"
                 res = self.toolchain.run_tool(grub_mk, [
                     f"--format={fmt}",
-                    f"-o={out_binary}", f"boot/grub2/grub.cfg={grub_cfg}"
+                    "-o", str(out_binary), f"boot/grub2/grub.cfg={grub_cfg}"
                 ], check=False)
                 if res.returncode == 0 and out_binary.exists():
                     built = True

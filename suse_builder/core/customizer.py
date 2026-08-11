@@ -1,7 +1,10 @@
 import subprocess
 from pathlib import Path
 from typing import Dict, Any
+import logging
 from suse_builder.core.chroot_manager import ChrootManager
+
+logger = logging.getLogger("customizer")
 
 class SystemCustomizer:
     def __init__(self, chroot: ChrootManager, config: Dict[str, Any]):
@@ -12,16 +15,33 @@ class SystemCustomizer:
     def setup_live_users(self):
         if self.chroot.mode == "mock":
             return
-        live_user = self.config.get("live_user", "liveuser")
-        if isinstance(live_user, dict):
-            live_user = live_user.get("name", "liveuser")
-        groups = self.config.get("live_groups", ["wheel", "audio", "video", "users"])
+        live_user_cfg = self.config.get("live_user", "liveuser")
+        if isinstance(live_user_cfg, dict):
+            live_user = live_user_cfg.get("name", "liveuser")
+            cfg_groups = live_user_cfg.get("groups", [])
+        else:
+            live_user = str(live_user_cfg)
+            cfg_groups = []
+
+        # Keep backward compatibility with older top-level live_groups configs.
+        groups = self.config.get("live_groups") or cfg_groups or ["wheel", "audio", "video", "users"]
         groups_str = ",".join(groups)
+
         try:
-            self.chroot.run_in_chroot(["useradd", "-m", "-s", "/bin/bash", "-G", groups_str, str(live_user)], check=False)
-            self.chroot.run_in_chroot(f"echo '{live_user}:live' | chpasswd", check=False)
+            for group in groups:
+                lookup = self.chroot.run_in_chroot(["getent", "group", str(group)], check=False)
+                if lookup.returncode != 0:
+                    self.chroot.run_in_chroot(["groupadd", "-f", str(group)], check=False)
+
+            create_user = self.chroot.run_in_chroot(["useradd", "-m", "-s", "/bin/bash", "-G", groups_str, str(live_user)], check=False)
+            if create_user.returncode == 0:
+                self.chroot.run_in_chroot(f"echo '{live_user}:live' | chpasswd", check=False)
+            else:
+                existing = self.chroot.run_in_chroot(["id", "-u", str(live_user)], check=False)
+                if existing.returncode == 0:
+                    self.chroot.run_in_chroot(f"echo '{live_user}:live' | chpasswd", check=False)
         except Exception:
-            pass
+            logger.exception("Could not fully configure live user %s", live_user)
 
         sudoers_file = self.target_root / "etc" / "sudoers.d" / "live_user_nopasswd"
         sudoers_file.parent.mkdir(parents=True, exist_ok=True)
