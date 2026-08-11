@@ -61,4 +61,4 @@ class TestISOEngine:
         assert all(any(str(arg).startswith("boot/grub/grub.cfg=") for arg in args) for args in grub_calls)
         assert "search --no-floppy --set=root --file /boot/mbrid" in toolchain.embedded_cfg
         assert "set prefix=($root)/boot/grub2" in toolchain.embedded_cfg
-        assert "source ($root)/boot/grub2/grub.cfg" in toolchain.embedded_cfg
+        assert "configfile ($root)/boot/grub2/grub.cfg" in toolchain.embedded_cfg

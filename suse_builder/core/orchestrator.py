@@ -249,8 +249,25 @@ class BuildOrchestrator:
         if initrds:
             return
 
-        logger.warning("No initramfs found in %s. Running dracut to generate one.", boot_dir)
-        chroot.run_in_chroot(["/bin/sh", "-lc", "dracut -f --regenerate-all"], check=True)
+        logger.warning("No initramfs found in %s. Running dracut to generate live-capable initramfs.", boot_dir)
+        dracut_cmd = r'''
+set -eu
+found_kernel=0
+for kimg in /boot/vmlinuz-*; do
+    [ -e "$kimg" ] || continue
+    found_kernel=1
+    kver="${kimg#/boot/vmlinuz-}"
+    dracut --force --no-hostonly \
+      --kver "$kver" \
+      --add "dmsquash-live dmsquash-live-autooverlay livenet pollcdrom" \
+      "/boot/initrd-$kver"
+done
+if [ "$found_kernel" -eq 0 ]; then
+    echo "No /boot/vmlinuz-* kernels found for dracut" >&2
+    exit 1
+fi
+'''
+        chroot.run_in_chroot(["/bin/sh", "-lc", dracut_cmd], check=True)
 
         initrds = sorted(
             f.name for f in boot_dir.iterdir() if f.is_file() and f.name.startswith("initrd")

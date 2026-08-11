@@ -35,7 +35,7 @@ class ISOEngine:
         return self.config.get("iso_label", self.config.get("system", {}).get("iso_label", "OPENSUSE_MODERN"))
 
     def _get_kernel_params(self) -> str:
-        return self.config.get("kernel_params", self.config.get("boot", {}).get("kernel_params", "root=live:CDLABEL=OPENSUSE_MODERN rd.live.image quiet splash"))
+        return self.config.get("kernel_params", self.config.get("boot", {}).get("kernel_params", "root=live:/dev/disk/by-label/OPENSUSE_MODERN rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img quiet splash"))
 
     def _find_kernel_and_initramfs(self) -> Tuple[Optional[str], Optional[str]]:
         boot_dir = self.target_root / "boot"
@@ -108,17 +108,34 @@ class ISOEngine:
         embed_cfg = efi_tmp / "embedded-grub.cfg"
         iso_label = self._get_iso_label()
         embed_cfg.write_text(
-            "search --no-floppy --set=root --file /boot/mbrid\n"
-            "set prefix=($root)/boot/grub2\n"
-            "if [ -f ($root)/boot/grub2/grub.cfg ]; then\n"
-            "    source ($root)/boot/grub2/grub.cfg\n"
+            "insmod search\n"
+            "insmod search_fs_file\n"
+            "insmod search_label\n"
+            "insmod iso9660\n"
+            "insmod configfile\n"
+            "if search --no-floppy --set=root --file /boot/mbrid; then\n"
+            "    set prefix=($root)/boot/grub2\n"
+            "    if [ -f ($root)/boot/grub2/grub.cfg ]; then\n"
+            "        configfile ($root)/boot/grub2/grub.cfg\n"
+            "    fi\n"
+            "    if [ -f ($root)/boot/grub/grub.cfg ]; then\n"
+            "        configfile ($root)/boot/grub/grub.cfg\n"
+            "    fi\n"
             "fi\n"
-            f"search --no-floppy --set=root --label {iso_label}\n"
-            "if [ -f ($root)/boot/grub2/grub.cfg ]; then\n"
-            "    source ($root)/boot/grub2/grub.cfg\n"
+            f"if search --no-floppy --set=root --label {iso_label}; then\n"
+            "    if [ -f ($root)/boot/grub2/grub.cfg ]; then\n"
+            "        configfile ($root)/boot/grub2/grub.cfg\n"
+            "    fi\n"
+            "    if [ -f ($root)/boot/grub/grub.cfg ]; then\n"
+            "        configfile ($root)/boot/grub/grub.cfg\n"
+            "    fi\n"
             "fi\n"
-            "search --no-floppy --set=root --file /boot/grub2/grub.cfg\n"
-            "source ($root)/boot/grub2/grub.cfg\n"
+            "if search --no-floppy --set=root --file /boot/grub2/grub.cfg; then\n"
+            "    configfile ($root)/boot/grub2/grub.cfg\n"
+            "fi\n"
+            "if search --no-floppy --set=root --file /boot/grub/grub.cfg; then\n"
+            "    configfile ($root)/boot/grub/grub.cfg\n"
+            "fi\n"
         )
 
         created_binaries = []
@@ -129,6 +146,7 @@ class ISOEngine:
             if grub_mk:
                 res = self.toolchain.run_tool(grub_mk, [
                     f"--format={fmt}",
+                    "--modules=iso9660 search search_fs_file search_label configfile normal linux",
                     "-o", str(out_binary), f"boot/grub/grub.cfg={embed_cfg}"
                 ], check=False)
                 if res.returncode == 0 and out_binary.exists():
@@ -160,6 +178,7 @@ class ISOEngine:
         self.iso_staging.mkdir(parents=True, exist_ok=True)
         (self.iso_staging / "LiveOS").mkdir(parents=True, exist_ok=True)
         (self.iso_staging / "boot" / "grub2").mkdir(parents=True, exist_ok=True)
+        (self.iso_staging / "boot" / "grub").mkdir(parents=True, exist_ok=True)
 
         # KIWI uses an early-boot search marker in /boot. Keep a stable marker
         # so standalone GRUB can reliably locate the ISO root.
@@ -193,14 +212,16 @@ class ISOEngine:
         iso_label = self._get_iso_label()
         kernel_params = self._get_kernel_params()
 
-        with open(self.iso_staging / "boot" / "grub2" / "grub.cfg", "w") as f:
-            f.write(
-                f"set default=0\nset timeout=5\n\n"
-                f"menuentry 'Start openSUSE Modern' {{\n"
-                f"    linux /boot/{kernel} {kernel_params}\n"
-                f"    initrd /boot/{initramfs}\n"
-                f"}}\n"
-            )
+        grub_menu = (
+            f"set default=0\nset timeout=5\n\n"
+            f"menuentry 'Start openSUSE Modern' {{\n"
+            f"    linux /boot/{kernel} {kernel_params}\n"
+            f"    initrd /boot/{initramfs}\n"
+            f"}}\n"
+        )
+        (self.iso_staging / "boot" / "grub2" / "grub.cfg").write_text(grub_menu)
+        # Some GRUB builds still expect /boot/grub/grub.cfg as primary prefix.
+        (self.iso_staging / "boot" / "grub" / "grub.cfg").write_text(grub_menu)
 
         self.generate_grub_efi_image()
 

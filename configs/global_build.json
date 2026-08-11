@@ -5,6 +5,6 @@
     "iso_label": "OPENSUSE_MODERN"
   },
   "boot": {
-    "kernel_params": "root=live:CDLABEL=OPENSUSE_MODERN rd.live.image quiet splash"
+    "kernel_params": "root=live:/dev/disk/by-label/OPENSUSE_MODERN rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img quiet splash"
   }
 }
