@@ -2,7 +2,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, Optional
 import logging
 from suse_builder.core.toolchain_manager import ToolchainManager
 from suse_builder.core.path_utils import resolve_from_project
@@ -37,7 +37,7 @@ class ISOEngine:
     def _get_kernel_params(self) -> str:
         return self.config.get("kernel_params", self.config.get("boot", {}).get("kernel_params", "root=live:CDLABEL=OPENSUSE_MODERN rd.live.image quiet splash"))
 
-    def _find_kernel_and_initramfs(self) -> Tuple[str, str]:
+    def _find_kernel_and_initramfs(self) -> Tuple[Optional[str], Optional[str]]:
         boot_dir = self.target_root / "boot"
         kernel = None
         initramfs = None
@@ -50,7 +50,7 @@ class ISOEngine:
                     elif f.name.startswith("initrd"):
                         initramfs = f.name
 
-        return kernel or "vmlinuz", initramfs or "initrd"
+        return kernel, initramfs
 
     def _create_squashfs(self, source_dir: Path, output_path: Path):
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -103,16 +103,33 @@ class ISOEngine:
         efi_tmp = self.workdir / "tmp_efi"
         efi_tmp.mkdir(parents=True, exist_ok=True)
 
+        # Standalone EFI binaries need an embedded early config that can find
+        # the ISO and chainload the real menu file from /boot/grub2/grub.cfg.
+        embed_cfg = efi_tmp / "embedded-grub.cfg"
+        iso_label = self._get_iso_label()
+        embed_cfg.write_text(
+            "search --no-floppy --set=root --file /boot/mbrid\n"
+            "set prefix=($root)/boot/grub2\n"
+            "if [ -f ($root)/boot/grub2/grub.cfg ]; then\n"
+            "    source ($root)/boot/grub2/grub.cfg\n"
+            "fi\n"
+            f"search --no-floppy --set=root --label {iso_label}\n"
+            "if [ -f ($root)/boot/grub2/grub.cfg ]; then\n"
+            "    source ($root)/boot/grub2/grub.cfg\n"
+            "fi\n"
+            "search --no-floppy --set=root --file /boot/grub2/grub.cfg\n"
+            "source ($root)/boot/grub2/grub.cfg\n"
+        )
+
         created_binaries = []
         for fmt, boot_filename in formats_to_build:
             out_binary = efi_tmp / boot_filename
             built = False
             grub_mk = "grub2-mkstandalone" if (self.toolchain.use_isolated or shutil.which("grub2-mkstandalone")) else ("grub-mkstandalone" if shutil.which("grub-mkstandalone") else None)
             if grub_mk:
-                grub_cfg = self.iso_staging / "boot" / "grub2" / "grub.cfg"
                 res = self.toolchain.run_tool(grub_mk, [
                     f"--format={fmt}",
-                    "-o", str(out_binary), f"boot/grub2/grub.cfg={grub_cfg}"
+                    "-o", str(out_binary), f"boot/grub/grub.cfg={embed_cfg}"
                 ], check=False)
                 if res.returncode == 0 and out_binary.exists():
                     built = True
@@ -144,7 +161,24 @@ class ISOEngine:
         (self.iso_staging / "LiveOS").mkdir(parents=True, exist_ok=True)
         (self.iso_staging / "boot" / "grub2").mkdir(parents=True, exist_ok=True)
 
+        # KIWI uses an early-boot search marker in /boot. Keep a stable marker
+        # so standalone GRUB can reliably locate the ISO root.
+        (self.iso_staging / "boot" / "mbrid").write_text("suse-builder\n")
+
         kernel, initramfs = self._find_kernel_and_initramfs()
+        if self.mode == "mock":
+            kernel = kernel or "vmlinuz"
+            initramfs = initramfs or "initrd"
+        else:
+            if not kernel:
+                raise ISOEngineError(
+                    f"No kernel found in {self.target_root / 'boot'} (expected file starting with 'vmlinuz')."
+                )
+            if not initramfs:
+                raise ISOEngineError(
+                    f"No initramfs found in {self.target_root / 'boot'} (expected file starting with 'initrd')."
+                )
+
         if self.mode != "mock":
             src_kernel = self.target_root / "boot" / kernel
             src_initramfs = self.target_root / "boot" / initramfs

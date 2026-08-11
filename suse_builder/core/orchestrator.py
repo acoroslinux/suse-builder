@@ -181,6 +181,8 @@ class BuildOrchestrator:
             customizer = SystemCustomizer(chroot, self.config)
             customizer.configure_live_environment()
 
+            self._ensure_iso_boot_artifacts(chroot)
+
             chroot.umount_virtual_fs()
 
             iso_engine = ISOEngine(self.workdir, self.target_root, name, self.config, self.mode, toolchain)
@@ -222,6 +224,42 @@ class BuildOrchestrator:
 
             output_dir = resolve_from_project("output")
             self._fix_output_permissions(output_dir)
+
+    def _ensure_iso_boot_artifacts(self, chroot: ChrootManager) -> None:
+        """Make sure kernel + initramfs exist before packaging an ISO."""
+        if self.mode == "mock" or self.output_format != "iso":
+            return
+
+        boot_dir = self.target_root / "boot"
+        if not boot_dir.exists():
+            raise BuildOrchestratorError(f"Missing boot directory in rootfs: {boot_dir}")
+
+        kernels = sorted(
+            f.name for f in boot_dir.iterdir() if f.is_file() and f.name.startswith("vmlinuz")
+        )
+        initrds = sorted(
+            f.name for f in boot_dir.iterdir() if f.is_file() and f.name.startswith("initrd")
+        )
+
+        if not kernels:
+            raise BuildOrchestratorError(
+                f"No kernel found in {boot_dir}; expected a file starting with 'vmlinuz'."
+            )
+
+        if initrds:
+            return
+
+        logger.warning("No initramfs found in %s. Running dracut to generate one.", boot_dir)
+        chroot.run_in_chroot(["/bin/sh", "-lc", "dracut -f --regenerate-all"], check=True)
+
+        initrds = sorted(
+            f.name for f in boot_dir.iterdir() if f.is_file() and f.name.startswith("initrd")
+        )
+        if not initrds:
+            raise BuildOrchestratorError(
+                "dracut completed but no initramfs was produced under /boot. "
+                "Check kernel modules and dracut configuration in the target rootfs."
+            )
 
     def _fix_output_permissions(self, output_dir: Path):
         """Fix ownership of output directory and built ISOs from root to SUDO_USER if invoked via sudo."""

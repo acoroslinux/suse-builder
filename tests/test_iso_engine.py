@@ -25,11 +25,16 @@ class TestISOEngine:
             def __init__(self):
                 self.use_isolated = True
                 self.calls = []
+                self.embedded_cfg = ""
 
             def run_tool(self, tool_binary, args, check=True):
                 self.calls.append((tool_binary, args))
                 if tool_binary in {"grub2-mkstandalone", "grub-mkstandalone"}:
                     out_idx = args.index("-o")
+                    embed_arg = next((arg for arg in args if str(arg).startswith("boot/grub/grub.cfg=")), "")
+                    if embed_arg:
+                        _, cfg_path = embed_arg.split("=", 1)
+                        self.embedded_cfg = Path(cfg_path).read_text()
                     Path(args[out_idx + 1]).parent.mkdir(parents=True, exist_ok=True)
                     Path(args[out_idx + 1]).write_bytes(b"EFI")
                 elif tool_binary == "truncate":
@@ -53,3 +58,7 @@ class TestISOEngine:
         assert grub_calls
         assert all("-o" in args for args in grub_calls)
         assert all(not any(arg.startswith("-o=") for arg in args) for args in grub_calls)
+        assert all(any(str(arg).startswith("boot/grub/grub.cfg=") for arg in args) for args in grub_calls)
+        assert "search --no-floppy --set=root --file /boot/mbrid" in toolchain.embedded_cfg
+        assert "set prefix=($root)/boot/grub2" in toolchain.embedded_cfg
+        assert "source ($root)/boot/grub2/grub.cfg" in toolchain.embedded_cfg

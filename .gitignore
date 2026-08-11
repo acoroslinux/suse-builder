@@ -55,3 +55,6 @@ Thumbs.db
 .idea/
 *.sublime-project
 *.sublime-workspace
+
+# Local reference repositories
+.references/
