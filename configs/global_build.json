@@ -1,10 +1,10 @@
 {
   "system": {
-    "hostname": "suse-live",
+    "hostname": "opensuse-modern",
     "locale": "en_US.UTF-8",
-    "iso_label": "OPENSUSE_LIVE"
+    "iso_label": "OPENSUSE_MODERN"
   },
   "boot": {
-    "kernel_params": "root=live:CDLABEL=OPENSUSE_LIVE rd.live.image quiet splash"
+    "kernel_params": "root=live:CDLABEL=OPENSUSE_MODERN rd.live.image quiet splash"
   }
 }

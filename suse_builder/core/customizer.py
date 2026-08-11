@@ -31,7 +31,7 @@ class SystemCustomizer:
     def configure_system_defaults(self):
         if self.chroot.mode == "mock":
             return
-        hostname = self.config.get("hostname", "suse-live")
+        hostname = self.config.get("hostname", "opensuse-modern")
         with open(self.target_root / "etc" / "hostname", "w") as f:
             f.write(f"{hostname}\n")
 

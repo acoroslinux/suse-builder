@@ -17,7 +17,7 @@ elif command -v dnf >/dev/null 2>&1; then
 elif command -v apt >/dev/null 2>&1; then
     echo "Installing via apt..."
     apt update
-    apt install -y xorriso squashfs-tools mtools dosfstools qemu-user-static grub-common grub-efi-amd64-bin grub-efi-ia32-bin grub-pc-bin
+    apt install -y zypper xorriso squashfs-tools mtools dosfstools qemu-user-static grub-common grub-efi-amd64-bin grub-efi-ia32-bin grub-pc-bin
 elif command -v pacman >/dev/null 2>&1; then
     echo "Installing via pacman..."
     pacman -Sy --noconfirm xorriso squashfs-tools mtools dosfstools qemu-user-static-binfmt grub

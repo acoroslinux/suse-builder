@@ -24,10 +24,7 @@ class ConfigLoader:
 
     def load_profile(self, category: str, profile_name: str) -> Dict[str, Any]:
         path = self.config_root / category / f"{profile_name}.json"
-        try:
-            return self.load_json(path)
-        except ConfigLoaderError:
-            return {}
+        return self.load_json(path)
 
     def _merge_dicts(self, base: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, Any]:
         result = base.copy()
@@ -73,8 +70,7 @@ class ConfigLoader:
         }
 
         # 1. Global config
-        if global_config_path.exists():
-            config = self._merge_dicts(config, self.load_json(global_config_path))
+        config = self._merge_dicts(config, self.load_json(global_config_path))
 
         # 2. Distro
         if distro:

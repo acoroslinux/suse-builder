@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import platform
 from pathlib import Path
 from typing import Optional, List, Union
 import logging
@@ -18,6 +19,26 @@ class ChrootManager:
         self.cache_dir = Path(cache_dir).resolve() if cache_dir else None
         self.arch = arch.lower()
         self.virtual_mounts = ["proc", "sys", "dev", "dev/pts"]
+
+    def prepare_emulation(self) -> None:
+        """Make a foreign-architecture rootfs executable through host binfmt/QEMU."""
+        if self.mode == "mock":
+            return
+        host_arch = platform.machine().lower()
+        native = {"x86_64": {"x86_64", "amd64"}, "i386": {"i386", "i486", "i586", "i686"}}
+        if self.arch in native.get(host_arch, {host_arch}):
+            return
+        qemu_names = {"aarch64": "qemu-aarch64-static", "riscv64": "qemu-riscv64-static", "i586": "qemu-i386-static", "i686": "qemu-i386-static"}
+        qemu_name = qemu_names.get(self.arch)
+        qemu_path = shutil.which(qemu_name) if qemu_name else None
+        if not qemu_path:
+            raise ChrootManagerError(f"Foreign architecture {self.arch} requires {qemu_name}; install or provide qemu-user-static.")
+        binfmt_entry = Path("/proc/sys/fs/binfmt_misc") / qemu_name.removesuffix("-static")
+        if not binfmt_entry.exists():
+            raise ChrootManagerError(f"{qemu_name} is installed but binfmt_misc is not registered. Enable it with: sudo update-binfmts --enable {qemu_name.removesuffix('-static')}")
+        destination = self.target_root / "usr" / "bin" / qemu_name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(qemu_path, destination)
 
     def mount_virtual_fs(self):
         if self.mode == "mock":

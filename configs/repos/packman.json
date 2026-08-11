@@ -2,7 +2,7 @@
   "repos": [
     {
       "name": "packman",
-      "url": "http://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/"
+      "url": "https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/"
     }
   ]
 }

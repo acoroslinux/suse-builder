@@ -7,10 +7,15 @@ Modular openSUSE Linux ISO & Image Builder.
 
 import argparse
 import re
+import subprocess
 import sys
 from pathlib import Path
 
 from suse_builder.core.orchestrator import BuildOrchestrator, BuildOrchestratorError
+from suse_builder.core.config_loader import ConfigLoaderError
+from suse_builder.core.toolchain_manager import ToolchainManagerError
+from suse_builder.core.zypper_manager import ZypperManagerError
+from suse_builder.core.iso_engine import ISOEngineError
 from suse_builder.core.path_utils import resolve_from_project
 
 
@@ -75,6 +80,25 @@ def main():
         choices=["mock", "real"],
         default="mock",
         help="Execution mode: 'mock' (simulation, no root required) or 'real' (actual build, requires root). Default: mock",
+    )
+
+    parser.add_argument(
+        "--clean",
+        dest="clean",
+        action="store_true",
+        default=True,
+        help="Remove the target architecture work directory before a real build (default).",
+    )
+    parser.add_argument(
+        "--no-clean",
+        dest="clean",
+        action="store_false",
+        help="Reuse the existing real-build work directory.",
+    )
+    parser.add_argument(
+        "--force-isolated-toolchain",
+        action="store_true",
+        help="Request the isolated toolchain (currently unavailable; use host tools instead).",
     )
 
     parser.add_argument(
@@ -196,21 +220,26 @@ def main():
 
     parsed_package_profiles = _parse_list_arg(args.package_profile)
 
-    orchestrator = BuildOrchestrator(
-        arch=arch_lower,
-        config_path=args.config,
-        mode=args.mode,
-        distro=args.distro,
-        desktop=args.desktop,
-        kernel=args.kernel,
-        bootloader=args.bootloader,
-        package_profiles=parsed_package_profiles,
-        output_format=args.format,
-        with_calamares=args.with_calamares,
-        multimedia_codecs=args.multimedia_codecs,
-        with_flathub=args.with_flathub,
-        with_zram=args.with_zram,
-    )
+    try:
+        orchestrator = BuildOrchestrator(
+            arch=arch_lower,
+            config_path=args.config,
+            mode=args.mode,
+            clean=args.clean,
+            distro=args.distro,
+            desktop=args.desktop,
+            kernel=args.kernel,
+            bootloader=args.bootloader,
+            package_profiles=parsed_package_profiles,
+            output_format=args.format,
+            with_calamares=args.with_calamares,
+            multimedia_codecs=args.multimedia_codecs,
+            with_flathub=args.with_flathub,
+            with_zram=args.with_zram,
+            force_isolated_toolchain=args.force_isolated_toolchain,
+        )
+    except (ConfigLoaderError, BuildOrchestratorError) as exc:
+        parser.error(str(exc))
 
     if args.validate_only:
         print(f"\n🔍 Validating configuration for '{arch_lower}' / '{args.distro}'...")
@@ -222,7 +251,10 @@ def main():
         sys.exit(0 if report.get("valid") else 1)
 
     print(f"🚀 Starting SUSE-Builder [{args.mode.upper()} MODE] for {arch_lower} ({args.distro})...")
-    artifact = orchestrator.build(output_name=args.output)
+    try:
+        artifact = orchestrator.build(output_name=args.output)
+    except (BuildOrchestratorError, ToolchainManagerError, ZypperManagerError, ISOEngineError, RuntimeError, subprocess.CalledProcessError) as exc:
+        parser.error(str(exc))
     print(f"🎉 Build completed successfully! Output: {artifact}")
 
 

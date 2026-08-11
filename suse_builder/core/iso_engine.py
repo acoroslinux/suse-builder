@@ -32,10 +32,10 @@ class ISOEngine:
         self.arch = config.get("architecture", "x86_64")
 
     def _get_iso_label(self) -> str:
-        return self.config.get("iso_label", self.config.get("system", {}).get("iso_label", "OPENSUSE_LIVE"))
+        return self.config.get("iso_label", self.config.get("system", {}).get("iso_label", "OPENSUSE_MODERN"))
 
     def _get_kernel_params(self) -> str:
-        return self.config.get("kernel_params", self.config.get("boot", {}).get("kernel_params", "root=live:CDLABEL=OPENSUSE_LIVE rd.live.image quiet splash"))
+        return self.config.get("kernel_params", self.config.get("boot", {}).get("kernel_params", "root=live:CDLABEL=OPENSUSE_MODERN rd.live.image quiet splash"))
 
     def _find_kernel_and_initramfs(self) -> Tuple[str, str]:
         boot_dir = self.target_root / "boot"
@@ -107,13 +107,13 @@ class ISOEngine:
         for fmt, boot_filename in formats_to_build:
             out_binary = efi_tmp / boot_filename
             built = False
-            grub_mk = shutil.which("grub2-mkstandalone") or shutil.which("grub-mkstandalone")
+            grub_mk = "grub2-mkstandalone" if (self.toolchain.use_isolated or shutil.which("grub2-mkstandalone")) else ("grub-mkstandalone" if shutil.which("grub-mkstandalone") else None)
             if grub_mk:
                 grub_cfg = self.iso_staging / "boot" / "grub2" / "grub.cfg"
-                res = subprocess.run([
-                    grub_mk, f"--format={fmt}",
+                res = self.toolchain.run_tool(grub_mk, [
+                    f"--format={fmt}",
                     f"-o={out_binary}", f"boot/grub2/grub.cfg={grub_cfg}"
-                ], capture_output=True)
+                ], check=False)
                 if res.returncode == 0 and out_binary.exists():
                     built = True
 
@@ -126,13 +126,16 @@ class ISOEngine:
             for binary_path, filename in created_binaries:
                 shutil.copy2(binary_path, iso_efi_dir / filename)
 
-            subprocess.run(["truncate", "-s", "32M", str(efiboot_img)], check=True)
-            if shutil.which("mformat") and shutil.which("mcopy"):
-                subprocess.run(["mformat", "-i", str(efiboot_img), "-h", "32", "-t", "32", "-n", "64", "-c", "1", "::"], check=True, capture_output=True)
-                subprocess.run(["mmd", "-i", str(efiboot_img), "::/EFI"], capture_output=True)
-                subprocess.run(["mmd", "-i", str(efiboot_img), "::/EFI/BOOT"], capture_output=True)
+            self.toolchain.run_tool("truncate", ["-s", "32M", str(efiboot_img)], check=True)
+            if self.toolchain.use_isolated or (shutil.which("mformat") and shutil.which("mcopy")):
+                self.toolchain.run_tool("mformat", ["-i", str(efiboot_img), "-h", "32", "-t", "32", "-n", "64", "-c", "1", "::"], check=True)
+                self.toolchain.run_tool("mmd", ["-i", str(efiboot_img), "::/EFI"], check=True)
+                self.toolchain.run_tool("mmd", ["-i", str(efiboot_img), "::/EFI/BOOT"], check=True)
                 for binary_path, filename in created_binaries:
-                    subprocess.run(["mcopy", "-i", str(efiboot_img), str(binary_path), f"::/EFI/BOOT/{filename}"], check=True, capture_output=True)
+                    self.toolchain.run_tool("mcopy", ["-i", str(efiboot_img), str(binary_path), f"::/EFI/BOOT/{filename}"], check=True)
+
+        if not efiboot_img.exists():
+            raise ISOEngineError("Could not create an EFI boot image; install GRUB and mtools support for the target architecture.")
 
         shutil.rmtree(efi_tmp, ignore_errors=True)
 
@@ -159,7 +162,7 @@ class ISOEngine:
         with open(self.iso_staging / "boot" / "grub2" / "grub.cfg", "w") as f:
             f.write(
                 f"set default=0\nset timeout=5\n\n"
-                f"menuentry 'Start openSUSE Live' {{\n"
+                f"menuentry 'Start openSUSE Modern' {{\n"
                 f"    linux /boot/{kernel} {kernel_params}\n"
                 f"    initrd /boot/{initramfs}\n"
                 f"}}\n"
@@ -185,8 +188,11 @@ class ISOEngine:
                     "-o", str(iso_path),
                     str(self.iso_staging),
                 ],
-                check=False
+                check=True
             )
+
+        if not iso_path.exists() or (self.mode != "mock" and iso_path.stat().st_size == 0):
+            raise ISOEngineError(f"xorriso did not create a valid ISO: {iso_path}")
 
         return iso_path
 

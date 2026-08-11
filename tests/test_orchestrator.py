@@ -1,6 +1,9 @@
 import pytest
 from pathlib import Path
+import tarfile
+import pytest
 from suse_builder.core.orchestrator import BuildOrchestrator
+from suse_builder.core.config_loader import ConfigLoaderError
 
 def make_orchestrator(tmp_path=None, **kwargs) -> BuildOrchestrator:
     defaults = dict(
@@ -43,3 +46,18 @@ class TestOrchestrator:
         result = orch.build()
         assert isinstance(result, Path)
         assert result.name.endswith(".tar.xz")
+
+    def test_mock_build_container_is_oci_layout(self, tmp_path):
+        orch = make_orchestrator(tmp_path=tmp_path, output_format="container")
+        result = orch.build(output_name="test-container")
+        assert result.name.endswith(".oci.tar")
+        with tarfile.open(result) as archive:
+            assert {"oci-layout", "index.json"}.issubset(archive.getnames())
+
+    def test_unknown_profile_is_rejected(self):
+        with pytest.raises(ConfigLoaderError):
+            make_orchestrator(distro="does-not-exist")
+
+    def test_multimedia_codecs_enable_packman(self):
+        orch = make_orchestrator(multimedia_codecs=True)
+        assert any(repo.get("name") == "packman" for repo in orch.config["repos"])
