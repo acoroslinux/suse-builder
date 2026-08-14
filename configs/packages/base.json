@@ -1,12 +1,12 @@
 {
   "packages": [
     "patterns-base-base",
+    "systemd",
     "sudo",
     "bash",
     "coreutils",
     "util-linux",
     "util-linux-systemd",
-    "systemd-udev",
     "hwdata",
     "iproute2",
     "curl",
