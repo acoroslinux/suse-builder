@@ -3,11 +3,10 @@
   "display_manager": "lightdm",
   "packages": [
     "patterns-xfce-xfce",
-    "patterns-xfce-xfce_office",
     "lightdm",
     "lightdm-gtk-greeter",
     "xfce4-session",
-    "xfce4-panel-plugins",
+    "xfce4-panel",
     "xfce4-pulseaudio-plugin",
     "xfce4-whiskermenu-plugin",
     "xfce4-power-manager",

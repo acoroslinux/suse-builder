@@ -4,10 +4,7 @@
     "xorg-x11-driver-video",
     "xorg-x11-driver-input",
     "xf86-video-vmware",
-    "xorg-x11-utils",
     "xinit",
-    "dbus-1-x11",
-    "xf86-video-all",
     "xf86-input-evdev",
     "xf86-input-libinput",
     "x11-tools"

@@ -12,7 +12,6 @@
     "dbus-1",
     "xdg-user-dirs",
     "xdg-utils",
-    "live-boot",
     "dracut",
     "iputils",
     "zstd",
