@@ -75,6 +75,33 @@ class ISOEngine:
         default_params = f"root=live:CDLABEL={iso_label} rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay.overlayfs=1 quiet splash"
         return self.config.get("kernel_params", self.config.get("boot", {}).get("kernel_params", default_params))
 
+    def _get_template_placeholders(self) -> Dict[str, str]:
+        iso_label = self._get_iso_label()
+        kernel_params = self._get_kernel_params()
+        desktop = str(self.config.get("desktop", "xfce")).upper()
+        distro = str(self.config.get("distro", "openSUSE")).title()
+        arch = self.arch
+        keymap = self.config.get("keymap", "us")
+        locale = self.config.get("locale", "en_US.UTF-8")
+        live_user = self.config.get("live_user", "liveuser")
+        if isinstance(live_user, dict):
+            live_user = live_user.get("name", "liveuser")
+
+        return {
+            "@@VOL_ID@@": iso_label,
+            "@@ISO_LABEL@@": iso_label,
+            "@@BOOT_TITLE@@": f"{distro} Modern",
+            "@@DISTRO_NAME@@": f"{distro} Modern",
+            "@@DESKTOP@@": desktop,
+            "@@ARCH@@": arch,
+            "@@KERNEL_PARAMS@@": kernel_params,
+            "@@BOOT_CMDLINE@@": kernel_params,
+            "@@KEYMAP@@": keymap,
+            "@@LOCALE@@": locale,
+            "@@LIVE_USER@@": live_user,
+            "@@SPLASHIMAGE@@": "splash.png"
+        }
+
     def _find_kernel_and_initramfs(self) -> Tuple[Optional[str], Optional[str]]:
         boot_dir = self.target_root / "boot"
         kernel = None
@@ -331,30 +358,94 @@ class ISOEngine:
 
         iso_label = self._get_iso_label()
         kernel_params = self._get_kernel_params()
+        placeholders = self._get_template_placeholders()
 
-        distro_name = self.config.get("distro_name", "openSUSE Modern")
-        grub_menu = (
-            "set default=0\nset timeout=5\n\n"
-            "insmod gzio\ninsmod part_gpt\ninsmod part_msdos\ninsmod ext2\ninsmod fat\ninsmod iso9660\ninsmod normal\n\n"
-            f"search --no-floppy --set=root --file /boot/{kernel}\n\n"
-            f"menuentry 'Start {distro_name}' {{\n"
-            f"    search --no-floppy --set=root --file /boot/{kernel}\n"
-            f"    linux /boot/{kernel} {kernel_params}\n"
-            f"    initrd /boot/{initramfs}\n"
-            "}\n\n"
-            f"menuentry 'Start {distro_name} (Failsafe Mode)' {{\n"
-            f"    search --no-floppy --set=root --file /boot/{kernel}\n"
-            f"    linux /boot/{kernel} {kernel_params} nomodeset xci586 noapic acpi=off\n"
-            f"    initrd /boot/{initramfs}\n"
-            "}\n"
-        )
+        # 1. Load config.cfg from template if available
+        config_template = resolve_from_project("configs/bootloaders/templates/config.cfg.in")
+        if config_template.exists():
+            config_cfg_text = config_template.read_text()
+            for k, v in placeholders.items():
+                config_cfg_text = config_cfg_text.replace(k, str(v))
+        else:
+            config_cfg_text = (
+                "set default=0\n\n"
+                "if [ -e \"${prefix}/${grub_cpu}-${grub_platform}/all_video.mod\" ]; then\n"
+                "    insmod all_video\n"
+                "else\n"
+                "    insmod efi_gop\n"
+                "    insmod efi_uga\n"
+                "    insmod video_bochs\n"
+                "    insmod video_cirrus\n"
+                "fi\n\n"
+                "insmod font\n"
+                "insmod png\n"
+                "insmod part_gpt\n"
+                "insmod part_msdos\n"
+                "insmod fat\n"
+                "insmod iso9660\n"
+                "insmod ext2\n\n"
+                "if loadfont /boot/grub2/unicode.pf2 ; then\n"
+                "    set gfxmode=auto\n"
+                "    insmod gfxterm\n"
+                "    terminal_output gfxterm\n"
+                "fi\n"
+            )
+
+        # 2. Load grub.cfg from template if available
+        grub_template = resolve_from_project("configs/bootloaders/templates/grub.cfg.in")
+        if grub_template.exists():
+            grub_menu = grub_template.read_text()
+            for k, v in placeholders.items():
+                grub_menu = grub_menu.replace(k, str(v))
+        else:
+            distro_name = self.config.get("distro_name", "openSUSE Modern")
+            grub_menu = (
+                "set default=0\nset timeout=5\n\n"
+                "insmod gzio\ninsmod part_gpt\ninsmod part_msdos\ninsmod ext2\ninsmod fat\ninsmod iso9660\ninsmod normal\n\n"
+                f"search --no-floppy --set=root --file /boot/{kernel}\n\n"
+                f"menuentry 'Start {distro_name}' {{\n"
+                f"    search --no-floppy --set=root --file /boot/{kernel}\n"
+                f"    linux /boot/{kernel} {kernel_params}\n"
+                f"    initrd /boot/{initramfs}\n"
+                "}\n\n"
+                f"menuentry 'Start {distro_name} (Failsafe Mode)' {{\n"
+                f"    search --no-floppy --set=root --file /boot/{kernel}\n"
+                f"    linux /boot/{kernel} {kernel_params} nomodeset xci586 noapic acpi=off\n"
+                f"    initrd /boot/{initramfs}\n"
+                "}\n"
+            )
+
+        # 3. Load loopback.cfg from template if available
+        loopback_template = resolve_from_project("configs/bootloaders/templates/loopback.cfg.in")
+        if loopback_template.exists():
+            loopback_cfg_text = loopback_template.read_text()
+            for k, v in placeholders.items():
+                loopback_cfg_text = loopback_cfg_text.replace(k, str(v))
+        else:
+            loopback_cfg_text = "source /boot/grub2/grub.cfg\n"
+
         for d in [
             self.iso_staging / "boot" / "grub",
             self.iso_staging / "boot" / "grub2",
             self.iso_staging / "EFI" / "BOOT",
         ]:
             d.mkdir(parents=True, exist_ok=True)
+            (d / "config.cfg").write_text(config_cfg_text)
             (d / "grub.cfg").write_text(grub_menu)
+            (d / "loopback.cfg").write_text(loopback_cfg_text)
+
+        # Copy unicode.pf2 font if available
+        for font_candidate in [
+            self.target_root / "usr" / "share" / "grub2" / "unicode.pf2",
+            self.target_root / "usr" / "share" / "grub" / "unicode.pf2",
+            self.workdir / "build_host" / "usr" / "share" / "grub2" / "unicode.pf2",
+            Path("/usr/share/grub2/unicode.pf2"),
+            Path("/usr/share/grub/unicode.pf2"),
+        ]:
+            if font_candidate.exists():
+                shutil.copy2(font_candidate, self.iso_staging / "boot" / "grub2" / "unicode.pf2")
+                shutil.copy2(font_candidate, self.iso_staging / "boot" / "grub" / "unicode.pf2")
+                break
 
         self.generate_grub_efi_image()
         self.generate_grub_bios_core()

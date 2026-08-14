@@ -1,0 +1,46 @@
+set default=0
+set timeout=15
+set timeout_style=menu
+
+# Source graphical configuration, fonts and display settings
+if [ -f /boot/grub/config.cfg ]; then
+    source /boot/grub/config.cfg
+elif [ -f /boot/grub2/config.cfg ]; then
+    source /boot/grub2/config.cfg
+fi
+
+# Main Live Boot Entries for openSUSE
+menuentry 'Start @@BOOT_TITLE@@ @@DESKTOP@@ (Live)' --class opensuse --class gnu-linux --class os --hotkey=l {
+    search --no-floppy --set=root --label @@VOL_ID@@
+    if [ -z "$root" ]; then
+        search --no-floppy --set=root --file /boot/vmlinuz
+    fi
+    linux /boot/vmlinuz root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay.overlayfs=1 vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@ quiet splash
+    initrd /boot/initrd
+}
+
+menuentry 'Start @@BOOT_TITLE@@ @@DESKTOP@@ (Copy to RAM)' --class opensuse --class gnu-linux --class os --hotkey=r {
+    search --no-floppy --set=root --label @@VOL_ID@@
+    if [ -z "$root" ]; then
+        search --no-floppy --set=root --file /boot/vmlinuz
+    fi
+    linux /boot/vmlinuz root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.ram=1 rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay.overlayfs=1 vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@ quiet splash
+    initrd /boot/initrd
+}
+
+menuentry 'Start @@BOOT_TITLE@@ @@DESKTOP@@ (Safe Graphics - nomodeset)' --class opensuse --class gnu-linux --class os --hotkey=f {
+    search --no-floppy --set=root --label @@VOL_ID@@
+    if [ -z "$root" ]; then
+        search --no-floppy --set=root --file /boot/vmlinuz
+    fi
+    linux /boot/vmlinuz root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay.overlayfs=1 nomodeset xci586 noapic acpi=off vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@
+    initrd /boot/initrd
+}
+
+menuentry 'Reboot' --class reboot {
+    reboot
+}
+
+menuentry 'Power Off' --class shutdown {
+    halt
+}

@@ -1,0 +1,5 @@
+if [ -f /boot/grub2/grub.cfg ]; then
+    source /boot/grub2/grub.cfg
+elif [ -f /boot/grub/grub.cfg ]; then
+    source /boot/grub/grub.cfg
+fi
