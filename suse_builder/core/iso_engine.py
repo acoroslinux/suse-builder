@@ -72,7 +72,7 @@ class ISOEngine:
 
     def _get_kernel_params(self) -> str:
         iso_label = self._get_iso_label()
-        default_params = f"root=live:LABEL={iso_label} rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img quiet splash"
+        default_params = f"root=live:CDLABEL={iso_label} rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay.overlayfs=1 quiet splash"
         return self.config.get("kernel_params", self.config.get("boot", {}).get("kernel_params", default_params))
 
     def _find_kernel_and_initramfs(self) -> Tuple[Optional[str], Optional[str]]:
@@ -341,12 +341,12 @@ class ISOEngine:
             f"    search --no-floppy --set=root --file /boot/{kernel}\n"
             f"    linux /boot/{kernel} {kernel_params}\n"
             f"    initrd /boot/{initramfs}\n"
-            f"}}\n\n"
+            "}\n\n"
             f"menuentry 'Start {distro_name} (Failsafe Mode)' {{\n"
             f"    search --no-floppy --set=root --file /boot/{kernel}\n"
             f"    linux /boot/{kernel} {kernel_params} nomodeset xci586 noapic acpi=off\n"
             f"    initrd /boot/{initramfs}\n"
-            f"}}\n"
+            "}\n"
         )
         for d in [
             self.iso_staging / "boot" / "grub",
