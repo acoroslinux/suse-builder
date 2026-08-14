@@ -16,6 +16,7 @@ from suse_builder.core.config_loader import ConfigLoaderError
 from suse_builder.core.toolchain_manager import ToolchainManagerError
 from suse_builder.core.zypper_manager import ZypperManagerError
 from suse_builder.core.iso_engine import ISOEngineError
+from suse_builder.core.container_engine import ContainerEngineError
 from suse_builder.core.path_utils import resolve_from_project
 
 
@@ -51,10 +52,16 @@ def _parse_list_arg(arg_value) -> list:
 VALID_ARCHS = ("x86_64", "amd64", "i686", "i586", "aarch64", "riscv64")
 
 
+class CustomArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        print(f"❌ Error: {message}", file=sys.stderr)
+        sys.exit(2)
+
+
 def main():
     default_config_path = resolve_from_project("configs/global_build.json")
 
-    parser = argparse.ArgumentParser(
+    parser = CustomArgumentParser(
         description="SUSE-Builder: Modular openSUSE Linux ISO & Image Builder",
         epilog="Use --help to see a detailed list of available arguments.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -98,7 +105,7 @@ def main():
     parser.add_argument(
         "--force-isolated-toolchain",
         action="store_true",
-        help="Request the isolated toolchain (currently unavailable; use host tools instead).",
+        help="Force use of the isolated openSUSE secondary build-host chroot environment.",
     )
 
     parser.add_argument(
@@ -106,6 +113,13 @@ def main():
         type=str,
         default="tumbleweed",
         help="Distro profile (tumbleweed, leap-15.6, leap-16.0, slowroll). Default: tumbleweed",
+    )
+
+    parser.add_argument(
+        "--variant",
+        type=str,
+        default="live",
+        help="Variant profile (live, minimal). Default: live",
     )
 
     parser.add_argument(
@@ -120,8 +134,8 @@ def main():
         "-k",
         "--kernel",
         type=str,
-        default="kernel-default",
-        help="Kernel profile (kernel-default, kernel-lts, kernel-rt). Default: kernel-default",
+        default="generic",
+        help="Kernel flavor profile: 'generic' (kernel-default), 'rt' (kernel-rt), or 'cloud' (kernel-kvm). Default: generic",
     )
 
     parser.add_argument(
@@ -143,9 +157,9 @@ def main():
     parser.add_argument(
         "-f",
         "--format",
-        choices=["iso", "img", "tarball", "container"],
+        choices=["iso", "img", "qcow2", "vmdk", "vhd", "vdi", "tarball", "container"],
         default="iso",
-        help="Output artifact format: iso, img, tarball, container. Default: iso",
+        help="Output artifact format: iso, img, qcow2, vmdk, vhd, vdi, tarball, container. Default: iso",
     )
 
     parser.add_argument(
@@ -154,6 +168,27 @@ def main():
         type=str,
         default=None,
         help="Output filename for the final build artifact.",
+    )
+
+    parser.add_argument(
+        "--hostname",
+        type=str,
+        default=None,
+        help="Hostname for the built system (default: opensuse-modern).",
+    )
+
+    parser.add_argument(
+        "--live-user",
+        type=str,
+        default=None,
+        help="Default live environment username (default: liveuser).",
+    )
+
+    parser.add_argument(
+        "--compression",
+        type=str,
+        default="zstd",
+        help="SquashFS image compression algorithm (zstd, xz, gzip). Default: zstd",
     )
 
     parser.add_argument(
@@ -230,8 +265,12 @@ def main():
             desktop=args.desktop,
             kernel=args.kernel,
             bootloader=args.bootloader,
+            variant=args.variant,
             package_profiles=parsed_package_profiles,
             output_format=args.format,
+            compression=args.compression,
+            live_user=args.live_user,
+            hostname=args.hostname,
             with_calamares=args.with_calamares,
             multimedia_codecs=args.multimedia_codecs,
             with_flathub=args.with_flathub,
@@ -239,7 +278,8 @@ def main():
             force_isolated_toolchain=args.force_isolated_toolchain,
         )
     except (ConfigLoaderError, BuildOrchestratorError) as exc:
-        parser.error(str(exc))
+        print(f"❌ Error: {exc}", file=sys.stderr)
+        sys.exit(1)
 
     if args.validate_only:
         print(f"\n🔍 Validating configuration for '{arch_lower}' / '{args.distro}'...")
@@ -253,8 +293,9 @@ def main():
     print(f"🚀 Starting SUSE-Builder [{args.mode.upper()} MODE] for {arch_lower} ({args.distro})...")
     try:
         artifact = orchestrator.build(output_name=args.output)
-    except (BuildOrchestratorError, ToolchainManagerError, ZypperManagerError, ISOEngineError, RuntimeError, subprocess.CalledProcessError) as exc:
-        parser.error(str(exc))
+    except (BuildOrchestratorError, ToolchainManagerError, ZypperManagerError, ISOEngineError, ContainerEngineError, RuntimeError, subprocess.CalledProcessError) as exc:
+        print(f"❌ Error: {exc}", file=sys.stderr)
+        sys.exit(1)
     print(f"🎉 Build completed successfully! Output: {artifact}")
 
 

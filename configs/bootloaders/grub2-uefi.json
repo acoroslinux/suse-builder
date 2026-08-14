@@ -1,5 +1,5 @@
 {
-  "packages": ["grub2-x86_64-efi", "shim"],
+  "packages": ["grub2-x86_64-efi", "grub2-i386-efi", "shim"],
   "bootloader": {
     "type": "grub2-uefi"
   }

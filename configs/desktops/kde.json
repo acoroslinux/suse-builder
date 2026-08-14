@@ -1,5 +1,15 @@
 {
   "desktop": "kde",
   "display_manager": "sddm",
-  "packages": ["patterns-kde-kde_plasma", "sddm"]
+  "packages": [
+    "patterns-kde-kde_plasma",
+    "plasma5-desktop",
+    "plasma-workspace",
+    "sddm",
+    "xorg-x11-server",
+    "xf86-video-vmware",
+    "xf86-input-evdev",
+    "dbus-1-x11",
+    "xterm"
+  ]
 }

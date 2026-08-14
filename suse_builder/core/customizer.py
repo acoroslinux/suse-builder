@@ -18,9 +18,11 @@ class SystemCustomizer:
         live_user_cfg = self.config.get("live_user", "liveuser")
         if isinstance(live_user_cfg, dict):
             live_user = live_user_cfg.get("name", "liveuser")
+            live_password = live_user_cfg.get("password", "live")
             cfg_groups = live_user_cfg.get("groups", [])
         else:
             live_user = str(live_user_cfg)
+            live_password = "live"
             cfg_groups = []
 
         # Keep backward compatibility with older top-level live_groups configs.
@@ -33,13 +35,18 @@ class SystemCustomizer:
                 if lookup.returncode != 0:
                     self.chroot.run_in_chroot(["groupadd", "-f", str(group)], check=False)
 
-            create_user = self.chroot.run_in_chroot(["useradd", "-m", "-s", "/bin/bash", "-G", groups_str, str(live_user)], check=False)
-            if create_user.returncode == 0:
-                self.chroot.run_in_chroot(f"echo '{live_user}:live' | chpasswd", check=False)
-            else:
-                existing = self.chroot.run_in_chroot(["id", "-u", str(live_user)], check=False)
-                if existing.returncode == 0:
-                    self.chroot.run_in_chroot(f"echo '{live_user}:live' | chpasswd", check=False)
+            self.chroot.run_in_chroot(["groupadd", "-f", "nopasswdlogin"], check=False)
+            create_user = self.chroot.run_in_chroot(["useradd", "-m", "-s", "/bin/bash", "-G", f"{groups_str},nopasswdlogin", str(live_user)], check=False)
+            if create_user.returncode != 0:
+                self.chroot.run_in_chroot(["usermod", "-aG", "nopasswdlogin", str(live_user)], check=False)
+
+            self.chroot.run_in_chroot(f"echo '{live_user}:{live_password}' | chpasswd", check=False)
+            self.chroot.run_in_chroot(f"echo 'root:{live_password}' | chpasswd", check=False)
+            self.chroot.run_in_chroot(["passwd", "-d", str(live_user)], check=False)
+            self.chroot.run_in_chroot(["passwd", "-u", str(live_user)], check=False)
+            self.chroot.run_in_chroot(["passwd", "-u", "root"], check=False)
+            self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:users", f"/home/{live_user}"], check=False)
+            self.chroot.run_in_chroot(["chmod", "755", f"/home/{live_user}"], check=False)
         except Exception:
             logger.exception("Could not fully configure live user %s", live_user)
 
@@ -52,8 +59,33 @@ class SystemCustomizer:
         if self.chroot.mode == "mock":
             return
         hostname = self.config.get("hostname", "opensuse-modern")
-        with open(self.target_root / "etc" / "hostname", "w") as f:
+        etc_dir = self.target_root / "etc"
+        etc_dir.mkdir(parents=True, exist_ok=True)
+        with open(etc_dir / "hostname", "w") as f:
             f.write(f"{hostname}\n")
+
+        hosts_file = etc_dir / "hosts"
+        hosts_content = (
+            "127.0.0.1   localhost\n"
+            f"127.0.1.1   {hostname}.localdomain {hostname}\n"
+            "::1         localhost ip6-localhost ip6-loopback\n"
+        )
+        hosts_file.write_text(hosts_content)
+
+    def configure_dbus_launch(self):
+        dbus_launch = self.chroot.target_root / "usr" / "bin" / "dbus-launch"
+        if not dbus_launch.exists() or dbus_launch.stat().st_size == 0:
+            dbus_launch.parent.mkdir(parents=True, exist_ok=True)
+            dbus_launch.write_text(
+                "#!/bin/sh\n"
+                "# dbus-launch compatibility wrapper for live environments\n"
+                "if [ -n \"$DBUS_SESSION_BUS_ADDRESS\" ]; then\n"
+                "    exec \"$@\"\n"
+                "fi\n"
+                "exec dbus-run-session -- \"$@\"\n"
+            )
+            dbus_launch.chmod(0o755)
+            logger.info("dbus-launch compatibility wrapper written.")
 
     def setup_services(self):
         if self.chroot.mode == "mock":
@@ -61,26 +93,132 @@ class SystemCustomizer:
         services = self.config.get("services", [])
         if isinstance(services, dict):
             services = services.get("enable", [])
-        for svc in services:
+        services_to_enable = list(services)
+        for auto_svc in ["NetworkManager", "dbus"]:
+            if auto_svc not in services_to_enable:
+                unit = self.target_root / "usr" / "lib" / "systemd" / "system" / f"{auto_svc}.service"
+                if unit.exists():
+                    services_to_enable.append(auto_svc)
+
+        for svc in services_to_enable:
             try:
                 self.chroot.run_in_chroot(["systemctl", "enable", str(svc)], check=False)
             except Exception:
                 pass
 
+    def _detect_desktop_session(self) -> str:
+        session = self.config.get("desktop_session") or self.config.get("desktop")
+        if session:
+            session_lower = session.lower()
+            if session_lower in {"kde", "plasma"}:
+                return "plasma"
+            return session_lower
+        for session_dir in ["usr/share/xsessions", "usr/share/wayland-sessions"]:
+            full_dir = self.target_root / session_dir
+            if full_dir.exists():
+                for f in sorted(full_dir.glob("*.desktop")):
+                    return f.stem
+        return "xfce"
+
     def configure_autologin(self):
         if self.chroot.mode == "mock":
             return
         dm = self.config.get("display_manager")
-        if not dm:
-            return
         live_user = self.config.get("live_user", "liveuser")
         if isinstance(live_user, dict):
             live_user = live_user.get("name", "liveuser")
-        if dm == "sddm":
-            sddm_conf = self.target_root / "etc" / "sddm.conf.d" / "autologin.conf"
+
+        # Auto-detect DM if not explicitly specified
+        if not dm:
+            if (self.target_root / "usr" / "bin" / "sddm").exists():
+                dm = "sddm"
+            elif (self.target_root / "usr" / "sbin" / "gdm").exists() or (self.target_root / "usr" / "bin" / "gdm").exists():
+                dm = "gdm"
+            elif (self.target_root / "usr" / "sbin" / "lightdm").exists() or (self.target_root / "usr" / "bin" / "lightdm").exists():
+                dm = "lightdm"
+
+        session_name = self._detect_desktop_session()
+
+        # openSUSE native displaymanager sysconfig integration
+        sysconfig_dm = self.target_root / "etc" / "sysconfig" / "displaymanager"
+        sysconfig_dm.parent.mkdir(parents=True, exist_ok=True)
+        sysconfig_content = (
+            f'DISPLAYMANAGER="{dm}"\n'
+            f'DISPLAYMANAGER_AUTOLOGIN="{live_user}"\n'
+            'DISPLAYMANAGER_PASSWORD_LESS_LOGIN="yes"\n'
+            'DISPLAYMANAGER_DEFAULT_MODE="x11"\n'
+        )
+        sysconfig_dm.write_text(sysconfig_content)
+
+        # Ensure PAM autologin configuration files permit passwordless login across all display managers
+        pam_autologin_content = (
+            "#%PAM-1.0\n"
+            "auth        sufficient  pam_permit.so\n"
+            "account     sufficient  pam_permit.so\n"
+            "password    sufficient  pam_permit.so\n"
+            "session     required    pam_limits.so\n"
+            "session     sufficient  pam_permit.so\n"
+        )
+        for pam_service in [
+            "lightdm", "lightdm-autologin",
+            "sddm", "sddm-autologin",
+            "gdm", "gdm-autologin", "gdm-password", "gdm3",
+            "lxdm", "lxdm-autologin",
+            "slim"
+        ]:
+            pam_file = self.target_root / "etc" / "pam.d" / pam_service
+            pam_file.parent.mkdir(parents=True, exist_ok=True)
+            pam_file.write_text(pam_autologin_content)
+
+        # SDDM configuration
+        for sddm_rel in ["etc/sddm.conf.d/autologin.conf", "etc/sddm.conf"]:
+            sddm_conf = self.target_root / sddm_rel
             sddm_conf.parent.mkdir(parents=True, exist_ok=True)
-            with open(sddm_conf, "w") as f:
-                f.write(f"[Autologin]\nUser={live_user}\nSession=plasma\n")
+            sddm_conf.write_text(
+                f"[Autologin]\nUser={live_user}\nSession={session_name}\nRelogin=false\n"
+            )
+
+        # GDM / GDM3 configuration
+        gdm_content = (
+            "[daemon]\n"
+            "AutomaticLoginEnable=true\n"
+            f"AutomaticLogin={live_user}\n"
+            "TimedLoginEnable=true\n"
+            f"TimedLogin={live_user}\n"
+            "TimedLoginDelay=0\n"
+        )
+        for gdm_path in [
+            "etc/gdm/custom.conf", "etc/gdm3/custom.conf",
+            "etc/gdm/daemon.conf", "etc/gdm3/daemon.conf"
+        ]:
+            gdm_conf = self.target_root / gdm_path
+            gdm_conf.parent.mkdir(parents=True, exist_ok=True)
+            gdm_conf.write_text(gdm_content)
+
+        # LightDM configuration
+        lightdm_content = (
+            "[Seat:*]\n"
+            "autologin-guest=false\n"
+            f"autologin-user={live_user}\n"
+            "autologin-user-timeout=0\n"
+            "autologin-in-background=false\n"
+            f"autologin-session={session_name}\n"
+            "pam-service=lightdm-autologin\n"
+            "pam-autologin-service=lightdm-autologin\n"
+            "\n"
+            "[SeatDefaults]\n"
+            "autologin-guest=false\n"
+            f"autologin-user={live_user}\n"
+            "autologin-user-timeout=0\n"
+            "autologin-in-background=false\n"
+            f"autologin-session={session_name}\n"
+            "pam-service=lightdm-autologin\n"
+            "pam-autologin-service=lightdm-autologin\n"
+        )
+        for conf_rel in ["etc/lightdm/lightdm.conf", "etc/lightdm/lightdm.conf.d/50-autologin.conf"]:
+            conf_file = self.target_root / conf_rel
+            conf_file.parent.mkdir(parents=True, exist_ok=True)
+            conf_file.write_text(lightdm_content)
 
     def configure_zram(self):
         if self.chroot.mode == "mock":
@@ -104,8 +242,9 @@ class SystemCustomizer:
                 "[Flatpak Remote]\n"
                 "Title=Flathub\n"
                 "Url=https://dl.flathub.org/repo/\n"
-                "GPGKey=mQENBFk71/ABCADb7...\n"
+                "GPGKey=https://dl.flathub.org/repo/flathub.gpg\n"
                 "Homepage=https://flathub.org/\n"
+                "Comment=Central repository of Flatpak applications\n"
             )
 
     def configure_polkit_power(self):
@@ -131,35 +270,162 @@ class SystemCustomizer:
             return
         if not self.config.get("with_calamares", False):
             return
-        script_path = self.target_root / "usr" / "local" / "bin" / "create-install-icon.sh"
-        script_path.parent.mkdir(parents=True, exist_ok=True)
-        script_content = (
-            "#!/bin/bash\n"
-            "for user_home in /home/*; do\n"
-            "    if [ -d \"$user_home\" ]; then\n"
-            "        desktop_dir=\"$user_home/Desktop\"\n"
-            "        mkdir -p \"$desktop_dir\"\n"
-            "        cat << 'EOF' > \"$desktop_dir/install-suse.desktop\"\n"
+
+        # 1. Polkit rule to allow launching Calamares via pkexec without password prompt
+        polkit_dir = self.target_root / "etc" / "polkit-1" / "rules.d"
+        polkit_dir.mkdir(parents=True, exist_ok=True)
+        (polkit_dir / "49-calamares.rules").write_text(
+            "/* Allow live user to launch calamares installer via pkexec without password prompt */\n"
+            "polkit.addRule(function(action, subject) {\n"
+            "    if ((action.id === 'org.freedesktop.policykit.exec' && action.lookup('program') === '/usr/bin/calamares') ||\n"
+            "        action.id.indexOf('com.github.calamares.') === 0 ||\n"
+            "        action.id.indexOf('io.calamares.') === 0) {\n"
+            "        return polkit.Result.YES;\n"
+            "    }\n"
+            "});\n"
+        )
+
+        desktop_entry = (
             "[Desktop Entry]\n"
+            "Version=1.0\n"
             "Type=Application\n"
             "Name=Install openSUSE\n"
+            "Name[pt_PT]=Instalar o openSUSE\n"
             "Comment=Install openSUSE to disk\n"
-            "Exec=sudo calamares\n"
+            "Comment[pt_PT]=Instalar o sistema no disco rígido\n"
+            "Exec=pkexec /usr/bin/calamares\n"
             "Icon=system-software-install\n"
             "Terminal=false\n"
-            "Categories=System;\n"
+            "Categories=System;Qt;\n"
+            "StartupNotify=true\n"
+        )
+
+        # 2. Add launcher to /usr/share/applications/
+        apps_dir = self.target_root / "usr" / "share" / "applications"
+        apps_dir.mkdir(parents=True, exist_ok=True)
+        app_desktop = apps_dir / "install-suse.desktop"
+        app_desktop.write_text(desktop_entry)
+        app_desktop.chmod(0o755)
+
+        # 3. Install into /etc/skel/Desktop for new users
+        skel_desktop = self.target_root / "etc" / "skel" / "Desktop" / "install-suse.desktop"
+        skel_desktop.parent.mkdir(parents=True, exist_ok=True)
+        skel_desktop.write_text(desktop_entry)
+        skel_desktop.chmod(0o755)
+
+        # 4. Helper script to create and trust desktop icon on live session login
+        script_path = self.target_root / "usr" / "local" / "bin" / "add-installer-desktop-icon.sh"
+        script_path.parent.mkdir(parents=True, exist_ok=True)
+        script_content = (
+            "#!/bin/sh\n"
+            "desktop_dir=\"$HOME/Desktop\"\n"
+            "mkdir -p \"$desktop_dir\"\n"
+            "icon_path=\"$desktop_dir/install-suse.desktop\"\n"
+            "cat << 'EOF' > \"$icon_path\"\n"
+            f"{desktop_entry}"
             "EOF\n"
-            "        chmod +x \"$desktop_dir/install-suse.desktop\"\n"
-            "        chown -R $(basename \"$user_home\"): \"$desktop_dir\"\n"
+            "chmod +x \"$icon_path\"\n"
+            "if command -v gio >/dev/null 2>&1; then\n"
+            "    gio set --type=string \"$icon_path\" metadata::trusted true 2>/dev/null\n"
+            "    if command -v sha256sum >/dev/null 2>&1; then\n"
+            "        checksum=$(sha256sum \"$icon_path\" | cut -d' ' -f1)\n"
+            "        gio set --type=string \"$icon_path\" metadata::xfce-exe-checksum \"$checksum\" 2>/dev/null\n"
             "    fi\n"
-            "done\n"
+            "fi\n"
+            "touch \"$icon_path\"\n"
         )
         script_path.write_text(script_content)
         script_path.chmod(0o755)
 
+        # 5. Autostart desktop entry (/etc/xdg/autostart/)
+        autostart_dir = self.target_root / "etc" / "xdg" / "autostart"
+        autostart_dir.mkdir(parents=True, exist_ok=True)
+        (autostart_dir / "create-install-icon.desktop").write_text(
+            "[Desktop Entry]\n"
+            "Type=Application\n"
+            "Name=Create Install Icon\n"
+            "Exec=/usr/local/bin/add-installer-desktop-icon.sh\n"
+            "Icon=system-software-install\n"
+            "Terminal=false\n"
+            "NoDisplay=true\n"
+        )
+
+        # 6. Also install for existing users in /home/*
+        home_dir = self.target_root / "home"
+        if home_dir.exists():
+            for user_dir in home_dir.iterdir():
+                if user_dir.is_dir():
+                    user_desktop = user_dir / "Desktop" / "install-suse.desktop"
+                    user_desktop.parent.mkdir(parents=True, exist_ok=True)
+                    user_desktop.write_text(desktop_entry)
+                    user_desktop.chmod(0o755)
+
+    def configure_locales(self):
+        locale_gen = self.chroot.target_root / "etc" / "locale.gen"
+        if locale_gen.exists():
+            content = locale_gen.read_text()
+            for loc in ["pt_PT.UTF-8 UTF-8", "en_US.UTF-8 UTF-8"]:
+                if f"# {loc}" in content:
+                    content = content.replace(f"# {loc}", loc)
+                elif loc not in content:
+                    content += f"\n{loc}\n"
+            locale_gen.write_text(content)
+        else:
+            locale_gen.parent.mkdir(parents=True, exist_ok=True)
+            locale_gen.write_text("pt_PT.UTF-8 UTF-8\nen_US.UTF-8 UTF-8\n")
+
+        locale_conf = self.chroot.target_root / "etc" / "locale.conf"
+        locale_conf.parent.mkdir(parents=True, exist_ok=True)
+        locale_conf.write_text("LANG=pt_PT.UTF-8\nLC_ALL=pt_PT.UTF-8\n")
+        logger.info("Locale configuration written.")
+
+    def fix_home_permissions(self):
+        if self.chroot.mode == "mock":
+            return
+        live_user_cfg = self.config.get("live_user", "liveuser")
+        if isinstance(live_user_cfg, dict):
+            live_user = live_user_cfg.get("name", "liveuser")
+        else:
+            live_user = str(live_user_cfg)
+
+        user_home = self.target_root / "home" / live_user
+        if user_home.exists():
+            self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:users", f"/home/{live_user}"], check=False)
+            self.chroot.run_in_chroot(["chmod", "0755", f"/home/{live_user}"], check=False)
+
+    def configure_branding(self):
+        if self.chroot.mode == "mock":
+            return
+        etc_dir = self.target_root / "etc"
+        etc_dir.mkdir(parents=True, exist_ok=True)
+
+        os_release = etc_dir / "os-release"
+        if not os_release.exists():
+            os_release.write_text(
+                'NAME="openSUSE Modern"\n'
+                'ID="opensuse_modern"\n'
+                'ID_LIKE="opensuse suse"\n'
+                'PRETTY_NAME="openSUSE Modern GNU/Linux"\n'
+                'VERSION="2026.08"\n'
+                'VERSION_ID="2026.08"\n'
+                'HOME_URL="https://github.com/acoroslinux/suse-builder"\n'
+                'SUPPORT_URL="https://github.com/acoroslinux/suse-builder"\n'
+                'BUG_REPORT_URL="https://github.com/acoroslinux/suse-builder"\n'
+                'LOGO="distributor-logo-opensuse"\n'
+            )
+
+        issue_file = etc_dir / "issue"
+        issue_file.write_text("openSUSE Modern GNU/Linux \\r (\\l)\n\n")
+
+        rel_file = etc_dir / "opensuse_modern-release"
+        rel_file.write_text("openSUSE Modern release 2026.08\n")
+
     def configure_live_environment(self):
+        self.configure_locales()
         self.setup_live_users()
         self.configure_system_defaults()
+        self.configure_dbus_launch()
+        self.configure_branding()
         self.setup_services()
         self.configure_autologin()
         self.configure_zram()
@@ -168,6 +434,48 @@ class SystemCustomizer:
         self.configure_calamares()
         self.configure_artwork()
         self.copy_custom_files()
+        self.configure_machine_id()
+        self.fix_home_permissions()
+
+    def configure_machine_id(self):
+        machine_id_path = self.chroot.target_root / "etc" / "machine-id"
+        machine_id_path.parent.mkdir(parents=True, exist_ok=True)
+        machine_id_path.write_text("")  # Empty = transient live ID
+        logger.info("Set /etc/machine-id to empty (transient live mode).")
+
+        dbus_machine_id = self.chroot.target_root / "var" / "lib" / "dbus" / "machine-id"
+        dbus_machine_id.parent.mkdir(parents=True, exist_ok=True)
+        if not dbus_machine_id.is_symlink():
+            if dbus_machine_id.exists():
+                dbus_machine_id.unlink()
+            try:
+                dbus_machine_id.symlink_to("/etc/machine-id")
+            except Exception:
+                dbus_machine_id.write_text("")
+
+        # Mask systemd-machine-id-commit to prevent re-commit on read-only rootfs
+        systemd_dir = self.chroot.target_root / "etc" / "systemd" / "system"
+        systemd_dir.mkdir(parents=True, exist_ok=True)
+        commit_mask = systemd_dir / "systemd-machine-id-commit.service"
+        if not commit_mask.exists():
+            commit_mask.symlink_to("/dev/null")
+
+        # Write minimal /etc/fstab if missing
+        fstab = self.chroot.target_root / "etc" / "fstab"
+        if not fstab.exists() or fstab.stat().st_size == 0:
+            fstab.parent.mkdir(parents=True, exist_ok=True)
+            fstab.write_text(
+                "# /etc/fstab: static file system information.\n"
+                "# <file system>  <mount point>  <type>  <options>  <dump>  <pass>\n"
+                "tmpfs  /tmp  tmpfs  defaults,noatime,mode=1777  0  0\n"
+                "tmpfs  /run  tmpfs  defaults,noatime,mode=0755  0  0\n"
+            )
+
+        # Purge SSH host keys (regenerated on first real boot)
+        for key_file in (self.chroot.target_root / "etc" / "ssh").glob("ssh_host_*"):
+            key_file.unlink(missing_ok=True)
+
+        logger.info("machine-id and fstab configured for live environment.")
 
     def copy_custom_files(self):
         """
@@ -198,6 +506,12 @@ class SystemCustomizer:
 
         # 2. Structured list from JSON config
         custom_files_list = list(self.config.get("custom_files", []))
+        base_copy_files = self.config.get("base_copy_files", [])
+        if isinstance(base_copy_files, list):
+            for entry in base_copy_files:
+                if entry not in custom_files_list:
+                    custom_files_list.append(entry)
+
         copy_files = self.config.get("copy_files", [])
         if isinstance(copy_files, list):
             for entry in copy_files:
@@ -250,13 +564,63 @@ class SystemCustomizer:
                     pass
 
     def configure_artwork(self):
-        """Install custom openSUSE Modern artwork."""
+        """Install custom openSUSE Modern artwork and set default wallpaper link."""
         if self.chroot.mode == "mock":
             return
-        bg_dir = self.target_root / "usr" / "share" / "backgrounds" / "suse-modern"
+        bg_dir = self.target_root / "usr" / "share" / "backgrounds"
         bg_dir.mkdir(parents=True, exist_ok=True)
+
         from suse_builder.core.path_utils import resolve_from_project
-        artwork_src = resolve_from_project("artwork/wallpapers/suse-modern.jpg")
-        if artwork_src.exists():
+        custom_wp = resolve_from_project("configs/custom_files/backgrounds/suse-modern-wallpaper.png")
+        if custom_wp.exists():
             import shutil
-            shutil.copy2(artwork_src, bg_dir / "suse-modern.jpg")
+            dest_wp = bg_dir / "suse-modern-wallpaper.png"
+            shutil.copy2(custom_wp, dest_wp)
+
+            default_wp = bg_dir / "default-wallpaper.png"
+            if default_wp.exists() or default_wp.is_symlink():
+                default_wp.unlink()
+            default_wp.symlink_to(Path("/usr/share/backgrounds/suse-modern-wallpaper.png"))
+
+        # Configure default XFCE desktop wallpaper via xfconf template
+        xfconf_dir = self.target_root / "etc" / "skel" / ".config" / "xfce4" / "xfconf" / "xfce-perchannel-xml"
+        xfconf_dir.mkdir(parents=True, exist_ok=True)
+        xfce_desktop_xml = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<channel name="xfce4-desktop" version="1.0">\n'
+            '  <property name="backdrop" type="empty">\n'
+            '    <property name="screen0" type="empty">\n'
+            '      <property name="monitor0" type="empty">\n'
+            '        <property name="workspace0" type="empty">\n'
+            '          <property name="color-style" type="int" value="0"/>\n'
+            '          <property name="image-style" type="int" value="5"/>\n'
+            '          <property name="last-image" type="string" value="/usr/share/backgrounds/default-wallpaper.png"/>\n'
+            '        </property>\n'
+            '      </property>\n'
+            '    </property>\n'
+            '  </property>\n'
+            '</channel>\n'
+        )
+        (xfconf_dir / "xfce4-desktop.xml").write_text(xfce_desktop_xml)
+
+    def fix_home_permissions(self):
+        if self.chroot.mode == "mock":
+            return
+        live_user = self.config.get("live_user", "liveuser")
+        if isinstance(live_user, dict):
+            live_user = live_user.get("name", "liveuser")
+
+        home_dir = self.target_root / "home" / live_user
+        if home_dir.exists():
+            try:
+                self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:users", f"/home/{live_user}"], check=False)
+                self.chroot.run_in_chroot(["chmod", "755", f"/home/{live_user}"], check=False)
+            except Exception as e:
+                logger.warning(f"Could not fix permissions on /home/{live_user}: {e}")
+
+        # Ensure sticky bit on /tmp and /var/tmp
+        for tmp_path in ["/tmp", "/var/tmp"]:
+            try:
+                self.chroot.run_in_chroot(["chmod", "1777", tmp_path], check=False)
+            except Exception:
+                pass

@@ -79,7 +79,25 @@ class ZypperManager:
             url = r.get("url")
             repo_file = self.target_root / "etc" / "zypp" / "repos.d" / f"{name}.repo"
             if url and not repo_file.exists():
-                self._run_zypper(["--root", str(self.target_root), "ar", "-f", url, name])
+                ar_args = ["--root", str(self.target_root), "ar", "-f"]
+                if r.get("gpgcheck") is False:
+                    ar_args.append("--no-gpgcheck")
+                ar_args.extend([url, name])
+                self._run_zypper(ar_args)
+
+        # Enforce keeppackages=1 on all repository definitions
+        repos_d = self.target_root / "etc" / "zypp" / "repos.d"
+        if repos_d.exists():
+            for r_file in repos_d.glob("*.repo"):
+                try:
+                    content = r_file.read_text()
+                    if "keeppackages=" in content:
+                        content = content.replace("keeppackages=0", "keeppackages=1")
+                    else:
+                        content += "\nkeeppackages=1\n"
+                    r_file.write_text(content)
+                except Exception:
+                    pass
 
     def bootstrap_rootfs(self, distro: str, arch: str, use_seed: bool = True, reuse_existing: bool = False):
         if self.chroot.mode == "mock":
@@ -161,15 +179,37 @@ class ZypperManager:
         if result.returncode != 0:
             raise ZypperManagerError(f"Zypper refresh failed with exit code {result.returncode}")
 
+    def sync_cache_to_target(self):
+        if self.chroot.mode == "mock":
+            return
+        host_cache = self.resolve_cache_dir() / "packages"
+        target_cache = self.target_root / "var" / "cache" / "zypp" / "packages"
+        if not host_cache.exists():
+            return
+        target_cache.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["rsync", "-a", "--ignore-existing", f"{host_cache}/", f"{target_cache}/"], check=False)
+
+    def sync_cache_from_target(self):
+        if self.chroot.mode == "mock":
+            return
+        host_cache = self.resolve_cache_dir() / "packages"
+        target_cache = self.target_root / "var" / "cache" / "zypp" / "packages"
+        if not target_cache.exists():
+            return
+        host_cache.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["rsync", "-a", "--ignore-existing", f"{target_cache}/", f"{host_cache}/"], check=False)
+
     def install_packages(self, packages: List[str]):
         if not packages or self.chroot.mode == "mock":
             return
         real_pkgs = [p for p in packages if p]
         if not real_pkgs:
             return
+        self.sync_cache_to_target()
         cmd_signed = ["--non-interactive", "--gpg-auto-import-keys", "--root", str(self.target_root), "install", "--force-resolution", "-y"] + real_pkgs
         cmd_fallback = ["--non-interactive", "--root", str(self.target_root), "--no-gpg-checks", "install", "--force-resolution", "-y"] + real_pkgs
         res = self._run_prefer_signed(cmd_signed, cmd_fallback)
+        self.sync_cache_from_target()
         if res.returncode != 0:
             raise ZypperManagerError(f"Zypper package installation failed with exit code {res.returncode}")
 

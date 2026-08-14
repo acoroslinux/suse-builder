@@ -1,0 +1,4 @@
+{
+  "kernel": "cloud",
+  "packages": ["kernel-kvm"]
+}

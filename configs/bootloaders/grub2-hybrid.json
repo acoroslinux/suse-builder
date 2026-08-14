@@ -1,5 +1,5 @@
 {
-  "packages": ["grub2", "grub2-x86_64-efi", "grub2-i386-pc", "shim"],
+  "packages": ["grub2", "grub2-x86_64-efi", "grub2-i386-efi", "shim"],
   "bootloader": {
     "type": "grub2-hybrid"
   }

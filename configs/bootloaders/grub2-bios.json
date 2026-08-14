@@ -1,5 +1,5 @@
 {
-  "packages": ["grub2-i386-pc"],
+  "packages": ["grub2-i386-pc", "dracut", "dracut-kiwi-lib"],
   "bootloader": {
     "type": "grub2-bios"
   }

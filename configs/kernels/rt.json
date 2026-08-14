@@ -1,0 +1,4 @@
+{
+  "kernel": "rt",
+  "packages": ["kernel-rt"]
+}

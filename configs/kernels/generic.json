@@ -1,0 +1,4 @@
+{
+  "kernel": "generic",
+  "packages": ["kernel-default"]
+}

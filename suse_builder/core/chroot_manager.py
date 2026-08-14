@@ -60,10 +60,19 @@ class ChrootManager:
             cmd.extend([src, str(target)])
             subprocess.run(cmd, check=False, stderr=subprocess.DEVNULL)
 
+        policy_rc_d = self.target_root / "usr" / "sbin" / "policy-rc.d"
+        policy_rc_d.parent.mkdir(parents=True, exist_ok=True)
+        policy_rc_d.write_text("#!/bin/sh\nexit 101\n")
+        policy_rc_d.chmod(0o755)
+
     def umount_virtual_fs(self):
         if self.mode == "mock":
             logger.info("[MOCK CHROOT] Simulating unmounting virtual filesystems.")
             return
+
+        policy_rc_d = self.target_root / "usr" / "sbin" / "policy-rc.d"
+        if policy_rc_d.exists():
+            policy_rc_d.unlink()
 
         for path in [
             self.target_root / "dev" / "pts",
@@ -79,6 +88,8 @@ class ChrootManager:
         command: Union[str, List[str]],
         check: bool = True,
         env: Optional[dict] = None,
+        capture_output: bool = False,
+        text: bool = False,
     ) -> subprocess.CompletedProcess:
         if self.mode == "mock":
             cmd_str = command if isinstance(command, str) else " ".join(command)
@@ -92,7 +103,9 @@ class ChrootManager:
 
         full_env = os.environ.copy()
         full_env["PATH"] = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        full_env["LANG"] = "C.UTF-8"
+        full_env["LC_ALL"] = "C.UTF-8"
         if env:
             full_env.update(env)
 
-        return subprocess.run(cmd, check=check, env=full_env)
+        return subprocess.run(cmd, check=check, env=full_env, capture_output=capture_output, text=text)

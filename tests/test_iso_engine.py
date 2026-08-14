@@ -39,7 +39,7 @@ class TestISOEngine:
                     Path(args[out_idx + 1]).write_bytes(b"EFI")
                 elif tool_binary == "truncate":
                     Path(args[-1]).parent.mkdir(parents=True, exist_ok=True)
-                    Path(args[-1]).touch()
+                    Path(args[-1]).write_bytes(b"EFIBOOT")
                 return subprocess.CompletedProcess(args=[tool_binary, *args], returncode=0)
 
         toolchain = FakeToolchain()
@@ -59,6 +59,43 @@ class TestISOEngine:
         assert all("-o" in args for args in grub_calls)
         assert all(not any(arg.startswith("-o=") for arg in args) for args in grub_calls)
         assert all(any(str(arg).startswith("boot/grub/grub.cfg=") for arg in args) for args in grub_calls)
+        assert all(any(str(arg).startswith("--install-modules=") for arg in args) for args in grub_calls)
+        assert all("--fonts=" in args for args in grub_calls)
         assert "search --no-floppy --set=root --file /boot/mbrid" in toolchain.embedded_cfg
         assert "set prefix=($root)/boot/grub2" in toolchain.embedded_cfg
         assert "configfile ($root)/boot/grub2/grub.cfg" in toolchain.embedded_cfg
+
+    def test_grub_bios_core_failure_cleaned_up(self, tmp_path):
+        workdir = tmp_path / "x86_64"
+        target_root = workdir / "chroot"
+        iso_staging = workdir / "iso_root"
+
+        class FailingToolchain:
+            def __init__(self):
+                self.use_isolated = True
+                self.calls = []
+
+            def run_tool(self, tool_binary, args, check=True):
+                self.calls.append((tool_binary, args))
+                if tool_binary in {"grub2-mkstandalone", "grub-mkstandalone"}:
+                    out_idx = args.index("-o")
+                    out_path = Path(args[out_idx + 1])
+                    out_path.parent.mkdir(parents=True, exist_ok=True)
+                    out_path.touch()  # Create empty file before failing
+                    return subprocess.CompletedProcess(args=[tool_binary, *args], returncode=1)
+                return subprocess.CompletedProcess(args=[tool_binary, *args], returncode=0)
+
+        toolchain = FailingToolchain()
+        engine = ISOEngine(
+            workdir,
+            target_root,
+            "test-suse",
+            {"architecture": "x86_64"},
+            mode="real",
+            toolchain=toolchain,
+        )
+
+        engine.generate_grub_bios_core()
+        core_img = iso_staging / "boot" / "grub2" / "core.img"
+        assert not core_img.exists()
+

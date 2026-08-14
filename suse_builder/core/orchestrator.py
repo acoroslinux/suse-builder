@@ -11,7 +11,7 @@ from suse_builder.core.zypper_manager import ZypperManager
 from suse_builder.core.customizer import SystemCustomizer
 from suse_builder.core.iso_engine import ISOEngine
 from suse_builder.core.disk_engine import DiskEngine
-from suse_builder.core.container_engine import ContainerEngine
+from suse_builder.core.container_engine import ContainerEngine, ContainerEngineError
 from suse_builder.core.config_loader import ConfigLoader
 from suse_builder.core.path_utils import resolve_from_project, unmount_all_under
 import logging
@@ -37,6 +37,7 @@ class BuildOrchestrator:
         live_profile: Optional[str] = None,
         live_user: Optional[str] = None,
         live_groups: Optional[List[str]] = None,
+        hostname: Optional[str] = None,
         output_format: str = "iso",
         compression: str = "zstd",
         mode: str = "mock",
@@ -61,6 +62,7 @@ class BuildOrchestrator:
         self.live_profile = live_profile
         self.live_user = live_user
         self.live_groups = live_groups or []
+        self.hostname = hostname
         self.output_format = output_format
         self.compression = compression
         self.mode = mode.lower()
@@ -99,6 +101,8 @@ class BuildOrchestrator:
         self.config["with_flathub"] = self.with_flathub
         self.config["with_zram"] = self.with_zram
         self.config["compression"] = self.compression
+        if self.hostname:
+            self.config["hostname"] = self.hostname
         if self.live_user:
             live_config = dict(self.config.get("live_user", {}))
             live_config["name"] = self.live_user
@@ -106,11 +110,20 @@ class BuildOrchestrator:
                 live_config["groups"] = self.live_groups
             self.config["live_user"] = live_config
 
+        essential_boot_pkgs = [
+            "grub2", "grub2-x86_64-efi", "grub2-i386-pc", "shim",
+            "dosfstools", "mtools", "efibootmgr", "syslinux"
+        ]
+        for pkg in essential_boot_pkgs:
+            if pkg not in self.config.get("packages", []):
+                self.config.setdefault("packages", []).append(pkg)
+
     def validate(self) -> Dict[str, Any]:
         errors = []
+        valid_formats = {"iso", "img", "qcow2", "vmdk", "vhd", "vdi", "tarball", "container"}
         if self.arch not in {"x86_64", "amd64", "i686", "i586", "aarch64", "riscv64"}:
             errors.append(f"Unsupported architecture: {self.arch}")
-        if self.output_format not in {"iso", "img", "tarball", "container"}:
+        if self.output_format not in valid_formats:
             errors.append(f"Unsupported output format: {self.output_format}")
         if not self.config.get("distro"):
             errors.append("Distro profile did not provide a distro identifier.")
@@ -186,13 +199,14 @@ class BuildOrchestrator:
             chroot.umount_virtual_fs()
 
             iso_engine = ISOEngine(self.workdir, self.target_root, name, self.config, self.mode, toolchain)
-            if self.output_format == "img":
+            if self.output_format in {"img", "qcow2", "vmdk", "vhd", "vdi"}:
                 disk_engine = DiskEngine(self.workdir, self.target_root, name, self.config, self.mode)
-                artifact = disk_engine.build_disk_image()
+                artifact = disk_engine.build_disk_image(target_format=self.output_format)
             elif self.output_format == "tarball":
                 artifact = iso_engine.build_tarball()
-            elif self.output_format == "container":
-                artifact = ContainerEngine(self.target_root, name, self.config, self.mode).build_oci_archive()
+            elif self.output_format in {"container", "oci"}:
+                container_engine = ContainerEngine(self.target_root, name, self.config, self.mode)
+                artifact = container_engine.build_oci_archive()
             else:
                 artifact = iso_engine.build_iso()
 
@@ -252,6 +266,10 @@ class BuildOrchestrator:
         logger.warning("No initramfs found in %s. Running dracut to generate live-capable initramfs.", boot_dir)
         dracut_cmd = r'''
 set -eu
+if ! command -v dracut >/dev/null 2>&1; then
+    echo "dracut is not installed in the target rootfs" >&2
+    exit 1
+fi
 found_kernel=0
 for kimg in /boot/vmlinuz-*; do
     [ -e "$kimg" ] || continue
@@ -279,16 +297,20 @@ fi
             )
 
     def _fix_output_permissions(self, output_dir: Path):
-        """Fix ownership of output directory and built ISOs from root to SUDO_USER if invoked via sudo."""
-        if not output_dir.exists():
-            return
+        """Fix ownership of output directory and workdir from root to SUDO_USER if invoked via sudo."""
         sudo_uid = os.environ.get("SUDO_UID")
         sudo_gid = os.environ.get("SUDO_GID")
-        if sudo_uid and sudo_gid:
-            try:
-                uid = int(sudo_uid)
-                gid = int(sudo_gid)
-                for root, dirs, files in os.walk(output_dir):
+        if not (sudo_uid and sudo_gid):
+            return
+
+        try:
+            uid = int(sudo_uid)
+            gid = int(sudo_gid)
+            targets = [output_dir, self.workdir]
+            for target_path in targets:
+                if not target_path.exists():
+                    continue
+                for root, dirs, files in os.walk(target_path):
                     for d in dirs:
                         try:
                             os.chown(os.path.join(root, d), uid, gid)
@@ -299,10 +321,10 @@ fi
                             os.chown(os.path.join(root, f), uid, gid)
                         except Exception:
                             pass
-                os.chown(output_dir, uid, gid)
-                logger.info(f"Updated ownership of {output_dir} to non-root user ({sudo_uid}:{sudo_gid})")
-            except Exception as e:
-                logger.warning(f"Could not update output ownership: {e}")
+                os.chown(target_path, uid, gid)
+            logger.info(f"Updated ownership of build artifacts and workdir to non-root user ({sudo_uid}:{sudo_gid})")
+        except Exception as e:
+            logger.warning(f"Could not update output ownership: {e}")
 
     def _generate_checksums(self, artifact_path: Path):
         if not artifact_path or not artifact_path.exists():
@@ -319,6 +341,13 @@ fi
         md5_path = artifact_path.with_name(f"{artifact_path.name}.md5")
         sha256_path.write_text(f"{sha256.hexdigest()}  {artifact_path.name}\n")
         md5_path.write_text(f"{md5.hexdigest()}  {artifact_path.name}\n")
+
+        # Generate package manifest file
+        manifest_path = artifact_path.with_name(f"{artifact_path.name}.manifest")
+        pkgs = sorted(self.config.get("packages", []))
+        manifest_lines = [f"# SUSE-Builder Package Manifest for {artifact_path.name}\n"]
+        manifest_lines.extend(f"{pkg}\n" for pkg in pkgs)
+        manifest_path.write_text("".join(manifest_lines))
 
     def _state_file_path(self) -> Path:
         return self.workdir / ".build_state.json"

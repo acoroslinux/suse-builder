@@ -47,3 +47,56 @@ def test_setup_live_users_creates_missing_groups_and_sets_password(tmp_path):
     assert ["groupadd", "-f", "wheel"] in chroot.calls
     assert any(isinstance(c, list) and c[:1] == ["useradd"] and c[-1] == "liveuser" for c in chroot.calls)
     assert any(isinstance(c, str) and "liveuser:live" in c and "chpasswd" in c for c in chroot.calls)
+
+
+def test_configure_system_defaults_writes_hostname_and_hosts(tmp_path):
+    chroot = DummyChroot()
+    chroot.target_root = tmp_path / "chroot"
+    config = {"hostname": "my-suse-box"}
+
+    customizer = SystemCustomizer(chroot, config)
+    customizer.configure_system_defaults()
+
+    hostname_file = chroot.target_root / "etc" / "hostname"
+    hosts_file = chroot.target_root / "etc" / "hosts"
+    assert hostname_file.read_text().strip() == "my-suse-box"
+    assert "127.0.1.1   my-suse-box.localdomain my-suse-box" in hosts_file.read_text()
+
+
+def test_configure_autologin_supports_gdm_and_lightdm(tmp_path):
+    chroot = DummyChroot()
+    chroot.target_root = tmp_path / "chroot"
+    config = {"display_manager": "gdm", "live_user": "liveuser"}
+
+    customizer = SystemCustomizer(chroot, config)
+    customizer.configure_autologin()
+
+    gdm_conf = chroot.target_root / "etc" / "gdm" / "custom.conf"
+    assert gdm_conf.exists()
+    assert "AutomaticLogin=liveuser" in gdm_conf.read_text()
+
+
+def test_configure_calamares_populates_skel(tmp_path):
+    chroot = DummyChroot()
+    chroot.target_root = tmp_path / "chroot"
+    config = {"with_calamares": True}
+
+    customizer = SystemCustomizer(chroot, config)
+    customizer.configure_calamares()
+
+    skel_desktop = chroot.target_root / "etc" / "skel" / "Desktop" / "install-suse.desktop"
+    assert skel_desktop.exists()
+    assert "calamares" in skel_desktop.read_text()
+
+
+def test_configure_flathub_uses_valid_gpg_url(tmp_path):
+    chroot = DummyChroot()
+    chroot.target_root = tmp_path / "chroot"
+    config = {"with_flathub": True}
+
+    customizer = SystemCustomizer(chroot, config)
+    customizer.configure_flathub()
+
+    flathub_file = chroot.target_root / "etc" / "flatpak" / "remotes.d" / "flathub.flatpakrepo"
+    assert flathub_file.exists()
+    assert "GPGKey=https://dl.flathub.org/repo/flathub.gpg" in flathub_file.read_text()

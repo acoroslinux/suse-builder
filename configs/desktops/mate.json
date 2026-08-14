@@ -1,5 +1,15 @@
 {
   "desktop": "mate",
   "display_manager": "lightdm",
-  "packages": ["patterns-mate-mate", "lightdm"]
+  "packages": [
+    "patterns-mate-mate",
+    "patterns-mate-mate_basis",
+    "lightdm",
+    "lightdm-gtk-greeter",
+    "mate-terminal",
+    "mate-power-manager",
+    "mate-media",
+    "mate-utils",
+    "mate-control-center"
+  ]
 }

@@ -8,6 +8,15 @@
     "curl",
     "wget",
     "ca-certificates",
-    "kernel-firmware-all"
+    "kernel-firmware-all",
+    "dbus-1",
+    "xdg-user-dirs",
+    "xdg-utils",
+    "live-boot",
+    "dracut",
+    "iputils",
+    "zstd",
+    "glibc-locale",
+    "ca-certificates-mozilla"
   ]
 }

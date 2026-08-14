@@ -2,5 +2,31 @@
   "live_user": {
     "name": "liveuser",
     "groups": ["wheel", "audio", "video", "users"]
-  }
+  },
+  "base_copy_files": [
+    {
+      "source": "skel",
+      "destination": "/etc/skel"
+    },
+    {
+      "source": "backgrounds",
+      "destination": "/usr/share/backgrounds"
+    },
+    {
+      "source": "lightdm/lightdm-gtk-greeter.conf",
+      "destination": "/etc/lightdm/lightdm-gtk-greeter.conf"
+    },
+    {
+      "source": "etc/os-release",
+      "destination": "/etc/os-release"
+    },
+    {
+      "source": "etc/issue",
+      "destination": "/etc/issue"
+    },
+    {
+      "source": "etc/opensuse_modern-release",
+      "destination": "/etc/opensuse_modern-release"
+    }
+  ]
 }

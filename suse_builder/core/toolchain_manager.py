@@ -72,7 +72,7 @@ class ToolchainManager:
 
     def missing_host_tools(self) -> List[str]:
         """Return executables missing for a real ISO build."""
-        required_tools = ["zypper", "mksquashfs", "xorriso", "mformat", "mcopy"]
+        required_tools = ["zypper", "mksquashfs", "xorriso", "mformat", "mcopy", "zstd"]
         missing = [tool for tool in required_tools if shutil.which(tool) is None]
         if not (shutil.which("grub2-mkstandalone") or shutil.which("grub-mkstandalone")):
             missing.append("grub2-mkstandalone (or grub-mkstandalone)")
@@ -141,7 +141,7 @@ class ToolchainManager:
         result = subprocess.run([*initial_args, "install", "-y", "gpg2"], check=False)
         if result.returncode:
             raise ToolchainManagerError("Could not install gpg2 in the isolated openSUSE build host.")
-        packages = ["xorriso", "squashfs", "mtools", "grub2-x86_64-efi", "grub2-i386-efi", "grub2-i386-pc"]
+        packages = ["squashfs", "zstd", "xorriso", "grub2", "grub2-x86_64-efi", "grub2-i386-efi", "mtools", "dosfstools", "qemu-tools", "syslinux", "fdisk", "util-linux", "ca-certificates"]
         result = subprocess.run(["chroot", str(self.build_host_dir), "zypper", "--non-interactive", "install", "-y", *packages], check=False)
         if result.returncode:
             raise ToolchainManagerError("Could not install ISO build tools in the isolated openSUSE build host.")

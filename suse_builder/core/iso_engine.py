@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -26,16 +27,53 @@ class ISOEngine:
         self.target_root = Path(target_root)
         self.output_name = output_name
         self.config = config
-        self.mode = mode
+        self.mode = mode.lower()
         self.toolchain = toolchain
         self.iso_staging = self.workdir / "iso_root"
         self.arch = config.get("architecture", "x86_64")
 
+    def get_bootloader_type(self) -> str:
+        bootloader = self.config.get("bootloader", {})
+        if isinstance(bootloader, str):
+            raw_type = bootloader
+        else:
+            raw_type = bootloader.get("type") if isinstance(bootloader, dict) else None
+        if not raw_type:
+            raw_type = self.config.get("bootloader_type") or self.config.get("boot", {}).get("type") or "grub2-hybrid"
+
+        normalized = str(raw_type).strip().lower().replace("_", "-")
+        type_map = {
+            "grub2-hybrid": "grub2-hybrid",
+            "hybrid": "grub2-hybrid",
+            "grub2-uefi": "grub2-uefi",
+            "uefi": "grub2-uefi",
+            "efi": "grub2-uefi",
+            "grub2-bios": "grub2-bios",
+            "bios": "grub2-bios",
+            "syslinux": "syslinux",
+            "isolinux": "syslinux",
+        }
+        return type_map.get(normalized, "grub2-hybrid")
+
+    def should_use_grub_efi(self) -> bool:
+        return self.get_bootloader_type() in {"grub2-hybrid", "grub2-uefi"}
+
+    def should_use_grub_bios(self) -> bool:
+        return self.get_bootloader_type() in {"grub2-hybrid", "grub2-bios"}
+
+    def should_use_syslinux(self) -> bool:
+        return self.get_bootloader_type() == "syslinux"
+
     def _get_iso_label(self) -> str:
-        return self.config.get("iso_label", self.config.get("system", {}).get("iso_label", "OPENSUSE_MODERN"))
+        raw_label = self.config.get("iso_label", self.config.get("system", {}).get("iso_label", "OPENSUSE_MODERN"))
+        sanitized = re.sub(r"[^A-Z0-9_]+", "_", raw_label.upper().strip())
+        sanitized = sanitized.strip("_")
+        return (sanitized or "OPENSUSE_MODERN")[:32]
 
     def _get_kernel_params(self) -> str:
-        return self.config.get("kernel_params", self.config.get("boot", {}).get("kernel_params", "root=live:/dev/disk/by-label/OPENSUSE_MODERN rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img quiet splash"))
+        iso_label = self._get_iso_label()
+        default_params = f"root=live:LABEL={iso_label} rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img quiet splash"
+        return self.config.get("kernel_params", self.config.get("boot", {}).get("kernel_params", default_params))
 
     def _find_kernel_and_initramfs(self) -> Tuple[Optional[str], Optional[str]]:
         boot_dir = self.target_root / "boot"
@@ -146,13 +184,19 @@ class ISOEngine:
             if grub_mk:
                 res = self.toolchain.run_tool(grub_mk, [
                     f"--format={fmt}",
+                    "--fonts=",
+                    "--locales=",
+                    "--themes=",
+                    "--install-modules=iso9660 search search_fs_file search_label configfile normal linux",
                     "--modules=iso9660 search search_fs_file search_label configfile normal linux",
                     "-o", str(out_binary), f"boot/grub/grub.cfg={embed_cfg}"
                 ], check=False)
-                if res.returncode == 0 and out_binary.exists():
+                if res.returncode == 0 and out_binary.exists() and out_binary.stat().st_size > 0:
                     built = True
+                elif out_binary.exists():
+                    out_binary.unlink(missing_ok=True)
 
-            if built or out_binary.exists():
+            if built or (out_binary.exists() and out_binary.stat().st_size > 0):
                 created_binaries.append((out_binary, boot_filename))
 
         if created_binaries:
@@ -161,18 +205,94 @@ class ISOEngine:
             for binary_path, filename in created_binaries:
                 shutil.copy2(binary_path, iso_efi_dir / filename)
 
-            self.toolchain.run_tool("truncate", ["-s", "32M", str(efiboot_img)], check=True)
-            if self.toolchain.use_isolated or (shutil.which("mformat") and shutil.which("mcopy")):
-                self.toolchain.run_tool("mformat", ["-i", str(efiboot_img), "-h", "32", "-t", "32", "-n", "64", "-c", "1", "::"], check=True)
-                self.toolchain.run_tool("mmd", ["-i", str(efiboot_img), "::/EFI"], check=True)
-                self.toolchain.run_tool("mmd", ["-i", str(efiboot_img), "::/EFI/BOOT"], check=True)
-                for binary_path, filename in created_binaries:
-                    self.toolchain.run_tool("mcopy", ["-i", str(efiboot_img), str(binary_path), f"::/EFI/BOOT/{filename}"], check=True)
+            # The efiboot.img must be a valid FAT filesystem. xorriso with
+            # -isohybrid-gpt-basdat exposes it as the ESP partition content in
+            # the ISO's GPT, so no partition table is needed inside the image.
+            total_size_mb = max(32, (sum(p.stat().st_size for p, _ in created_binaries) // (1024 * 1024)) + 16)
+            size_kb = total_size_mb * 1024
 
-        if not efiboot_img.exists():
+            if efiboot_img.exists():
+                efiboot_img.unlink()
+
+            mkfs_cmd = shutil.which("mkfs.vfat") or shutil.which("mkfs.msdos")
+            if mkfs_cmd:
+                self.toolchain.run_tool(mkfs_cmd, ["-C", str(efiboot_img), str(size_kb)], check=True)
+            else:
+                self.toolchain.run_tool("truncate", ["-s", f"{total_size_mb}M", str(efiboot_img)], check=True)
+                self.toolchain.run_tool("mformat", ["-i", str(efiboot_img), "-h", "32", "-t", "32", "-n", "64", "-c", "1", "::"], check=True)
+
+            self.toolchain.run_tool("mmd", ["-i", str(efiboot_img), "::/EFI"], check=True)
+            self.toolchain.run_tool("mmd", ["-i", str(efiboot_img), "::/EFI/BOOT"], check=True)
+            for binary_path, filename in created_binaries:
+                self.toolchain.run_tool("mcopy", ["-i", str(efiboot_img), str(binary_path), f"::/EFI/BOOT/{filename}"], check=True)
+
+        if not efiboot_img.exists() or efiboot_img.stat().st_size == 0:
             raise ISOEngineError("Could not create an EFI boot image; install GRUB and mtools support for the target architecture.")
 
         shutil.rmtree(efi_tmp, ignore_errors=True)
+
+    def generate_grub_bios_core(self):
+        """Build a standalone GRUB core.img for legacy BIOS boot.
+
+        The resulting core.img embeds a config that locates the ISO root and
+        chains to /boot/grub2/grub.cfg, and is referenced by the El Torito
+        BIOS boot entry in the ISO.
+        """
+        core_img = self.iso_staging / "boot" / "grub2" / "core.img"
+        core_img.parent.mkdir(parents=True, exist_ok=True)
+
+        if self.mode == "mock":
+            core_img.touch()
+            return
+
+        if core_img.exists() and core_img.stat().st_size > 0:
+            return
+
+        grub_mk = "grub2-mkstandalone" if (self.toolchain.use_isolated or shutil.which("grub2-mkstandalone")) else ("grub-mkstandalone" if shutil.which("grub-mkstandalone") else None)
+        if not grub_mk:
+            logger.warning("grub2-mkstandalone not found; skipping legacy BIOS boot image.")
+            return
+
+        iso_label = self._get_iso_label()
+        embed_cfg = self.workdir / "tmp_bios_grub.cfg"
+        embed_cfg.write_text(
+            "insmod search\n"
+            "insmod search_fs_file\n"
+            "insmod search_label\n"
+            "insmod iso9660\n"
+            "insmod configfile\n"
+            "if search --no-floppy --set=root --file /boot/mbrid; then\n"
+            "    set prefix=($root)/boot/grub2\n"
+            "    if [ -f ($root)/boot/grub2/grub.cfg ]; then\n"
+            "        configfile ($root)/boot/grub2/grub.cfg\n"
+            "    fi\n"
+            "fi\n"
+            f"if search --no-floppy --set=root --label {iso_label}; then\n"
+            "    if [ -f ($root)/boot/grub2/grub.cfg ]; then\n"
+            "        configfile ($root)/boot/grub2/grub.cfg\n"
+            "    fi\n"
+            "fi\n"
+        )
+
+        res = self.toolchain.run_tool(
+            grub_mk,
+            [
+                "--format=i386-pc",
+                "--fonts=",
+                "--locales=",
+                "--themes=",
+                "--install-modules=iso9660 search search_fs_file search_label configfile normal biosdisk part_msdos linux",
+                "--modules=iso9660 search search_fs_file search_label configfile normal biosdisk part_msdos linux",
+                "-o", str(core_img),
+                f"boot/grub/grub.cfg={embed_cfg}",
+            ],
+            check=False,
+        )
+        if res.returncode != 0 or not core_img.exists() or core_img.stat().st_size == 0:
+            if core_img.exists():
+                core_img.unlink(missing_ok=True)
+            logger.warning("Failed to build legacy BIOS core.img; ISO will only boot via UEFI.")
+        embed_cfg.unlink(missing_ok=True)
 
     def build_iso(self) -> Path:
         self.iso_staging.mkdir(parents=True, exist_ok=True)
@@ -212,18 +332,32 @@ class ISOEngine:
         iso_label = self._get_iso_label()
         kernel_params = self._get_kernel_params()
 
+        distro_name = self.config.get("distro_name", "openSUSE Modern")
         grub_menu = (
-            f"set default=0\nset timeout=5\n\n"
-            f"menuentry 'Start openSUSE Modern' {{\n"
+            "set default=0\nset timeout=5\n\n"
+            "insmod gzio\ninsmod part_gpt\ninsmod part_msdos\ninsmod ext2\ninsmod fat\ninsmod iso9660\ninsmod normal\n\n"
+            f"search --no-floppy --set=root --file /boot/{kernel}\n\n"
+            f"menuentry 'Start {distro_name}' {{\n"
+            f"    search --no-floppy --set=root --file /boot/{kernel}\n"
             f"    linux /boot/{kernel} {kernel_params}\n"
+            f"    initrd /boot/{initramfs}\n"
+            f"}}\n\n"
+            f"menuentry 'Start {distro_name} (Failsafe Mode)' {{\n"
+            f"    search --no-floppy --set=root --file /boot/{kernel}\n"
+            f"    linux /boot/{kernel} {kernel_params} nomodeset xci586 noapic acpi=off\n"
             f"    initrd /boot/{initramfs}\n"
             f"}}\n"
         )
-        (self.iso_staging / "boot" / "grub2" / "grub.cfg").write_text(grub_menu)
-        # Some GRUB builds still expect /boot/grub/grub.cfg as primary prefix.
-        (self.iso_staging / "boot" / "grub" / "grub.cfg").write_text(grub_menu)
+        for d in [
+            self.iso_staging / "boot" / "grub",
+            self.iso_staging / "boot" / "grub2",
+            self.iso_staging / "EFI" / "BOOT",
+        ]:
+            d.mkdir(parents=True, exist_ok=True)
+            (d / "grub.cfg").write_text(grub_menu)
 
         self.generate_grub_efi_image()
+        self.generate_grub_bios_core()
 
         iso_path = resolve_from_project(f"output/{self.output_name}.iso")
         iso_path.parent.mkdir(parents=True, exist_ok=True)
@@ -231,20 +365,35 @@ class ISOEngine:
         if self.mode == "mock":
             iso_path.touch()
         else:
-            self.toolchain.run_tool(
-                "xorriso",
-                [
-                    "-as", "mkisofs",
-                    "-V", iso_label,
-                    "-rock", "-joliet",
+            xorriso_args = [
+                "-as", "mkisofs",
+                "-V", iso_label,
+                "-rock", "-joliet",
+            ]
+            # El Torito BIOS boot image (GRUB core.img) so legacy BIOS can boot.
+            grub_core = self.iso_staging / "boot" / "grub2" / "core.img"
+            if grub_core.exists() and grub_core.stat().st_size > 0:
+                xorriso_args += [
+                    "-b", "boot/grub2/core.img",
+                    "-no-emul-boot",
+                    "-boot-load-size", "4",
+                    "-boot-info-table",
+                ]
+            # El Torito UEFI boot image (efiboot.img) so UEFI firmware can boot.
+            efiboot_img = self.iso_staging / "boot" / "grub2" / "efiboot.img"
+            if efiboot_img.exists() and efiboot_img.stat().st_size > 0:
+                xorriso_args += [
                     "-eltorito-alt-boot",
                     "-e", "boot/grub2/efiboot.img",
-                    "-no-emul-boot", "-isohybrid-gpt-basdat",
-                    "-o", str(iso_path),
-                    str(self.iso_staging),
-                ],
-                check=True
-            )
+                    "-no-emul-boot",
+                    "-isohybrid-gpt-basdat",
+                    "-append_partition", "2", "0xef", str(efiboot_img),
+                ]
+            xorriso_args += [
+                "-o", str(iso_path),
+                str(self.iso_staging),
+            ]
+            self.toolchain.run_tool("xorriso", xorriso_args, check=True)
 
         if not iso_path.exists() or (self.mode != "mock" and iso_path.stat().st_size == 0):
             raise ISOEngineError(f"xorriso did not create a valid ISO: {iso_path}")
@@ -257,5 +406,11 @@ class ISOEngine:
         if self.mode == "mock":
             tar_path.touch()
         else:
-            subprocess.run(["tar", "cJpf", str(tar_path), "-C", str(self.target_root), "."], check=True)
+            cmd = [
+                "tar", "cJpf", str(tar_path),
+                "--exclude=./proc/*", "--exclude=./sys/*", "--exclude=./dev/*",
+                "--exclude=./tmp/*", "--exclude=./run/*",
+                "-C", str(self.target_root), "."
+            ]
+            subprocess.run(cmd, check=True)
         return tar_path
