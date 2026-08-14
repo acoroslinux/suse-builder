@@ -177,6 +177,10 @@ class ISOEngine:
             "insmod search_fs_file\n"
             "insmod search_label\n"
             "insmod iso9660\n"
+            "insmod fat\n"
+            "insmod part_gpt\n"
+            "insmod part_msdos\n"
+            "insmod test\n"
             "insmod configfile\n"
             "if search --no-floppy --set=root --file /boot/mbrid; then\n"
             "    set prefix=($root)/boot/grub2\n"
@@ -203,6 +207,8 @@ class ISOEngine:
             "fi\n"
         )
 
+        efi_modules = "iso9660 search search_fs_file search_label configfile normal linux gzio part_gpt part_msdos fat ext2 test echo loadenv all_video gfxterm font gettext png terminal"
+
         created_binaries = []
         for fmt, boot_filename in formats_to_build:
             out_binary = efi_tmp / boot_filename
@@ -214,8 +220,8 @@ class ISOEngine:
                     "--fonts=",
                     "--locales=",
                     "--themes=",
-                    "--install-modules=iso9660 search search_fs_file search_label configfile normal linux",
-                    "--modules=iso9660 search search_fs_file search_label configfile normal linux",
+                    f"--install-modules={efi_modules}",
+                    f"--modules={efi_modules}",
                     "-o", str(out_binary), f"boot/grub/grub.cfg={embed_cfg}"
                 ], check=False)
                 if res.returncode == 0 and out_binary.exists() and out_binary.stat().st_size > 0:
@@ -259,67 +265,130 @@ class ISOEngine:
         shutil.rmtree(efi_tmp, ignore_errors=True)
 
     def generate_grub_bios_core(self):
-        """Build a standalone GRUB core.img for legacy BIOS boot.
-
-        The resulting core.img embeds a config that locates the ISO root and
-        chains to /boot/grub2/grub.cfg, and is referenced by the El Torito
-        BIOS boot entry in the ISO.
-        """
-        core_img = self.iso_staging / "boot" / "grub2" / "core.img"
-        core_img.parent.mkdir(parents=True, exist_ok=True)
+        """Build GRUB BIOS eltorito image (cdboot.img + core.img) for legacy BIOS boot."""
+        eltorito_img = self.iso_staging / "boot" / "grub2" / "eltorito.img"
+        eltorito_img.parent.mkdir(parents=True, exist_ok=True)
+        (self.iso_staging / "boot" / "grub").mkdir(parents=True, exist_ok=True)
 
         if self.mode == "mock":
-            core_img.touch()
+            eltorito_img.touch()
+            (self.iso_staging / "boot" / "grub2" / "core.img").touch()
             return
 
-        if core_img.exists() and core_img.stat().st_size > 0:
-            return
+        # 1. Search for i386-pc directory with cdboot.img
+        i386_dir = None
+        for candidate in [
+            self.target_root / "usr" / "lib" / "grub2" / "i386-pc",
+            self.target_root / "usr" / "share" / "grub2" / "i386-pc",
+            self.target_root / "usr" / "lib" / "grub" / "i386-pc",
+            self.workdir / "build_host" / "usr" / "lib" / "grub2" / "i386-pc",
+            self.workdir / "build_host" / "usr" / "lib" / "grub" / "i386-pc",
+            Path("/usr/lib/grub2/i386-pc"),
+            Path("/usr/lib/grub/i386-pc"),
+            Path("/usr/share/grub2/i386-pc"),
+        ]:
+            if candidate.exists() and (candidate / "cdboot.img").exists():
+                i386_dir = candidate
+                break
 
+        if i386_dir:
+            # Copy all GRUB modules to /boot/grub2/i386-pc and /boot/grub/i386-pc
+            for target_d in [self.iso_staging / "boot" / "grub2" / "i386-pc", self.iso_staging / "boot" / "grub" / "i386-pc"]:
+                target_d.mkdir(parents=True, exist_ok=True)
+                for item in i386_dir.glob("*"):
+                    if item.is_file() and item.suffix in [".mod", ".lst", ".pf2"]:
+                        shutil.copy2(item, target_d / item.name)
+
+            early_cfg = self.workdir / "early-bios-grub.cfg"
+            early_cfg.write_text(
+                "insmod search\n"
+                "insmod search_fs_file\n"
+                "insmod search_label\n"
+                "insmod iso9660\n"
+                "insmod fat\n"
+                "insmod part_gpt\n"
+                "insmod part_msdos\n"
+                "insmod test\n"
+                f"search --no-floppy --set=root --label {self._get_iso_label()}\n"
+                "if [ -z \"$root\" ]; then\n"
+                "    search --no-floppy --set=root --file /boot/mbrid\n"
+                "fi\n"
+                "if [ -z \"$root\" ]; then\n"
+                "    search --no-floppy --set=root --file /boot/vmlinuz\n"
+                "fi\n"
+                "set prefix=($root)/boot/grub2\n"
+                "if [ -f ($root)/boot/grub2/grub.cfg ]; then\n"
+                "    configfile ($root)/boot/grub2/grub.cfg\n"
+                "elif [ -f ($root)/boot/grub/grub.cfg ]; then\n"
+                "    configfile ($root)/boot/grub/grub.cfg\n"
+                "fi\n"
+            )
+
+            core_tmp = self.workdir / "core_tmp.img"
+            if core_tmp.exists():
+                core_tmp.unlink()
+
+            grub_mkimage = "grub2-mkimage" if (self.toolchain.use_isolated or shutil.which("grub2-mkimage")) else ("grub-mkimage" if shutil.which("grub-mkimage") else None)
+            if grub_mkimage:
+                res = self.toolchain.run_tool(
+                    grub_mkimage,
+                    [
+                        "-d", str(i386_dir),
+                        "-c", str(early_cfg),
+                        "-o", str(core_tmp),
+                        "-O", "i386-pc",
+                        "--prefix=/boot/grub2",
+                        "biosdisk", "iso9660", "search", "search_fs_file", "search_label", "configfile", "normal", "linux", "gzio", "part_gpt", "part_msdos", "fat", "ext2", "test", "echo", "loadenv", "all_video", "gfxterm", "font", "gettext", "png", "terminal"
+                    ],
+                    check=False
+                )
+                if res.returncode == 0 and core_tmp.exists() and core_tmp.stat().st_size > 0:
+                    cdboot_path = i386_dir / "cdboot.img"
+                    with open(eltorito_img, "wb") as f_out:
+                        f_out.write(cdboot_path.read_bytes())
+                        f_out.write(core_tmp.read_bytes())
+                    shutil.copy2(eltorito_img, self.iso_staging / "boot" / "grub" / "eltorito.img")
+                    shutil.copy2(core_tmp, self.iso_staging / "boot" / "grub2" / "core.img")
+                    logger.info(f"Successfully generated GRUB BIOS El Torito image: {eltorito_img}")
+                    return
+
+        # 2. Fallback: Standalone GRUB BIOS image via grub-mkstandalone
         grub_mk = "grub2-mkstandalone" if (self.toolchain.use_isolated or shutil.which("grub2-mkstandalone")) else ("grub-mkstandalone" if shutil.which("grub-mkstandalone") else None)
-        if not grub_mk:
-            logger.warning("grub2-mkstandalone not found; skipping legacy BIOS boot image.")
-            return
-
-        iso_label = self._get_iso_label()
-        embed_cfg = self.workdir / "tmp_bios_grub.cfg"
-        embed_cfg.write_text(
-            "insmod search\n"
-            "insmod search_fs_file\n"
-            "insmod search_label\n"
-            "insmod iso9660\n"
-            "insmod configfile\n"
-            "if search --no-floppy --set=root --file /boot/mbrid; then\n"
-            "    set prefix=($root)/boot/grub2\n"
-            "    if [ -f ($root)/boot/grub2/grub.cfg ]; then\n"
-            "        configfile ($root)/boot/grub2/grub.cfg\n"
-            "    fi\n"
-            "fi\n"
-            f"if search --no-floppy --set=root --label {iso_label}; then\n"
-            "    if [ -f ($root)/boot/grub2/grub.cfg ]; then\n"
-            "        configfile ($root)/boot/grub2/grub.cfg\n"
-            "    fi\n"
-            "fi\n"
-        )
-
-        res = self.toolchain.run_tool(
-            grub_mk,
-            [
-                "--format=i386-pc",
-                "--fonts=",
-                "--locales=",
-                "--themes=",
-                "--install-modules=iso9660 search search_fs_file search_label configfile normal biosdisk part_msdos linux",
-                "--modules=iso9660 search search_fs_file search_label configfile normal biosdisk part_msdos linux",
-                "-o", str(core_img),
-                f"boot/grub/grub.cfg={embed_cfg}",
-            ],
-            check=False,
-        )
-        if res.returncode != 0 or not core_img.exists() or core_img.stat().st_size == 0:
-            if core_img.exists():
-                core_img.unlink(missing_ok=True)
-            logger.warning("Failed to build legacy BIOS core.img; ISO will only boot via UEFI.")
-        embed_cfg.unlink(missing_ok=True)
+        if grub_mk:
+            iso_label = self._get_iso_label()
+            embed_cfg = self.workdir / "tmp_bios_grub.cfg"
+            embed_cfg.write_text(
+                "insmod search\n"
+                "insmod search_fs_file\n"
+                "insmod search_label\n"
+                "insmod iso9660\n"
+                "insmod configfile\n"
+                "search --no-floppy --set=root --file /boot/vmlinuz\n"
+                "set prefix=($root)/boot/grub2\n"
+                "if [ -f ($root)/boot/grub2/grub.cfg ]; then\n"
+                "    configfile ($root)/boot/grub2/grub.cfg\n"
+                "fi\n"
+            )
+            res = self.toolchain.run_tool(
+                grub_mk,
+                [
+                    "--format=i386-pc",
+                    "--fonts=",
+                    "--locales=",
+                    "--themes=",
+                    "--install-modules=iso9660 search search_fs_file search_label configfile normal biosdisk part_msdos part_gpt linux fat ext2 test",
+                    "-o", str(eltorito_img),
+                    f"boot/grub/grub.cfg={embed_cfg}",
+                ],
+                check=False,
+            )
+            if res.returncode != 0 or not eltorito_img.exists() or eltorito_img.stat().st_size == 0:
+                eltorito_img.unlink(missing_ok=True)
+                (self.iso_staging / "boot" / "grub" / "eltorito.img").unlink(missing_ok=True)
+                (self.iso_staging / "boot" / "grub2" / "core.img").unlink(missing_ok=True)
+            else:
+                shutil.copy2(eltorito_img, self.iso_staging / "boot" / "grub" / "eltorito.img")
+                shutil.copy2(eltorito_img, self.iso_staging / "boot" / "grub2" / "core.img")
 
     def build_iso(self) -> Path:
         self.iso_staging.mkdir(parents=True, exist_ok=True)
@@ -350,8 +419,27 @@ class ISOEngine:
             src_initramfs = self.target_root / "boot" / initramfs
             if src_kernel.exists():
                 shutil.copy2(src_kernel, self.iso_staging / "boot" / kernel)
+                shutil.copy2(src_kernel, self.iso_staging / "boot" / "vmlinuz")
             if src_initramfs.exists():
                 shutil.copy2(src_initramfs, self.iso_staging / "boot" / initramfs)
+                shutil.copy2(src_initramfs, self.iso_staging / "boot" / "initrd")
+
+        # Copy GRUB x86_64-efi modules to ISO
+        for mod_candidate in [
+            self.target_root / "usr" / "lib" / "grub2" / "x86_64-efi",
+            self.target_root / "usr" / "share" / "grub2" / "x86_64-efi",
+            self.target_root / "usr" / "lib" / "grub" / "x86_64-efi",
+            self.workdir / "build_host" / "usr" / "lib" / "grub2" / "x86_64-efi",
+            Path("/usr/lib/grub2/x86_64-efi"),
+            Path("/usr/lib/grub/x86_64-efi"),
+        ]:
+            if mod_candidate.exists():
+                for d in [self.iso_staging / "boot" / "grub2" / "x86_64-efi", self.iso_staging / "boot" / "grub" / "x86_64-efi"]:
+                    d.mkdir(parents=True, exist_ok=True)
+                    for mod_f in mod_candidate.glob("*"):
+                        if mod_f.is_file() and mod_f.suffix in [".mod", ".lst"]:
+                            shutil.copy2(mod_f, d / mod_f.name)
+                break
 
         squashfs_path = self.iso_staging / "LiveOS" / "squashfs.img"
         self._create_squashfs(self.target_root, squashfs_path)
@@ -460,26 +548,59 @@ class ISOEngine:
                 "-as", "mkisofs",
                 "-V", iso_label,
                 "-rock", "-joliet",
+                "-joliet-long",
+                "-cache-inodes",
             ]
-            # El Torito BIOS boot image (GRUB core.img) so legacy BIOS can boot.
-            grub_core = self.iso_staging / "boot" / "grub2" / "core.img"
-            if grub_core.exists() and grub_core.stat().st_size > 0:
+
+            # Locate MBR file if available
+            mbr_bin = None
+            for candidate in [
+                self.target_root / "usr" / "lib" / "grub2" / "i386-pc" / "boot_hybrid.img",
+                self.target_root / "usr" / "lib" / "grub" / "i386-pc" / "boot_hybrid.img",
+                self.target_root / "usr" / "lib" / "ISOLINUX" / "isohdpfx.bin",
+                self.target_root / "usr" / "lib" / "syslinux" / "isohdpfx.bin",
+                Path("/usr/lib/grub2/i386-pc/boot_hybrid.img"),
+                Path("/usr/lib/grub/i386-pc/boot_hybrid.img"),
+                Path("/usr/lib/ISOLINUX/isohdpfx.bin"),
+                Path("/usr/lib/syslinux/isohdpfx.bin"),
+            ]:
+                if candidate.exists():
+                    mbr_bin = candidate
+                    break
+
+            # BIOS boot image (eltorito.img or core.img)
+            eltorito_img = self.iso_staging / "boot" / "grub2" / "eltorito.img"
+            if not eltorito_img.exists():
+                eltorito_img = self.iso_staging / "boot" / "grub" / "eltorito.img"
+            if not eltorito_img.exists():
+                eltorito_img = self.iso_staging / "boot" / "grub2" / "core.img"
+
+            if self.should_use_grub_bios() and eltorito_img.exists() and eltorito_img.stat().st_size > 0:
+                if mbr_bin:
+                    if "boot_hybrid.img" in str(mbr_bin):
+                        xorriso_args.extend(["--grub2-boot-info", "--grub2-mbr", str(mbr_bin)])
+                    else:
+                        xorriso_args.extend(["-isohybrid-mbr", str(mbr_bin)])
                 xorriso_args += [
-                    "-b", "boot/grub2/core.img",
+                    "-b", str(eltorito_img.relative_to(self.iso_staging)),
                     "-no-emul-boot",
                     "-boot-load-size", "4",
                     "-boot-info-table",
                 ]
-            # El Torito UEFI boot image (efiboot.img) so UEFI firmware can boot.
+
+            # El Torito UEFI boot image (efiboot.img)
             efiboot_img = self.iso_staging / "boot" / "grub2" / "efiboot.img"
-            if efiboot_img.exists() and efiboot_img.stat().st_size > 0:
+            if not efiboot_img.exists():
+                efiboot_img = self.iso_staging / "boot" / "grub" / "efiboot.img"
+            if self.should_use_grub_efi() and efiboot_img.exists() and efiboot_img.stat().st_size > 0:
                 xorriso_args += [
                     "-eltorito-alt-boot",
-                    "-e", "boot/grub2/efiboot.img",
+                    "-e", str(efiboot_img.relative_to(self.iso_staging)),
                     "-no-emul-boot",
                     "-isohybrid-gpt-basdat",
                     "-append_partition", "2", "0xef", str(efiboot_img),
                 ]
+
             xorriso_args += [
                 "-o", str(iso_path),
                 str(self.iso_staging),
