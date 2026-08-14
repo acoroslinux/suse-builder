@@ -220,6 +220,42 @@ class SystemCustomizer:
             conf_file.parent.mkdir(parents=True, exist_ok=True)
             conf_file.write_text(lightdm_content)
 
+        # LXDM configuration
+        lxdm_conf = self.target_root / "etc" / "lxdm" / "lxdm.conf"
+        if lxdm_conf.parent.exists() or (self.target_root / "usr" / "sbin" / "lxdm").exists():
+            lxdm_conf.parent.mkdir(parents=True, exist_ok=True)
+            lxdm_conf.write_text(
+                f"[base]\nautologin={live_user}\nsession={session_name}\n\n"
+                f"[server]\n[display]\n[input]\n"
+            )
+
+        # SLiM configuration
+        slim_conf = self.target_root / "etc" / "slim.conf"
+        if slim_conf.parent.exists() or (self.target_root / "usr" / "bin" / "slim").exists():
+            slim_content = (
+                f"default_user        {live_user}\n"
+                "auto_login          yes\n"
+                f"login_cmd           exec /bin/sh - ~/.xinitrc {session_name}\n"
+            )
+            slim_conf.write_text(slim_content)
+
+        # Greetd (Wayland) configuration
+        greetd_conf = self.target_root / "etc" / "greetd" / "config.toml"
+        if greetd_conf.parent.exists() or (self.target_root / "usr" / "bin" / "greetd").exists():
+            greetd_conf.parent.mkdir(parents=True, exist_ok=True)
+            greetd_conf.write_text(
+                f"[terminal]\nvt = 1\n\n"
+                f"[default_session]\ncommand = \"{session_name}\"\nuser = \"{live_user}\"\n\n"
+                f"[initial_session]\ncommand = \"{session_name}\"\nuser = \"{live_user}\"\n"
+            )
+
+        # TTY1 Console Autologin (Getty fallback for live session without DM)
+        getty_dropin = self.target_root / "etc" / "systemd" / "system" / "getty@tty1.service.d" / "autologin.conf"
+        getty_dropin.parent.mkdir(parents=True, exist_ok=True)
+        getty_dropin.write_text(
+            f"[Service]\nExecStart=\nExecStart=-/sbin/agetty -o '-p -f -- \\\\u' --noclear --autologin {live_user} %I $TERM\n"
+        )
+
     def configure_zram(self):
         if self.chroot.mode == "mock":
             return
