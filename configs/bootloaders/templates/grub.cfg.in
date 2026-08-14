@@ -15,7 +15,7 @@ menuentry 'Start @@BOOT_TITLE@@ @@DESKTOP@@ (Live)' --class opensuse --class gnu
     if [ -z "$root" ]; then
         search --no-floppy --set=root --file /boot/vmlinuz
     fi
-    linux /boot/vmlinuz root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay.overlayfs=1 vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@ quiet splash
+    linux /boot/vmlinuz root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay=1 vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@ quiet splash
     initrd /boot/initrd
 }
 
@@ -24,7 +24,7 @@ menuentry 'Start @@BOOT_TITLE@@ @@DESKTOP@@ (Copy to RAM)' --class opensuse --cl
     if [ -z "$root" ]; then
         search --no-floppy --set=root --file /boot/vmlinuz
     fi
-    linux /boot/vmlinuz root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.ram=1 rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay.overlayfs=1 vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@ quiet splash
+    linux /boot/vmlinuz root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.ram=1 rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay=1 vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@ quiet splash
     initrd /boot/initrd
 }
 
@@ -33,7 +33,7 @@ menuentry 'Start @@BOOT_TITLE@@ @@DESKTOP@@ (Safe Graphics - nomodeset)' --class
     if [ -z "$root" ]; then
         search --no-floppy --set=root --file /boot/vmlinuz
     fi
-    linux /boot/vmlinuz root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay.overlayfs=1 nomodeset xci586 noapic acpi=off vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@
+    linux /boot/vmlinuz root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay=1 nomodeset xci586 noapic acpi=off vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@
     initrd /boot/initrd
 }
 

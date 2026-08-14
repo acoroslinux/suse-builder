@@ -260,10 +260,7 @@ class BuildOrchestrator:
                 f"No kernel found in {boot_dir}; expected a file starting with 'vmlinuz'."
             )
 
-        if initrds:
-            return
-
-        logger.warning("No initramfs found in %s. Running dracut to generate live-capable initramfs.", boot_dir)
+        logger.info("Generating live-capable initramfs using dracut...")
         dracut_cmd = r'''
 set -eu
 if ! command -v dracut >/dev/null 2>&1; then
@@ -277,7 +274,7 @@ for kimg in /boot/vmlinuz-*; do
     kver="${kimg#/boot/vmlinuz-}"
     dracut --force --no-hostonly \
       --kver "$kver" \
-      --add "dmsquash-live dmsquash-live-autooverlay livenet pollcdrom base rootfs-block udev-rules" \
+      --add "dmsquash-live dmsquash-live-autooverlay pollcdrom base rootfs-block udev-rules" \
       --add-drivers "squashfs loop overlay iso9660 isofs dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic virtio_blk virtio_scsi virtio_pci uas usb_storage nvme" \
       "/boot/initrd-$kver"
 done

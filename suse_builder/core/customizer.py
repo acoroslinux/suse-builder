@@ -456,6 +456,20 @@ class SystemCustomizer:
         rel_file = etc_dir / "opensuse_modern-release"
         rel_file.write_text("openSUSE Modern release 2026.08\n")
 
+    def configure_dracut(self):
+        if self.chroot.mode == "mock":
+            return
+        dracut_conf_dir = self.target_root / "etc" / "dracut.conf.d"
+        dracut_conf_dir.mkdir(parents=True, exist_ok=True)
+        live_conf = dracut_conf_dir / "02-live.conf"
+        live_conf.write_text(
+            '# openSUSE Live Dracut Configuration\n'
+            'add_dracutmodules+=" dmsquash-live dmsquash-live-autooverlay pollcdrom base rootfs-block udev-rules "\n'
+            'add_drivers+=" squashfs loop overlay iso9660 isofs dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic virtio_blk virtio_scsi virtio_pci uas usb_storage nvme "\n'
+            'hostonly="no"\n'
+        )
+        logger.info("Dracut live configuration written to /etc/dracut.conf.d/02-live.conf.")
+
     def configure_live_environment(self):
         self.configure_locales()
         self.setup_live_users()
@@ -470,6 +484,7 @@ class SystemCustomizer:
         self.configure_calamares()
         self.configure_artwork()
         self.copy_custom_files()
+        self.configure_dracut()
         self.configure_machine_id()
         self.fix_home_permissions()
 

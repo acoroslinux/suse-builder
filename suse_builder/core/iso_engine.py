@@ -72,7 +72,7 @@ class ISOEngine:
 
     def _get_kernel_params(self) -> str:
         iso_label = self._get_iso_label()
-        default_params = f"root=live:CDLABEL={iso_label} rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay.overlayfs=1 quiet splash"
+        default_params = f"root=live:CDLABEL={iso_label} rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay=1 quiet splash"
         return self.config.get("kernel_params", self.config.get("boot", {}).get("kernel_params", default_params))
 
     def _get_template_placeholders(self) -> Dict[str, str]:

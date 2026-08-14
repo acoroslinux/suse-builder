@@ -22,19 +22,19 @@ MENU COLOR border       * #00000000 #00000000 none
 MENU COLOR sel          * #ffffffff #FF5255FF *
 
 LABEL live
-  MENU LABEL Start @@BOOT_TITLE@@ @@DESKTOP@@ (Live)
+  MENU LABEL @@BOOT_TITLE@@ @@DESKTOP@@ (Standard Live)
   KERNEL /boot/vmlinuz
-  APPEND initrd=/boot/initrd root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay.overlayfs=1 vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@ quiet splash
+  APPEND initrd=/boot/initrd root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay=1 vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@ quiet splash
 
 LABEL liveram
-  MENU LABEL Start @@BOOT_TITLE@@ @@DESKTOP@@ (Copy to RAM)
+  MENU LABEL @@BOOT_TITLE@@ @@DESKTOP@@ (Copy to RAM)
   KERNEL /boot/vmlinuz
-  APPEND initrd=/boot/initrd root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.ram=1 rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay.overlayfs=1 vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@ quiet splash
+  APPEND initrd=/boot/initrd root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.ram=1 rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay=1 vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@ quiet splash
 
 LABEL livenogfx
-  MENU LABEL Start @@BOOT_TITLE@@ @@DESKTOP@@ (Safe Graphics - nomodeset)
+  MENU LABEL @@BOOT_TITLE@@ @@DESKTOP@@ (Safe Graphics - nomodeset)
   KERNEL /boot/vmlinuz
-  APPEND initrd=/boot/initrd root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay.overlayfs=1 nomodeset xci586 noapic acpi=off vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@
+  APPEND initrd=/boot/initrd root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.overlay=1 nomodeset xci586 noapic acpi=off vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@
 
 LABEL c
   MENU LABEL Boot first HD found by BIOS
