@@ -141,7 +141,7 @@ class ToolchainManager:
         result = subprocess.run([*initial_args, "install", "-y", "gpg2"], check=False)
         if result.returncode:
             raise ToolchainManagerError("Could not install gpg2 in the isolated openSUSE build host.")
-        packages = ["squashfs", "zstd", "xorriso", "grub2", "grub2-x86_64-efi", "grub2-i386-efi", "mtools", "dosfstools", "qemu-tools", "syslinux", "fdisk", "util-linux", "ca-certificates"]
+        packages = ["squashfs", "zstd", "xorriso", "grub2", "grub2-x86_64-efi", "grub2-i386-efi", "mtools", "dosfstools", "qemu-tools", "syslinux", "util-linux", "ca-certificates"]
         result = subprocess.run(["chroot", str(self.build_host_dir), "zypper", "--non-interactive", "install", "-y", *packages], check=False)
         if result.returncode:
             raise ToolchainManagerError("Could not install ISO build tools in the isolated openSUSE build host.")
