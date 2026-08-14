@@ -278,6 +278,7 @@ for kimg in /boot/vmlinuz-*; do
     dracut --force --no-hostonly \
       --kver "$kver" \
       --add "dmsquash-live dmsquash-live-autooverlay livenet pollcdrom" \
+      --add-drivers "squashfs loop overlay iso9660 dm_mod" \
       "/boot/initrd-$kver"
 done
 if [ "$found_kernel" -eq 0 ]; then
