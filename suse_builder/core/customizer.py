@@ -26,7 +26,7 @@ class SystemCustomizer:
             cfg_groups = []
 
         # Keep backward compatibility with older top-level live_groups configs.
-        groups = self.config.get("live_groups") or cfg_groups or ["wheel", "audio", "video", "users"]
+        groups = self.config.get("live_groups") or cfg_groups or ["wheel", "audio", "video", "render", "input", "users"]
         groups_str = ",".join(groups)
 
         try:
@@ -36,24 +36,29 @@ class SystemCustomizer:
                     self.chroot.run_in_chroot(["groupadd", "-f", str(group)], check=False)
 
             self.chroot.run_in_chroot(["groupadd", "-f", "nopasswdlogin"], check=False)
-            create_user = self.chroot.run_in_chroot(["useradd", "-m", "-s", "/bin/bash", "-G", f"{groups_str},nopasswdlogin", str(live_user)], check=False)
+            create_user = self.chroot.run_in_chroot(["useradd", "-m", "-s", "/bin/bash", "-g", "users", "-G", f"{groups_str},nopasswdlogin", str(live_user)], check=False)
             if create_user.returncode != 0:
-                self.chroot.run_in_chroot(["usermod", "-aG", "nopasswdlogin", str(live_user)], check=False)
+                self.chroot.run_in_chroot(["usermod", "-aG", f"{groups_str},nopasswdlogin", str(live_user)], check=False)
 
             self.chroot.run_in_chroot(f"echo '{live_user}:{live_password}' | chpasswd", check=False)
             self.chroot.run_in_chroot(f"echo 'root:{live_password}' | chpasswd", check=False)
-            self.chroot.run_in_chroot(["passwd", "-d", str(live_user)], check=False)
             self.chroot.run_in_chroot(["passwd", "-u", str(live_user)], check=False)
             self.chroot.run_in_chroot(["passwd", "-u", "root"], check=False)
-            self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:users", f"/home/{live_user}"], check=False)
-            self.chroot.run_in_chroot(["chmod", "755", f"/home/{live_user}"], check=False)
+
+            home_dir = self.target_root / "home" / live_user
+            if home_dir.exists():
+                self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:users", f"/home/{live_user}"], check=False)
+                self.chroot.run_in_chroot(["chmod", "755", f"/home/{live_user}"], check=False)
         except Exception:
             logger.exception("Could not fully configure live user %s", live_user)
 
-        sudoers_file = self.target_root / "etc" / "sudoers.d" / "live_user_nopasswd"
+        sudoers_file = self.target_root / "etc" / "sudoers.d" / "10-liveuser"
         sudoers_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(sudoers_file, "w") as f:
-            f.write(f"{live_user} ALL=(ALL) NOPASSWD: ALL\n")
+        sudoers_file.write_text(f"{live_user} ALL=(ALL) NOPASSWD: ALL\n%wheel ALL=(ALL) NOPASSWD: ALL\n")
+        try:
+            sudoers_file.chmod(0o440)
+        except Exception:
+            pass
 
     def configure_system_defaults(self):
         if self.chroot.mode == "mock":
