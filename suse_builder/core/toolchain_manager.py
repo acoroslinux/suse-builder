@@ -141,10 +141,12 @@ class ToolchainManager:
         result = subprocess.run([*initial_args, "install", "-y", "gpg2"], check=False)
         if result.returncode:
             raise ToolchainManagerError("Could not install gpg2 in the isolated openSUSE build host.")
-        packages = ["squashfs", "zstd", "xorriso", "grub2", "grub2-x86_64-efi", "grub2-i386-efi", "mtools", "dosfstools", "qemu-tools", "syslinux", "util-linux", "ca-certificates", "isomd5sum"]
+        packages = ["squashfs", "zstd", "xorriso", "grub2", "grub2-x86_64-efi", "grub2-i386-efi", "mtools", "dosfstools", "qemu-tools", "syslinux", "util-linux", "ca-certificates"]
         result = subprocess.run(["chroot", str(self.build_host_dir), "zypper", "--non-interactive", "install", "-y", *packages], check=False)
         if result.returncode:
             raise ToolchainManagerError("Could not install ISO build tools in the isolated openSUSE build host.")
+        # Attempt installing optional utilities without failing if unavailable
+        subprocess.run(["chroot", str(self.build_host_dir), "zypper", "--non-interactive", "install", "-y", "isomd5sum"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def mount_virtual_fs(self):
         if self.mode == "mock":
