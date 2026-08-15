@@ -629,7 +629,7 @@ class ISOEngine:
             # If implantisomd5 is available, embed a valid MD5 checksum for media check integrity
             if shutil.which("implantisomd5"):
                 subprocess.run(["implantisomd5", str(iso_path)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            else:
+            elif (self.workdir.parent / "build_host" / "usr" / "bin" / "implantisomd5").exists():
                 try:
                     self.toolchain.run_in_build_host(["implantisomd5", str(iso_path)], check=False)
                 except Exception:
