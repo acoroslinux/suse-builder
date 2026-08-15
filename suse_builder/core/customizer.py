@@ -139,6 +139,13 @@ class SystemCustomizer:
         if dm:
             auto_services.extend(["display-manager"])
 
+        # Uninstall problematic legacy video drivers that crash Xorg in VMs
+        try:
+            logger.info("Removing legacy xf86-video-vmware to prevent Xorg crashes...")
+            self.chroot.run_in_chroot(["zypper", "--non-interactive", "rm", "xf86-video-vmware"], check=False)
+        except Exception as e:
+            logger.warning(f"Failed to remove xf86-video-vmware: {e}")
+
         for auto_svc in auto_services:
             if auto_svc not in services_to_enable:
                 for search_dir in ["usr/lib/systemd/system", "lib/systemd/system"]:
