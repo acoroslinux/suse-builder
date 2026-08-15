@@ -219,15 +219,29 @@ class SystemCustomizer:
             "session     sufficient  pam_permit.so\n"
         )
         for pam_service in [
-            "lightdm", "lightdm-autologin",
-            "sddm", "sddm-autologin",
-            "gdm", "gdm-autologin", "gdm-password", "gdm3",
-            "lxdm", "lxdm-autologin",
-            "slim"
+            "lightdm-autologin",
+            "sddm-autologin",
+            "gdm-autologin", "gdm-password",
+            "lxdm-autologin",
         ]:
             pam_file = self.target_root / "etc" / "pam.d" / pam_service
             pam_file.parent.mkdir(parents=True, exist_ok=True)
             pam_file.write_text(pam_autologin_content)
+            try:
+                pam_file.chmod(0o644)
+            except Exception:
+                pass
+
+        # Write fallback PAM for standalone DMs if not provided by distro package
+        for standalone_dm in ["lightdm", "sddm", "gdm", "gdm3", "lxdm", "slim"]:
+            pam_file = self.target_root / "etc" / "pam.d" / standalone_dm
+            if not pam_file.exists():
+                pam_file.parent.mkdir(parents=True, exist_ok=True)
+                pam_file.write_text(pam_autologin_content)
+                try:
+                    pam_file.chmod(0o644)
+                except Exception:
+                    pass
 
         # SDDM configuration
         for sddm_rel in ["etc/sddm.conf.d/autologin.conf", "etc/sddm.conf"]:
@@ -550,7 +564,117 @@ class SystemCustomizer:
         self.copy_custom_files()
         self.configure_dracut()
         self.configure_machine_id()
-        self.fix_home_permissions()
+        self.fix_system_permissions()
+
+    def fix_home_permissions(self):
+        self.fix_system_permissions()
+
+    def fix_system_permissions(self):
+        """Fix permissions and ownership on critical system files, shadow, PAM, sudoers, and home."""
+        if self.chroot.mode == "mock":
+            return
+
+        live_user = self.config.get("live_user", "liveuser")
+        if isinstance(live_user, dict):
+            live_user = live_user.get("name", "liveuser")
+
+        # 1. Shadow and password databases
+        for f, perm in [
+            ("etc/passwd", 0o644),
+            ("etc/group", 0o644),
+            ("etc/shadow", 0o640),
+            ("etc/gshadow", 0o640),
+            ("etc/shadow-", 0o600),
+            ("etc/gshadow-", 0o600),
+            ("etc/subuid", 0o644),
+            ("etc/subgid", 0o644),
+            ("etc/sudoers", 0o440),
+        ]:
+            p = self.target_root / f
+            if p.exists():
+                try:
+                    p.chmod(perm)
+                except Exception:
+                    pass
+
+        # 2. Sudoers.d drop-in permissions
+        sudoers_d = self.target_root / "etc" / "sudoers.d"
+        if sudoers_d.is_dir():
+            try:
+                sudoers_d.chmod(0o750)
+                for sf in sudoers_d.iterdir():
+                    if sf.is_file():
+                        sf.chmod(0o440)
+            except Exception:
+                pass
+
+        # 3. PAM directory and files
+        pamd = self.target_root / "etc" / "pam.d"
+        if pamd.is_dir():
+            try:
+                pamd.chmod(0o755)
+                for pf in pamd.iterdir():
+                    if pf.is_file():
+                        pf.chmod(0o644)
+            except Exception:
+                pass
+
+        # 4. Polkit rules permissions
+        polkit_d = self.target_root / "etc" / "polkit-1" / "rules.d"
+        if polkit_d.is_dir():
+            try:
+                polkit_d.chmod(0o755)
+                for rf in polkit_d.iterdir():
+                    if rf.is_file():
+                        rf.chmod(0o644)
+            except Exception:
+                pass
+
+        # 5. Setuid binaries for sudo / su / pkexec
+        for suid_bin in ["usr/bin/sudo", "usr/bin/su", "usr/bin/pkexec", "usr/bin/newuidmap", "usr/bin/newgidmap"]:
+            bp = self.target_root / suid_bin
+            if bp.exists():
+                try:
+                    self.chroot.run_in_chroot(["chmod", "4755", f"/{suid_bin}"], check=False)
+                    self.chroot.run_in_chroot(["chown", "root:root", f"/{suid_bin}"], check=False)
+                except Exception:
+                    pass
+
+        # 6. Display manager runtime directories
+        for dm_dir in ["var/lib/lightdm", "var/lib/lightdm-data", "var/log/lightdm", "var/cache/lightdm"]:
+            dp = self.target_root / dm_dir
+            if dp.exists():
+                try:
+                    self.chroot.run_in_chroot(["chown", "-R", "lightdm:lightdm", f"/{dm_dir}"], check=False)
+                    self.chroot.run_in_chroot(["chmod", "775", f"/{dm_dir}"], check=False)
+                except Exception:
+                    pass
+
+        for sddm_dir in ["var/lib/sddm"]:
+            dp = self.target_root / sddm_dir
+            if dp.exists():
+                try:
+                    self.chroot.run_in_chroot(["chown", "-R", "sddm:sddm", f"/{sddm_dir}"], check=False)
+                except Exception:
+                    pass
+
+        # 7. User home directory
+        home_dir = self.target_root / "home" / live_user
+        if home_dir.exists():
+            try:
+                self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:users", f"/home/{live_user}"], check=False)
+                self.chroot.run_in_chroot(["chmod", "755", f"/home/{live_user}"], check=False)
+            except Exception as e:
+                logger.warning(f"Could not fix permissions on /home/{live_user}: {e}")
+
+        # 8. Temporary directories sticky bit
+        for tmp_path in ["/tmp", "/var/tmp"]:
+            try:
+                self.chroot.run_in_chroot(["chmod", "1777", tmp_path], check=False)
+            except Exception:
+                pass
+
+        logger.info("Fixed system permissions on shadow, PAM, sudoers, display manager, and user home.")
 
     def configure_machine_id(self):
         machine_id_path = self.chroot.target_root / "etc" / "machine-id"
