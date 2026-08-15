@@ -94,17 +94,76 @@ class SystemCustomizer:
         if isinstance(services, dict):
             services = services.get("enable", [])
         services_to_enable = list(services)
-        for auto_svc in ["NetworkManager"]:
+
+        dm = self.config.get("display_manager")
+        if not dm:
+            if (self.target_root / "usr" / "bin" / "sddm").exists():
+                dm = "sddm"
+            elif (self.target_root / "usr" / "sbin" / "gdm").exists() or (self.target_root / "usr" / "bin" / "gdm").exists():
+                dm = "gdm"
+            elif (self.target_root / "usr" / "sbin" / "lightdm").exists() or (self.target_root / "usr" / "bin" / "lightdm").exists():
+                dm = "lightdm"
+
+        auto_services = ["NetworkManager", "dbus"]
+        if dm:
+            auto_services.extend([dm, "display-manager"])
+
+        for auto_svc in auto_services:
             if auto_svc not in services_to_enable:
-                unit = self.target_root / "usr" / "lib" / "systemd" / "system" / f"{auto_svc}.service"
-                if unit.exists():
-                    services_to_enable.append(auto_svc)
+                for search_dir in ["usr/lib/systemd/system", "lib/systemd/system"]:
+                    unit = self.target_root / search_dir / f"{auto_svc}.service"
+                    if unit.exists():
+                        services_to_enable.append(auto_svc)
+                        break
+
+        # Set default systemd target to graphical.target for desktop environments
+        if self.config.get("desktop") or dm:
+            try:
+                self.chroot.run_in_chroot(["systemctl", "set-default", "graphical.target"], check=False)
+            except Exception:
+                pass
+
+            default_target = self.target_root / "etc" / "systemd" / "system" / "default.target"
+            default_target.parent.mkdir(parents=True, exist_ok=True)
+            if default_target.exists() or default_target.is_symlink():
+                default_target.unlink()
+            default_target.symlink_to("/usr/lib/systemd/system/graphical.target")
+
+        # Enable services via systemctl and ensure systemd wants symlinks
+        graphical_wants = self.target_root / "etc" / "systemd" / "system" / "graphical.target.wants"
+        multi_user_wants = self.target_root / "etc" / "systemd" / "system" / "multi-user.target.wants"
+        graphical_wants.mkdir(parents=True, exist_ok=True)
+        multi_user_wants.mkdir(parents=True, exist_ok=True)
 
         for svc in services_to_enable:
             try:
                 self.chroot.run_in_chroot(["systemctl", "enable", str(svc)], check=False)
             except Exception:
                 pass
+
+            # Create fallback symlinks for graphical target and DM
+            for s_dir in ["/usr/lib/systemd/system", "/lib/systemd/system"]:
+                s_file = self.target_root / s_dir.lstrip("/") / f"{svc}.service"
+                if s_file.exists():
+                    wants_link = graphical_wants / f"{svc}.service"
+                    if not wants_link.exists() and not wants_link.is_symlink():
+                        try:
+                            wants_link.symlink_to(f"{s_dir}/{svc}.service")
+                        except Exception:
+                            pass
+                    break
+
+        if dm:
+            dm_link = self.target_root / "etc" / "systemd" / "system" / "display-manager.service"
+            if not dm_link.exists() and not dm_link.is_symlink():
+                for s_dir in ["/usr/lib/systemd/system", "/lib/systemd/system"]:
+                    dm_unit = self.target_root / s_dir.lstrip("/") / f"{dm}.service"
+                    if dm_unit.exists():
+                        try:
+                            dm_link.symlink_to(f"{s_dir}/{dm}.service")
+                        except Exception:
+                            pass
+                        break
 
     def _detect_desktop_session(self) -> str:
         session = self.config.get("desktop_session") or self.config.get("desktop")
@@ -219,6 +278,10 @@ class SystemCustomizer:
             conf_file = self.target_root / conf_rel
             conf_file.parent.mkdir(parents=True, exist_ok=True)
             conf_file.write_text(lightdm_content)
+
+        # Ensure LightDM directories exist
+        for ldir in ["var/lib/lightdm", "var/lib/lightdm-data", "var/log/lightdm", "var/cache/lightdm"]:
+            (self.target_root / ldir).mkdir(parents=True, exist_ok=True)
 
         # LXDM configuration
         lxdm_conf = self.target_root / "etc" / "lxdm" / "lxdm.conf"
