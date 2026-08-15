@@ -24,6 +24,7 @@
     "iputils",
     "zstd",
     "glibc-locale",
-    "ca-certificates-mozilla"
+    "ca-certificates-mozilla",
+    "isomd5sum"
   ]
 }

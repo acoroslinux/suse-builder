@@ -36,6 +36,11 @@ LABEL livenogfx
   KERNEL /boot/vmlinuz
   APPEND initrd=/boot/initrd root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.check=0 nomodeset xci586 noapic acpi=off vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@
 
+LABEL mediacheck
+  MENU LABEL @@BOOT_TITLE@@ @@DESKTOP@@ (Verify Media Integrity)
+  KERNEL /boot/vmlinuz
+  APPEND initrd=/boot/initrd root=live:CDLABEL=@@VOL_ID@@ rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img rd.live.check=1 vconsole.keymap=@@KEYMAP@@ locale.LANG=@@LOCALE@@
+
 LABEL c
   MENU LABEL Boot first HD found by BIOS
   COM32 chain.c32
