@@ -619,6 +619,13 @@ class ISOEngine:
             ]
             self.toolchain.run_tool("xorriso", xorriso_args, check=True)
 
+            # Pad ISO with 2MB of zero sectors to prevent ATAPI/IDE CD-ROM readahead timeouts (sr0 / ata2.00)
+            try:
+                with open(iso_path, "ab") as f:
+                    f.write(b"\x00" * (2 * 1024 * 1024))
+            except Exception as e:
+                logger.warning(f"Could not append zero padding to ISO: {e}")
+
         if not iso_path.exists() or (self.mode != "mock" and iso_path.stat().st_size == 0):
             raise ISOEngineError(f"xorriso did not create a valid ISO: {iso_path}")
 
