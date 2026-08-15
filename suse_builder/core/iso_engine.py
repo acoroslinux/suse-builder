@@ -624,7 +624,8 @@ class ISOEngine:
                 subprocess.run(["tagmedia", "--digest", "sha256", "--check", "--pad", "0", str(iso_path)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             elif (self.workdir.parent / "build_host" / "usr" / "bin" / "tagmedia").exists():
                 try:
-                    self.toolchain.run_in_build_host(["tagmedia", "--digest", "sha256", "--check", "--pad", "0", str(iso_path)], check=False)
+                    chroot_iso = f"/project/output/{iso_path.name}"
+                    self.toolchain.run_in_build_host(["env", "LC_ALL=C", "tagmedia", "--digest", "sha256", "--check", "--pad", "0", chroot_iso], check=False)
                 except Exception:
                     pass
             elif shutil.which("implantisomd5"):
