@@ -137,7 +137,7 @@ class SystemCustomizer:
 
         auto_services = ["NetworkManager", "dbus"]
         if dm:
-            auto_services.extend([dm, "display-manager"])
+            auto_services.extend(["display-manager"])
 
         for auto_svc in auto_services:
             if auto_svc not in services_to_enable:
@@ -186,29 +186,16 @@ class SystemCustomizer:
                     break
 
         if dm:
-            dm_link = self.target_root / "etc" / "systemd" / "system" / "display-manager.service"
-            if dm_link.exists() or dm_link.is_symlink():
-                dm_link.unlink()
-            for s_dir in ["/usr/lib/systemd/system", "/lib/systemd/system"]:
-                dm_unit = self.target_root / s_dir.lstrip("/") / f"{dm}.service"
-                if dm_unit.exists():
-                    try:
-                        dm_link.symlink_to(f"{s_dir}/{dm}.service")
-                    except Exception:
-                        pass
-                    break
-
-            dm_wants = graphical_wants / "display-manager.service"
-            if dm_wants.exists() or dm_wants.is_symlink():
-                dm_wants.unlink()
-            for s_dir in ["/usr/lib/systemd/system", "/lib/systemd/system"]:
-                dm_unit = self.target_root / s_dir.lstrip("/") / f"{dm}.service"
-                if dm_unit.exists():
-                    try:
-                        dm_wants.symlink_to(f"{s_dir}/{dm}.service")
-                    except Exception:
-                        pass
-                    break
+            sysconfig_dm = self.target_root / "etc" / "sysconfig" / "displaymanager"
+            if sysconfig_dm.exists():
+                content = sysconfig_dm.read_text()
+                # Use a simple regex-like approach to replace DISPLAYMANAGER=""
+                import re
+                content = re.sub(r'^DISPLAYMANAGER=".*"$', f'DISPLAYMANAGER="{dm}"', content, flags=re.MULTILINE)
+                sysconfig_dm.write_text(content)
+            else:
+                sysconfig_dm.parent.mkdir(parents=True, exist_ok=True)
+                sysconfig_dm.write_text(f'DISPLAYMANAGER="{dm}"\n')
 
     def _detect_desktop_session(self) -> str:
         # Check actual installed sessions first
@@ -646,26 +633,13 @@ class SystemCustomizer:
             'filesystems+=" squashfs iso9660 overlay vfat ext4 "\n'
             'hostonly="no"\n'
         )
-        # Mask checkisomd5 service and udev trigger rule
-        systemd_dir = self.target_root / "etc" / "systemd" / "system"
-        systemd_dir.mkdir(parents=True, exist_ok=True)
-        for unit_name in ["checkisomd5@.service", "checkisomd5.service"]:
-            mask_link = systemd_dir / unit_name
-            if not mask_link.exists():
-                try:
-                    mask_link.symlink_to("/dev/null")
-                except Exception:
-                    pass
+        # Add systemd condition to checkisomd5 so it ONLY runs if requested
+        logger.info("Adding ConditionKernelCommandLine to checkisomd5@.service")
+        dropin_dir = self.target_root / "etc" / "systemd" / "system" / "checkisomd5@.service.d"
+        dropin_dir.mkdir(parents=True, exist_ok=True)
+        dropin_file = dropin_dir / "condition.conf"
+        dropin_file.write_text("[Unit]\nConditionKernelCommandLine=rd.live.check=1\n")
 
-        udev_rules = self.target_root / "etc" / "udev" / "rules.d"
-        udev_rules.mkdir(parents=True, exist_ok=True)
-        for r_name in ["61-checkisomd5.rules", "60-checkisomd5.rules"]:
-            r_link = udev_rules / r_name
-            if not r_link.exists():
-                try:
-                    r_link.symlink_to("/dev/null")
-                except Exception:
-                    pass
         logger.info("Dracut live configuration written to /etc/dracut.conf.d/02-live.conf.")
 
     def configure_live_environment(self):
