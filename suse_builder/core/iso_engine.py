@@ -619,13 +619,6 @@ class ISOEngine:
             ]
             self.toolchain.run_tool("xorriso", xorriso_args, check=True)
 
-            # Pad ISO with 2MB of zero sectors to prevent ATAPI/IDE CD-ROM readahead timeouts (sr0 / ata2.00)
-            try:
-                with open(iso_path, "ab") as f:
-                    f.write(b"\x00" * (2 * 1024 * 1024))
-            except Exception as e:
-                logger.warning(f"Could not append zero padding to ISO: {e}")
-
             # If implantisomd5 is available, embed a valid MD5 checksum for media check integrity
             if shutil.which("implantisomd5"):
                 subprocess.run(["implantisomd5", str(iso_path)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
