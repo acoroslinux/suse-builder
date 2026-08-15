@@ -137,7 +137,7 @@ class SystemCustomizer:
 
         for svc in services_to_enable:
             try:
-                self.chroot.run_in_chroot(["systemctl", "enable", str(svc)], check=False)
+                self.chroot.run_in_chroot(["systemctl", "--force", "enable", str(svc)], check=False)
             except Exception:
                 pass
 
@@ -146,24 +146,38 @@ class SystemCustomizer:
                 s_file = self.target_root / s_dir.lstrip("/") / f"{svc}.service"
                 if s_file.exists():
                     wants_link = graphical_wants / f"{svc}.service"
-                    if not wants_link.exists() and not wants_link.is_symlink():
-                        try:
-                            wants_link.symlink_to(f"{s_dir}/{svc}.service")
-                        except Exception:
-                            pass
+                    if wants_link.exists() or wants_link.is_symlink():
+                        wants_link.unlink()
+                    try:
+                        wants_link.symlink_to(f"{s_dir}/{svc}.service")
+                    except Exception:
+                        pass
                     break
 
         if dm:
             dm_link = self.target_root / "etc" / "systemd" / "system" / "display-manager.service"
-            if not dm_link.exists() and not dm_link.is_symlink():
-                for s_dir in ["/usr/lib/systemd/system", "/lib/systemd/system"]:
-                    dm_unit = self.target_root / s_dir.lstrip("/") / f"{dm}.service"
-                    if dm_unit.exists():
-                        try:
-                            dm_link.symlink_to(f"{s_dir}/{dm}.service")
-                        except Exception:
-                            pass
-                        break
+            if dm_link.exists() or dm_link.is_symlink():
+                dm_link.unlink()
+            for s_dir in ["/usr/lib/systemd/system", "/lib/systemd/system"]:
+                dm_unit = self.target_root / s_dir.lstrip("/") / f"{dm}.service"
+                if dm_unit.exists():
+                    try:
+                        dm_link.symlink_to(f"{s_dir}/{dm}.service")
+                    except Exception:
+                        pass
+                    break
+
+            dm_wants = graphical_wants / "display-manager.service"
+            if dm_wants.exists() or dm_wants.is_symlink():
+                dm_wants.unlink()
+            for s_dir in ["/usr/lib/systemd/system", "/lib/systemd/system"]:
+                dm_unit = self.target_root / s_dir.lstrip("/") / f"{dm}.service"
+                if dm_unit.exists():
+                    try:
+                        dm_wants.symlink_to(f"{s_dir}/{dm}.service")
+                    except Exception:
+                        pass
+                    break
 
     def _detect_desktop_session(self) -> str:
         session = self.config.get("desktop_session") or self.config.get("desktop")
