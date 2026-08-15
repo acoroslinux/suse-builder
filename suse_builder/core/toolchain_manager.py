@@ -145,8 +145,8 @@ class ToolchainManager:
         result = subprocess.run(["chroot", str(self.build_host_dir), "zypper", "--non-interactive", "install", "-y", *packages], check=False)
         if result.returncode:
             raise ToolchainManagerError("Could not install ISO build tools in the isolated openSUSE build host.")
-        # Attempt installing optional utilities without failing if unavailable
-        subprocess.run(["chroot", str(self.build_host_dir), "zypper", "--non-interactive", "install", "-y", "isomd5sum"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Attempt installing optional openSUSE media tag/check utilities without failing if unavailable
+        subprocess.run(["chroot", str(self.build_host_dir), "zypper", "--non-interactive", "install", "-y", "checkmedia"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def mount_virtual_fs(self):
         if self.mode == "mock":

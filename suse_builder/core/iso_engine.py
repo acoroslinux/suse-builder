@@ -619,14 +619,16 @@ class ISOEngine:
             ]
             self.toolchain.run_tool("xorriso", xorriso_args, check=True)
 
-            # If implantisomd5 is available, embed a valid MD5 checksum for media check integrity
-            if shutil.which("implantisomd5"):
-                subprocess.run(["implantisomd5", str(iso_path)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            elif (self.workdir.parent / "build_host" / "usr" / "bin" / "implantisomd5").exists():
+            # Embed valid checksum into ISO volume header using tagmedia (openSUSE native) or implantisomd5 (Fedora)
+            if shutil.which("tagmedia"):
+                subprocess.run(["tagmedia", "--digest", "sha256", "--check", "--pad", "0", str(iso_path)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            elif (self.workdir.parent / "build_host" / "usr" / "bin" / "tagmedia").exists():
                 try:
-                    self.toolchain.run_in_build_host(["implantisomd5", str(iso_path)], check=False)
+                    self.toolchain.run_in_build_host(["tagmedia", "--digest", "sha256", "--check", "--pad", "0", str(iso_path)], check=False)
                 except Exception:
                     pass
+            elif shutil.which("implantisomd5"):
+                subprocess.run(["implantisomd5", "--supported-iso", str(iso_path)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         if not iso_path.exists() or (self.mode != "mock" and iso_path.stat().st_size == 0):
             raise ISOEngineError(f"xorriso did not create a valid ISO: {iso_path}")
