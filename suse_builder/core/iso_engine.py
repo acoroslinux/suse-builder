@@ -626,6 +626,15 @@ class ISOEngine:
             except Exception as e:
                 logger.warning(f"Could not append zero padding to ISO: {e}")
 
+            # If implantisomd5 is available, embed a valid MD5 checksum for media check integrity
+            if shutil.which("implantisomd5"):
+                subprocess.run(["implantisomd5", str(iso_path)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                try:
+                    self.toolchain.run_in_build_host(["implantisomd5", str(iso_path)], check=False)
+                except Exception:
+                    pass
+
         if not iso_path.exists() or (self.mode != "mock" and iso_path.stat().st_size == 0):
             raise ISOEngineError(f"xorriso did not create a valid ISO: {iso_path}")
 

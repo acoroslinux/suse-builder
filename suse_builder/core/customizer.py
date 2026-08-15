@@ -641,10 +641,21 @@ class SystemCustomizer:
         live_conf.write_text(
             '# openSUSE Live Dracut Configuration\n'
             'add_dracutmodules+=" dmsquash-live pollcdrom qemu qemu-net base rootfs-block udev-rules kernel-modules "\n'
+            'omit_dracutmodules+=" checkisomd5 "\n'
             'add_drivers+=" squashfs loop overlay iso9660 isofs dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme "\n'
             'filesystems+=" squashfs iso9660 overlay vfat ext4 "\n'
             'hostonly="no"\n'
         )
+        # Mask checkisomd5 service to prevent dracut initqueue media check halts
+        systemd_dir = self.target_root / "etc" / "systemd" / "system"
+        systemd_dir.mkdir(parents=True, exist_ok=True)
+        for unit_name in ["checkisomd5@.service", "checkisomd5.service"]:
+            mask_link = systemd_dir / unit_name
+            if not mask_link.exists():
+                try:
+                    mask_link.symlink_to("/dev/null")
+                except Exception:
+                    pass
         logger.info("Dracut live configuration written to /etc/dracut.conf.d/02-live.conf.")
 
     def configure_live_environment(self):
