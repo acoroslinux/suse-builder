@@ -464,7 +464,7 @@ class SystemCustomizer:
         live_conf = dracut_conf_dir / "02-live.conf"
         live_conf.write_text(
             '# openSUSE Live Dracut Configuration\n'
-            'add_dracutmodules+=" dmsquash-live dmsquash-live-autooverlay pollcdrom qemu qemu-net base rootfs-block udev-rules kernel-modules "\n'
+            'add_dracutmodules+=" dmsquash-live pollcdrom qemu qemu-net base rootfs-block udev-rules kernel-modules "\n'
             'add_drivers+=" squashfs loop overlay iso9660 isofs dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme "\n'
             'filesystems+=" squashfs iso9660 overlay vfat ext4 "\n'
             'hostonly="no"\n'

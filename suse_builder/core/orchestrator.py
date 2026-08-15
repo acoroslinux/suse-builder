@@ -274,7 +274,7 @@ for kimg in /boot/vmlinuz-*; do
     kver="${kimg#/boot/vmlinuz-}"
     dracut --force --no-hostonly \
       --kver "$kver" \
-      --add "dmsquash-live dmsquash-live-autooverlay pollcdrom qemu qemu-net base rootfs-block udev-rules kernel-modules" \
+      --add "dmsquash-live pollcdrom qemu qemu-net base rootfs-block udev-rules kernel-modules" \
       --add-drivers "squashfs loop overlay iso9660 isofs dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme" \
       --filesystems "squashfs iso9660 overlay vfat ext4" \
       "/boot/initrd-$kver"
