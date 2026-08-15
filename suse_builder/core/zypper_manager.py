@@ -217,3 +217,56 @@ class ZypperManager:
         if self.chroot.mode == "mock":
             return
         self._run_zypper(["--root", str(self.target_root), "clean", "--all"], check=False)
+
+    def download_offline_packages(self, packages: List[str], dest_dir: Path) -> Path:
+        """
+        Downloads the specified packages (and dependencies) into dest_dir and creates repodata metadata.
+        """
+        dest_dir = Path(dest_dir)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        if self.chroot.mode == "mock":
+            (dest_dir / "repodata").mkdir(parents=True, exist_ok=True)
+            (dest_dir / "repodata" / "repomd.xml").touch()
+            return dest_dir
+
+        real_pkgs = [p for p in packages if p]
+        if real_pkgs:
+            logger.info(f"📦 Downloading {len(real_pkgs)} offline packages into {dest_dir}...")
+            cmd_download = [
+                "--non-interactive", "--root", str(self.target_root),
+                "--pkg-cache-dir", str(dest_dir),
+                "download",
+            ] + real_pkgs
+            self._run_zypper(cmd_download, check=False)
+
+            # Also copy downloaded .rpm files from zypper cache into dest_dir
+            for src_dir in [
+                self.target_root / "var" / "cache" / "zypp" / "packages",
+                self.resolve_cache_dir() / "packages",
+            ]:
+                if src_dir.exists():
+                    for rpm_file in src_dir.rglob("*.rpm"):
+                        try:
+                            dst_file = dest_dir / rpm_file.name
+                            if not dst_file.exists():
+                                shutil.copy2(rpm_file, dst_file)
+                        except Exception:
+                            pass
+
+        self.create_repository_metadata(dest_dir)
+        return dest_dir
+
+    def create_repository_metadata(self, repo_dir: Path):
+        repo_dir = Path(repo_dir)
+        repo_dir.mkdir(parents=True, exist_ok=True)
+        if self.chroot.mode == "mock":
+            (repo_dir / "repodata").mkdir(parents=True, exist_ok=True)
+            (repo_dir / "repodata" / "repomd.xml").touch()
+            return
+
+        tool = shutil.which("createrepo_c") or shutil.which("createrepo")
+        if tool:
+            subprocess.run([tool, str(repo_dir)], check=False)
+        else:
+            self.chroot.run_in_chroot(["createrepo_c", str(repo_dir)], check=False)
+

@@ -542,6 +542,13 @@ class ISOEngine:
         self.generate_grub_efi_image()
         self.generate_grub_bios_core()
 
+        # Copy offline repository into ISO staging if available
+        offline_repo_dir = self.config.get("offline_repo_dir")
+        if offline_repo_dir and Path(offline_repo_dir).exists():
+            target_repo = self.iso_staging / "repo" / self.config.get("architecture", "x86_64")
+            target_repo.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(offline_repo_dir, target_repo, dirs_exist_ok=True, symlinks=True, ignore_dangling_symlinks=True)
+
         iso_path = resolve_from_project(f"output/{self.output_name}.iso")
         iso_path.parent.mkdir(parents=True, exist_ok=True)
 

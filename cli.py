@@ -216,6 +216,19 @@ def main():
     )
 
     parser.add_argument(
+        "--with-offline-repo",
+        action="store_true",
+        help="Embed an offline RPM package repository on the ISO.",
+    )
+
+    parser.add_argument(
+        "--offline-repo-packages",
+        type=str,
+        default=None,
+        help="Comma-separated list of packages to include in the offline ISO repository.",
+    )
+
+    parser.add_argument(
         "--list-options",
         action="store_true",
         help="List all available configuration profiles and exit.",
@@ -254,6 +267,7 @@ def main():
         sys.exit(1)
 
     parsed_package_profiles = _parse_list_arg(args.package_profile)
+    parsed_offline_packages = _parse_list_arg(args.offline_repo_packages)
 
     try:
         orchestrator = BuildOrchestrator(
@@ -275,6 +289,8 @@ def main():
             multimedia_codecs=args.multimedia_codecs,
             with_flathub=args.with_flathub,
             with_zram=args.with_zram,
+            with_offline_repo=args.with_offline_repo,
+            offline_repo_packages=parsed_offline_packages,
             force_isolated_toolchain=args.force_isolated_toolchain,
         )
     except (ConfigLoaderError, BuildOrchestratorError) as exc:

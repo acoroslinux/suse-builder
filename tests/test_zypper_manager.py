@@ -197,3 +197,14 @@ class TestZypperManager:
         assert len(calls) == 2
         assert "--gpg-auto-import-keys" in calls[0]
         assert "--no-gpg-checks" in calls[1]
+
+    def test_download_offline_packages_creates_repodata(self, tmp_path):
+        target_root = tmp_path / "chroot"
+        chroot = ChrootManager(target_root, mode="mock", arch="x86_64")
+        zypper = ZypperManager(chroot, config={})
+        dest_dir = tmp_path / "offline_repo"
+
+        result = zypper.download_offline_packages(["gparted", "git"], dest_dir)
+        assert result.exists()
+        assert (dest_dir / "repodata" / "repomd.xml").exists()
+

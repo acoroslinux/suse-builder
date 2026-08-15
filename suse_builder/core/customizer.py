@@ -607,9 +607,40 @@ class SystemCustomizer:
         self.configure_calamares()
         self.configure_artwork()
         self.copy_custom_files()
+        if self.config.get("with_offline_repo") or self.config.get("offline_repo_packages"):
+            self.configure_offline_repository()
         self.configure_dracut()
         self.configure_machine_id()
         self.fix_system_permissions()
+
+    def configure_offline_repository(self):
+        """Configure /etc/zypp/repos.d/offline-iso.repo pointing to the ISO's offline repository."""
+        if self.chroot.mode == "mock":
+            return
+        repos_d = self.target_root / "etc" / "zypp" / "repos.d"
+        repos_d.mkdir(parents=True, exist_ok=True)
+        vol_id = self.config.get("iso_label") or self.config.get("volume_id", "OPENSUSE_MODERN")
+        repo_content = (
+            "[offline-iso]\n"
+            "name=openSUSE Offline ISO Repository\n"
+            "enabled=1\n"
+            "autorefresh=0\n"
+            f"baseurl=cd:/?devices=/dev/disk/by-label/{vol_id}&path=/repo/x86_64\n"
+            "gpgcheck=0\n"
+            "keeppackages=0\n"
+            "type=rpm-md\n"
+            "\n"
+            "[offline-iso-fallback]\n"
+            "name=openSUSE Offline ISO Fallback (Mount Directory)\n"
+            "enabled=1\n"
+            "autorefresh=0\n"
+            f"baseurl=dir:/run/media/liveuser/{vol_id}/repo/x86_64\n"
+            "gpgcheck=0\n"
+            "keeppackages=0\n"
+            "type=rpm-md\n"
+        )
+        (repos_d / "offline-iso.repo").write_text(repo_content)
+        logger.info("Configured openSUSE offline ISO repository in /etc/zypp/repos.d/offline-iso.repo")
 
     def fix_home_permissions(self):
         self.fix_system_permissions()
