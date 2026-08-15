@@ -15,6 +15,7 @@ class SystemCustomizer:
     def setup_live_users(self):
         if self.chroot.mode == "mock":
             return
+        import shutil
         live_user_cfg = self.config.get("live_user", "liveuser")
         if isinstance(live_user_cfg, dict):
             live_user = live_user_cfg.get("name", "liveuser")
@@ -25,30 +26,55 @@ class SystemCustomizer:
             live_password = "live"
             cfg_groups = []
 
-        # Keep backward compatibility with older top-level live_groups configs.
-        groups = self.config.get("live_groups") or cfg_groups or ["wheel", "audio", "video", "render", "input", "users"]
-        groups_str = ",".join(groups)
+        # All essential desktop and administrative groups
+        groups = self.config.get("live_groups") or cfg_groups or [
+            "wheel", "sudo", "audio", "video", "render", "input", "seat", "disk", "storage", "users", "nopasswdlogin"
+        ]
 
         try:
+            # 1. Create all missing groups
             for group in groups:
                 lookup = self.chroot.run_in_chroot(["getent", "group", str(group)], check=False)
                 if lookup.returncode != 0:
                     self.chroot.run_in_chroot(["groupadd", "-f", str(group)], check=False)
 
             self.chroot.run_in_chroot(["groupadd", "-f", "nopasswdlogin"], check=False)
-            create_user = self.chroot.run_in_chroot(["useradd", "-m", "-s", "/bin/bash", "-g", "users", "-G", f"{groups_str},nopasswdlogin", str(live_user)], check=False)
-            if create_user.returncode != 0:
-                self.chroot.run_in_chroot(["usermod", "-aG", f"{groups_str},nopasswdlogin", str(live_user)], check=False)
 
+            # 2. Check if user already exists
+            user_check = self.chroot.run_in_chroot(["id", "-u", str(live_user)], check=False)
+            if user_check.returncode != 0:
+                res = self.chroot.run_in_chroot(["useradd", "-m", "-s", "/bin/bash", "-U", str(live_user)], check=False)
+                if res.returncode != 0:
+                    self.chroot.run_in_chroot(["useradd", "-m", "-s", "/bin/bash", str(live_user)], check=False)
+
+            # 3. Add to groups individually so a missing group never aborts everything
+            for group in groups:
+                self.chroot.run_in_chroot(["usermod", "-aG", str(group), str(live_user)], check=False)
+            self.chroot.run_in_chroot(["usermod", "-aG", "nopasswdlogin", str(live_user)], check=False)
+
+            # 4. Set passwords for liveuser and root
             self.chroot.run_in_chroot(f"echo '{live_user}:{live_password}' | chpasswd", check=False)
             self.chroot.run_in_chroot(f"echo 'root:{live_password}' | chpasswd", check=False)
+
+            # 5. Unlock accounts
             self.chroot.run_in_chroot(["passwd", "-u", str(live_user)], check=False)
             self.chroot.run_in_chroot(["passwd", "-u", "root"], check=False)
 
+            # 6. Ensure home directory exists and is populated from /etc/skel
             home_dir = self.target_root / "home" / live_user
-            if home_dir.exists():
-                self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:users", f"/home/{live_user}"], check=False)
-                self.chroot.run_in_chroot(["chmod", "755", f"/home/{live_user}"], check=False)
+            home_dir.mkdir(parents=True, exist_ok=True)
+            skel_dir = self.target_root / "etc" / "skel"
+            if skel_dir.is_dir():
+                for item in skel_dir.iterdir():
+                    dest = home_dir / item.name
+                    if not dest.exists():
+                        if item.is_dir():
+                            shutil.copytree(item, dest, symlinks=True, ignore_dangling_symlinks=True)
+                        else:
+                            shutil.copy2(item, dest)
+
+            self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:{live_user}", f"/home/{live_user}"], check=False)
+            self.chroot.run_in_chroot(["chmod", "755", f"/home/{live_user}"], check=False)
         except Exception:
             logger.exception("Could not fully configure live user %s", live_user)
 
