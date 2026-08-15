@@ -1,9 +1,7 @@
 {
   "packages": [
     "xorg-x11-server",
-    "xorg-x11-driver-video",
     "xorg-x11-driver-input",
-    "xf86-video-vmware",
     "xinit",
     "xf86-input-evdev",
     "xf86-input-libinput",
