@@ -554,6 +554,9 @@ class ISOEngine:
                 "-rock", "-joliet",
                 "-joliet-long",
                 "-cache-inodes",
+                "-pad",
+                "-padding", "300k",
+                "-partition_offset", "16",
             ]
 
             # Locate MBR file if available
