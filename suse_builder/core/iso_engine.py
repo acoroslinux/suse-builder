@@ -523,6 +523,8 @@ class ISOEngine:
             (d / "loopback.cfg").write_text(loopback_cfg_text)
 
         # Copy unicode.pf2 font if available
+        (self.iso_staging / "boot" / "grub2" / "fonts").mkdir(parents=True, exist_ok=True)
+        (self.iso_staging / "boot" / "grub" / "fonts").mkdir(parents=True, exist_ok=True)
         for font_candidate in [
             self.target_root / "usr" / "share" / "grub2" / "unicode.pf2",
             self.target_root / "usr" / "share" / "grub" / "unicode.pf2",
@@ -533,6 +535,8 @@ class ISOEngine:
             if font_candidate.exists():
                 shutil.copy2(font_candidate, self.iso_staging / "boot" / "grub2" / "unicode.pf2")
                 shutil.copy2(font_candidate, self.iso_staging / "boot" / "grub" / "unicode.pf2")
+                shutil.copy2(font_candidate, self.iso_staging / "boot" / "grub2" / "fonts" / "unicode.pf2")
+                shutil.copy2(font_candidate, self.iso_staging / "boot" / "grub" / "fonts" / "unicode.pf2")
                 break
 
         self.generate_grub_efi_image()
