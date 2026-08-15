@@ -760,8 +760,8 @@ class SystemCustomizer:
             bp = self.target_root / suid_bin
             if bp.exists():
                 try:
-                    self.chroot.run_in_chroot(["chmod", "4755", f"/{suid_bin}"], check=False)
                     self.chroot.run_in_chroot(["chown", "root:root", f"/{suid_bin}"], check=False)
+                    self.chroot.run_in_chroot(["chmod", "4755", f"/{suid_bin}"], check=False)
                 except Exception:
                     pass
 
