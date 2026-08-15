@@ -553,9 +553,7 @@ class ISOEngine:
                 "-V", iso_label,
                 "-rock", "-joliet",
                 "-joliet-long",
-                "-cache-inodes",
                 "-pad",
-                "-padding", "300k",
                 "-partition_offset", "16",
             ]
 
