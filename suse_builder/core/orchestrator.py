@@ -295,7 +295,7 @@ for kimg in /boot/vmlinuz-*; do
       --kver "$kver" \
       --add "dmsquash-live pollcdrom qemu qemu-net base rootfs-block udev-rules kernel-modules" \
       --omit "checkisomd5" \
-      --add-drivers "squashfs loop overlay iso9660 isofs dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme" \
+      --add-drivers "squashfs loop overlay iso9660 isofs zstd zstd_decompress dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme" \
       --filesystems "squashfs iso9660 overlay vfat ext4" \
       "/boot/initrd-$kver"
 done

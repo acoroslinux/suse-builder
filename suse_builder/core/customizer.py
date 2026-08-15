@@ -642,7 +642,7 @@ class SystemCustomizer:
             '# openSUSE Live Dracut Configuration\n'
             'add_dracutmodules+=" dmsquash-live pollcdrom qemu qemu-net base rootfs-block udev-rules kernel-modules "\n'
             'omit_dracutmodules+=" checkisomd5 "\n'
-            'add_drivers+=" squashfs loop overlay iso9660 isofs dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme "\n'
+            'add_drivers+=" squashfs loop overlay iso9660 isofs zstd zstd_decompress dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme "\n'
             'filesystems+=" squashfs iso9660 overlay vfat ext4 "\n'
             'hostonly="no"\n'
         )

@@ -241,7 +241,7 @@ class ISOEngine:
             # The efiboot.img must be a valid FAT filesystem. xorriso with
             # -isohybrid-gpt-basdat exposes it as the ESP partition content in
             # the ISO's GPT, so no partition table is needed inside the image.
-            total_size_mb = max(32, (sum(p.stat().st_size for p, _ in created_binaries) // (1024 * 1024)) + 16)
+            total_size_mb = max(8, min(24, (sum(p.stat().st_size for p, _ in created_binaries) // (1024 * 1024)) + 4))
             size_kb = total_size_mb * 1024
 
             if efiboot_img.exists():
