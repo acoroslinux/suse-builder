@@ -211,17 +211,25 @@ class SystemCustomizer:
                     break
 
     def _detect_desktop_session(self) -> str:
+        # Check actual installed sessions first
+        for session_dir in ["usr/share/xsessions", "usr/share/wayland-sessions"]:
+            full_dir = self.target_root / session_dir
+            if full_dir.exists():
+                candidates = [f.stem for f in sorted(full_dir.glob("*.desktop"))]
+                if candidates:
+                    desktop = str(self.config.get("desktop") or "").lower()
+                    for cand in candidates:
+                        cand_lower = cand.lower()
+                        if desktop and (desktop in cand_lower or cand_lower in desktop):
+                            return cand
+                    return candidates[0]
+
         session = self.config.get("desktop_session") or self.config.get("desktop")
         if session:
             session_lower = session.lower()
             if session_lower in {"kde", "plasma"}:
                 return "plasma"
             return session_lower
-        for session_dir in ["usr/share/xsessions", "usr/share/wayland-sessions"]:
-            full_dir = self.target_root / session_dir
-            if full_dir.exists():
-                for f in sorted(full_dir.glob("*.desktop")):
-                    return f.stem
         return "xfce"
 
     def configure_autologin(self):
@@ -254,15 +262,47 @@ class SystemCustomizer:
         )
         sysconfig_dm.write_text(sysconfig_content)
 
-        # Ensure PAM autologin configuration files permit passwordless login across all display managers
-        pam_autologin_content = (
-            "#%PAM-1.0\n"
-            "auth        sufficient  pam_permit.so\n"
-            "account     sufficient  pam_permit.so\n"
-            "password    sufficient  pam_permit.so\n"
-            "session     required    pam_limits.so\n"
-            "session     sufficient  pam_permit.so\n"
-        )
+        # Write Xorg wrapper config to permit non-root Xorg execution across virtualized drivers
+        xwrapper = self.target_root / "etc" / "X11" / "Xwrapper.config"
+        xwrapper.parent.mkdir(parents=True, exist_ok=True)
+        xwrapper.write_text("allowed_users = anybody\nneeds_root_rights = yes\n")
+
+        # Create PAM autologin configuration with proper systemd-logind session integration
+        has_common_session = (self.target_root / "etc" / "pam.d" / "common-session").exists()
+        has_system_auth = (self.target_root / "etc" / "pam.d" / "system-auth").exists()
+
+        if has_common_session:
+            pam_autologin_content = (
+                "#%PAM-1.0\n"
+                "auth        sufficient  pam_permit.so\n"
+                "auth        include     common-auth\n"
+                "account     include     common-account\n"
+                "password    include     common-password\n"
+                "session     required    pam_loginuid.so\n"
+                "session     include     common-session\n"
+            )
+        elif has_system_auth:
+            pam_autologin_content = (
+                "#%PAM-1.0\n"
+                "auth        sufficient  pam_permit.so\n"
+                "auth        include     system-auth\n"
+                "account     include     system-auth\n"
+                "password    include     system-auth\n"
+                "session     required    pam_loginuid.so\n"
+                "session     include     system-auth\n"
+            )
+        else:
+            pam_autologin_content = (
+                "#%PAM-1.0\n"
+                "auth        sufficient  pam_permit.so\n"
+                "account     sufficient  pam_permit.so\n"
+                "password    sufficient  pam_permit.so\n"
+                "session     required    pam_loginuid.so\n"
+                "session     required    pam_limits.so\n"
+                "session     optional    pam_systemd.so\n"
+                "session     sufficient  pam_permit.so\n"
+            )
+
         for pam_service in [
             "lightdm-autologin",
             "sddm-autologin",
@@ -315,7 +355,11 @@ class SystemCustomizer:
 
         # LightDM configuration
         lightdm_content = (
+            "[LightDM]\n"
+            "run-directory=/run/lightdm\n\n"
             "[Seat:*]\n"
+            "greeter-session=lightdm-gtk-greeter\n"
+            f"user-session={session_name}\n"
             "autologin-guest=false\n"
             f"autologin-user={live_user}\n"
             "autologin-user-timeout=0\n"
@@ -323,8 +367,11 @@ class SystemCustomizer:
             f"autologin-session={session_name}\n"
             "pam-service=lightdm-autologin\n"
             "pam-autologin-service=lightdm-autologin\n"
+            "pam-greeter-service=lightdm-greeter\n"
             "\n"
             "[SeatDefaults]\n"
+            "greeter-session=lightdm-gtk-greeter\n"
+            f"user-session={session_name}\n"
             "autologin-guest=false\n"
             f"autologin-user={live_user}\n"
             "autologin-user-timeout=0\n"
@@ -332,15 +379,22 @@ class SystemCustomizer:
             f"autologin-session={session_name}\n"
             "pam-service=lightdm-autologin\n"
             "pam-autologin-service=lightdm-autologin\n"
+            "pam-greeter-service=lightdm-greeter\n"
         )
         for conf_rel in ["etc/lightdm/lightdm.conf", "etc/lightdm/lightdm.conf.d/50-autologin.conf"]:
             conf_file = self.target_root / conf_rel
             conf_file.parent.mkdir(parents=True, exist_ok=True)
             conf_file.write_text(lightdm_content)
 
-        # Ensure LightDM directories exist
+        # Ensure LightDM runtime directories exist and have proper ownership
         for ldir in ["var/lib/lightdm", "var/lib/lightdm-data", "var/log/lightdm", "var/cache/lightdm"]:
             (self.target_root / ldir).mkdir(parents=True, exist_ok=True)
+        try:
+            self.chroot.run_in_chroot(["chown", "-R", "lightdm:lightdm", "/var/lib/lightdm", "/var/lib/lightdm-data", "/var/log/lightdm", "/var/cache/lightdm"], check=False)
+            for g in ["video", "render", "input", "tty", "users"]:
+                self.chroot.run_in_chroot(["usermod", "-aG", g, "lightdm"], check=False)
+        except Exception:
+            pass
 
         # LXDM configuration
         lxdm_conf = self.target_root / "etc" / "lxdm" / "lxdm.conf"
