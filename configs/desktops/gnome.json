@@ -6,8 +6,6 @@
     "gdm",
     "gnome-tweaks",
     "gnome-extensions",
-    "gnome-shell-extension-dash-to-dock",
-    "gnome-shell-extension-appindicator",
     "papirus-icon-theme",
     "dconf-editor"
   ]
