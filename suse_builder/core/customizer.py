@@ -656,6 +656,7 @@ class SystemCustomizer:
         self.configure_dbus_launch()
         self.configure_branding()
         self.setup_services()
+        self.configure_gnome_defaults()
         self.configure_autologin()
         self.configure_zram()
         self.configure_flathub()
@@ -973,6 +974,41 @@ class SystemCustomizer:
             '</channel>\n'
         )
         (xfconf_dir / "xfce4-desktop.xml").write_text(xfce_desktop_xml)
+
+    def configure_gnome_defaults(self):
+        if self.chroot.mode == "mock" or self.config.get("desktop") != "gnome":
+            return
+        
+        logger.info("Configuring custom GNOME defaults (extensions, themes, dock)...")
+        schema_dir = self.target_root / "usr" / "share" / "glib-2.0" / "schemas"
+        schema_dir.mkdir(parents=True, exist_ok=True)
+        
+        override_content = (
+            "[org.gnome.shell]\n"
+            "enabled-extensions=['dash-to-dock@micxgx.gmail.com', 'appindicatorsupport@rgcjonas.gmail.com']\n"
+            "\n"
+            "[org.gnome.desktop.interface]\n"
+            "icon-theme='Papirus'\n"
+            "color-scheme='prefer-dark'\n"
+            "\n"
+            "[org.gnome.mutter]\n"
+            "center-new-windows=true\n"
+            "\n"
+            "[org.gnome.shell.extensions.dash-to-dock]\n"
+            "dock-position='BOTTOM'\n"
+            "dash-max-icon-size=48\n"
+            "click-action='minimize'\n"
+            "show-trash=false\n"
+            "show-mounts=false\n"
+        )
+        
+        (schema_dir / "99_opensuse_modern.gschema.override").write_text(override_content)
+        
+        # Recompile schemas inside chroot
+        try:
+            self.chroot.run_in_chroot(["glib-compile-schemas", "/usr/share/glib-2.0/schemas/"], check=False)
+        except Exception as e:
+            logger.warning(f"Failed to compile GNOME schemas: {e}")
 
     def fix_home_permissions(self):
         if self.chroot.mode == "mock":
