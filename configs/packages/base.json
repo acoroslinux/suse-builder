@@ -24,6 +24,8 @@
     "iputils",
     "zstd",
     "glibc-locale",
-    "ca-certificates-mozilla"
+    "ca-certificates-mozilla",
+    "xf86-input-libinput",
+    "xf86-input-evdev"
   ]
 }

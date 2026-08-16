@@ -8,8 +8,6 @@
     "gnome-extensions",
     "papirus-icon-theme",
     "dconf-editor",
-    "xorg-x11-server",
-    "xf86-input-libinput",
-    "xf86-input-evdev"
+    "xorg-x11-server"
   ]
 }
