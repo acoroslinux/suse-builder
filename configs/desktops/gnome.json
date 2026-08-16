@@ -7,6 +7,9 @@
     "gnome-tweaks",
     "gnome-extensions",
     "papirus-icon-theme",
-    "dconf-editor"
+    "dconf-editor",
+    "xorg-x11-server",
+    "xf86-input-libinput",
+    "xf86-input-evdev"
   ]
 }
