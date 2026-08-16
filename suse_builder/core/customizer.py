@@ -333,6 +333,7 @@ class SystemCustomizer:
         # GDM / GDM3 configuration
         gdm_content = (
             "[daemon]\n"
+            "WaylandEnable=false\n"
             "AutomaticLoginEnable=true\n"
             f"AutomaticLogin={live_user}\n"
             "TimedLoginEnable=true\n"
