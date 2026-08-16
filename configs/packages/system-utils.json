@@ -12,6 +12,9 @@
     "7zip",
     "rsync",
     "tree",
-    "lsof"
+    "lsof",
+    "avahi",
+    "samba",
+    "openssh"
   ]
 }
