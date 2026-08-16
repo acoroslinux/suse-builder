@@ -26,6 +26,9 @@
     "glibc-locale",
     "ca-certificates-mozilla",
     "xf86-input-libinput",
-    "xf86-input-evdev"
+    "xf86-input-evdev",
+    "virtualbox-guest-tools",
+    "virtualbox-guest-x11",
+    "qemu-guest-agent"
   ]
 }
