@@ -152,7 +152,12 @@ class BuildOrchestrator:
         report = self.validate()
         if not report["valid"]:
             raise BuildOrchestratorError("Invalid build configuration: " + "; ".join(report["errors"]))
-        name = output_name or f"suse-{self.distro}-{self.arch}"
+        if output_name:
+            name = output_name
+        else:
+            desktop_part = f"-{self.desktop}" if self.desktop else ""
+            kernel_part = f"-{self.kernel}" if self.kernel else ""
+            name = f"suse-{self.distro}{desktop_part}{kernel_part}-{self.arch}"
 
         current_fingerprint = self._effective_build_fingerprint()
         previous_fingerprint = self._load_previous_build_fingerprint()
