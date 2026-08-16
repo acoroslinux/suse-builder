@@ -3,12 +3,10 @@
   "display_manager": "sddm",
   "packages": [
     "patterns-kde-kde_plasma",
-    "plasma5-desktop",
-    "plasma-workspace",
+    "plasma6-desktop",
+    "plasma6-workspace",
     "sddm",
     "xorg-x11-server",
-    "xf86-video-vmware",
-    "xf86-input-evdev",
     "xterm"
   ]
 }
