@@ -1,0 +1,11 @@
+{
+  "desktop": "lxde",
+  "display_manager": "lightdm",
+  "packages": [
+    "patterns-lxde-lxde",
+    "lightdm",
+    "lightdm-gtk-greeter",
+    "lxterminal",
+    "pcmanfm"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "desktop": "enlightenment",
+  "display_manager": "lightdm",
+  "packages": [
+    "patterns-enlightenment-enlightenment",
+    "lightdm",
+    "lightdm-gtk-greeter",
+    "terminology"
+  ]
+}

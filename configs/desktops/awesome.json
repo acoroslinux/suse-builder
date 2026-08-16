@@ -1,0 +1,13 @@
+{
+  "desktop": "awesome",
+  "display_manager": "lightdm",
+  "packages": [
+    "awesome",
+    "rofi",
+    "lightdm",
+    "lightdm-gtk-greeter",
+    "alacritty",
+    "thunar",
+    "polkit-gnome"
+  ]
+}

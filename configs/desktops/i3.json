@@ -1,0 +1,15 @@
+{
+  "desktop": "i3",
+  "display_manager": "lightdm",
+  "packages": [
+    "i3",
+    "i3status",
+    "i3lock",
+    "dmenu",
+    "lightdm",
+    "lightdm-gtk-greeter",
+    "alacritty",
+    "thunar",
+    "polkit-gnome"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "desktop": "deepin",
+  "display_manager": "lightdm",
+  "packages": [
+    "patterns-deepin-deepin",
+    "lightdm",
+    "lightdm-gtk-greeter",
+    "deepin-terminal",
+    "deepin-file-manager"
+  ]
+}

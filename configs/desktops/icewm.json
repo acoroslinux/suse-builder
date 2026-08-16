@@ -1,0 +1,13 @@
+{
+  "desktop": "icewm",
+  "display_manager": "lightdm",
+  "packages": [
+    "icewm",
+    "icewm-themes",
+    "lightdm",
+    "lightdm-gtk-greeter",
+    "alacritty",
+    "thunar",
+    "polkit-gnome"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "desktop": "cinnamon",
+  "display_manager": "lightdm",
+  "packages": [
+    "patterns-cinnamon-cinnamon",
+    "lightdm",
+    "lightdm-gtk-greeter",
+    "nemo",
+    "gnome-terminal"
+  ]
+}

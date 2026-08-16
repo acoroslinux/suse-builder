@@ -1,0 +1,15 @@
+{
+  "desktop": "openbox",
+  "display_manager": "lightdm",
+  "packages": [
+    "openbox",
+    "obconf",
+    "tint2",
+    "rofi",
+    "lightdm",
+    "lightdm-gtk-greeter",
+    "alacritty",
+    "thunar",
+    "polkit-gnome"
+  ]
+}

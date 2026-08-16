@@ -1,0 +1,11 @@
+{
+  "desktop": "budgie",
+  "display_manager": "lightdm",
+  "packages": [
+    "patterns-budgie-desktop",
+    "lightdm",
+    "lightdm-gtk-greeter",
+    "nautilus",
+    "gnome-terminal"
+  ]
+}

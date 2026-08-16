@@ -1,0 +1,15 @@
+{
+  "desktop": "bspwm",
+  "display_manager": "lightdm",
+  "packages": [
+    "bspwm",
+    "sxhkd",
+    "polybar",
+    "rofi",
+    "lightdm",
+    "lightdm-gtk-greeter",
+    "alacritty",
+    "thunar",
+    "polkit-gnome"
+  ]
+}
