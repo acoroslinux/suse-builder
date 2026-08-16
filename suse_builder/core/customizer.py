@@ -674,6 +674,7 @@ class SystemCustomizer:
         self.configure_branding()
         self.setup_services()
         self.configure_gnome_defaults()
+        self.configure_kde_defaults()
         self.configure_autologin()
         self.configure_zram()
         self.configure_flathub()
@@ -1026,6 +1027,33 @@ class SystemCustomizer:
             self.chroot.run_in_chroot(["glib-compile-schemas", "/usr/share/glib-2.0/schemas/"], check=False)
         except Exception as e:
             logger.warning(f"Failed to compile GNOME schemas: {e}")
+
+    def configure_kde_defaults(self):
+        if self.chroot.mode == "mock" or self.config.get("desktop") != "kde":
+            return
+            
+        logger.info("Configuring custom KDE Plasma 6 defaults (Breeze Dark, Wallpaper)...")
+        skel_config = self.target_root / "etc" / "skel" / ".config"
+        skel_config.mkdir(parents=True, exist_ok=True)
+        
+        # Force Breeze Dark theme globally
+        kdeglobals = skel_config / "kdeglobals"
+        kdeglobals_content = (
+            "[KDE]\n"
+            "LookAndFeelPackage=org.kde.breezedark.desktop\n"
+            "\n"
+            "[General]\n"
+            "ColorScheme=BreezeDark\n"
+        )
+        kdeglobals.write_text(kdeglobals_content)
+        
+        # Disable screen locking in Live ISO
+        kscreenlockerrc = skel_config / "kscreenlockerrc"
+        kscreenlockerrc.write_text(
+            "[Daemon]\n"
+            "Autolock=false\n"
+            "LockOnResume=false\n"
+        )
 
     def fix_home_permissions(self):
         if self.chroot.mode == "mock":
