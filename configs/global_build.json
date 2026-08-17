@@ -85,6 +85,10 @@
     "lightdm-gtk-greeter-settings",
     "noto-fonts",
     "noto-coloremoji-fonts",
-    "nano"
+    "nano",
+    "vim",
+    "neovim",
+    "htop",
+    "neofetch"
   ]
 }
