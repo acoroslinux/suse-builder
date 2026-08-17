@@ -1,8 +1,8 @@
 {
   "os_name": "openSUSE Modern",
-  "grub_background": "artwork/grub-bg.png",
-  "plymouth_theme_dir": "artwork/plymouth-modern",
-  "desktop_wallpaper": "artwork/wallpaper.jpg",
+  "grub_background": "configs/custom_files/grub-bg.png",
+  "plymouth_theme_dir": "configs/custom_files/plymouth-modern",
+  "desktop_wallpaper": "configs/custom_files/wallpaper.jpg",
   "icon_theme": "Papirus-Dark",
   "gtk_theme": "Adwaita-dark",
   "color_scheme": "prefer-dark"
