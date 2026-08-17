@@ -42,6 +42,26 @@ class BrandingManager:
         self._apply_desktop_branding()
         self._apply_plymouth_branding()
         self._apply_dconf_branding()
+        self._apply_calamares_branding()
+
+    def _apply_calamares_branding(self):
+        """Replaces generic variables in Calamares branding.desc with actual OS and version names."""
+        calamares_dir = self.chroot.target_root / "etc" / "calamares" / "branding"
+        if not calamares_dir.exists():
+            return
+            
+        os_name = self.branding_cfg.get("os_name", "Custom OS")
+        distro_ver = str(self.config.get("distro", "Rolling")).capitalize()
+        if distro_ver.lower() == "tumbleweed":
+            distro_ver = "Tumbleweed"
+            
+        for desc_file in calamares_dir.rglob("branding.desc"):
+            content = desc_file.read_text()
+            if "@@OS_NAME@@" in content or "@@VERSION@@" in content:
+                content = content.replace("@@OS_NAME@@", os_name)
+                content = content.replace("@@VERSION@@", distro_ver)
+                desc_file.write_text(content)
+                logger.info(f"  -> Dynamic Calamares branding injected: {os_name} {distro_ver}")
 
     def _apply_custom_files_overlay(self):
         """Intelligently copies files from configs/custom_files to their respective system locations."""

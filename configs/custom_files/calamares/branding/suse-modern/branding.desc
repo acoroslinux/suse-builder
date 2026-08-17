@@ -4,13 +4,13 @@
 componentName:   suse-modern
 
 strings:
-    productName:         "openSUSE Modern"
-    shortProductName:    "openSUSE Modern"
-    version:             "Tumbleweed"
-    shortVersion:        "TW"
-    versionedName:       "openSUSE Modern Tumbleweed"
-    shortVersionedName:  "openSUSE Modern TW"
-    installLabel:        "Install openSUSE Modern"
+    productName:         "@@OS_NAME@@"
+    shortProductName:    "@@OS_NAME@@"
+    version:             "@@VERSION@@"
+    shortVersion:        "@@VERSION@@"
+    versionedName:       "@@OS_NAME@@ @@VERSION@@"
+    shortVersionedName:  "@@OS_NAME@@ @@VERSION@@"
+    installLabel:        "Install @@OS_NAME@@"
     productUrl:          "https://github.com/acoroslinux/suse-builder"
     supportUrl:          "https://github.com/acoroslinux/suse-builder/issues"
     knownIssuesUrl:      "https://github.com/acoroslinux/suse-builder/issues"
