@@ -909,15 +909,17 @@ class SystemCustomizer:
 
         # 1. Direct overlay from configs/custom_files/ -> target_root/
         if custom_files_dir.exists() and custom_files_dir.is_dir():
+            import subprocess
             for item in custom_files_dir.iterdir():
                 if item.name == ".gitkeep":
                     continue
                 dest_path = self.target_root / item.name
                 if item.is_dir():
-                    shutil.copytree(item, dest_path, dirs_exist_ok=True, symlinks=True, ignore_dangling_symlinks=True)
+                    dest_path.mkdir(parents=True, exist_ok=True)
+                    subprocess.run(["cp", "-af", f"{item}/.", f"{dest_path}/"], check=False)
                 else:
                     dest_path.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(item, dest_path)
+                    subprocess.run(["cp", "-af", str(item), str(dest_path)], check=False)
 
         # 2. Structured list from JSON config
         custom_files_list = list(self.config.get("custom_files", []))
@@ -966,9 +968,13 @@ class SystemCustomizer:
 
             dest_path.parent.mkdir(parents=True, exist_ok=True)
             if src_path.is_dir():
-                shutil.copytree(src_path, dest_path, dirs_exist_ok=True, symlinks=True, ignore_dangling_symlinks=True)
+                dest_path.mkdir(parents=True, exist_ok=True)
+                import subprocess
+                subprocess.run(["cp", "-af", f"{src_path}/.", f"{dest_path}/"], check=False)
             else:
-                shutil.copy2(src_path, dest_path)
+                dest_path.parent.mkdir(parents=True, exist_ok=True)
+                import subprocess
+                subprocess.run(["cp", "-af", str(src_path), str(dest_path)], check=False)
 
             mode_str = entry.get("permissions")
             if mode_str:

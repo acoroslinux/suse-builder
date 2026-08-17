@@ -95,7 +95,8 @@ class BrandingManager:
                 tgt_dir = self.chroot.target_root / tgt_path
                 tgt_dir.mkdir(parents=True, exist_ok=True)
                 if src_dir.is_dir():
-                    shutil.copytree(src_dir, tgt_dir, dirs_exist_ok=True)
+                    import subprocess
+                    subprocess.run(["cp", "-af", f"{src_dir}/.", f"{tgt_dir}/"], check=False)
                     logger.info(f"  -> Applied overlay: {src_name}/ to /{tgt_path}/")
 
     def _apply_dconf_branding(self):
@@ -112,8 +113,11 @@ class BrandingManager:
             if src.exists():
                 tgt = dconf_target / sub
                 tgt.parent.mkdir(parents=True, exist_ok=True)
-                # If target directory exists, copytree needs dirs_exist_ok=True (Python 3.8+)
-                shutil.copytree(src, tgt, dirs_exist_ok=True) if src.is_dir() else shutil.copy2(src, tgt)
+                import subprocess
+                if src.is_dir():
+                    subprocess.run(["cp", "-af", f"{src}/.", f"{tgt}/"], check=False)
+                else:
+                    subprocess.run(["cp", "-af", str(src), str(tgt)], check=False)
                 
         # Run dconf update inside chroot
         try:
@@ -139,7 +143,9 @@ class BrandingManager:
         # Copy the theme over
         if target_dir.exists():
             shutil.rmtree(target_dir)
-        shutil.copytree(source_dir, target_dir)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        import subprocess
+        subprocess.run(["cp", "-af", f"{source_dir}/.", f"{target_dir}/"], check=False)
         
         # Execute plymouth-set-default-theme inside the chroot to update initramfs
         try:
