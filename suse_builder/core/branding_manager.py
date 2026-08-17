@@ -39,6 +39,33 @@ class BrandingManager:
         self._apply_os_release()
         self._apply_grub_branding()
         self._apply_desktop_branding()
+        self._apply_plymouth_branding()
+
+    def _apply_plymouth_branding(self):
+        """Copies Plymouth theme and sets it as default."""
+        theme_dir_str = self.branding_cfg.get("plymouth_theme_dir")
+        if not theme_dir_str:
+            return
+            
+        source_dir = resolve_from_project(theme_dir_str)
+        if not source_dir.exists() or not source_dir.is_dir():
+            logger.warning(f"  -> Plymouth theme directory not found at {source_dir}")
+            return
+            
+        theme_name = source_dir.name
+        target_dir = self.chroot.target_root / "usr" / "share" / "plymouth" / "themes" / theme_name
+        
+        # Copy the theme over
+        if target_dir.exists():
+            shutil.rmtree(target_dir)
+        shutil.copytree(source_dir, target_dir)
+        
+        # Execute plymouth-set-default-theme inside the chroot to update initramfs
+        try:
+            self.chroot.run_in_chroot(["plymouth-set-default-theme", "-R", theme_name], check=False)
+            logger.info(f"  -> Injected custom Plymouth theme '{theme_name}' and rebuilt initramfs")
+        except Exception as e:
+            logger.warning(f"  -> Failed to set Plymouth theme: {e}")
 
     def _apply_os_release(self):
         """Overrides the PRETTY_NAME and NAME in /etc/os-release to match branding."""
