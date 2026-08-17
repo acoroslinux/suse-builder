@@ -62,6 +62,16 @@
     "xfce4-wavelan-plugin",
     "xfce4-weather-plugin",
     "xfce4-whiskermenu-plugin",
-    "xfce4-xkb-plugin"
+    "xfce4-xkb-plugin",
+    "xfce4-screenshooter",
+    "xfce4-panel-profiles",
+    "xfce4-docklike-plugin",
+    "xfce4-notes-plugin",
+    "xfce4-calculator-plugin",
+    "xfce4-mailwatch-plugin",
+    "thunar-archive-plugin",
+    "thunar-media-tags-plugin",
+    "thunar-volman",
+    "file-roller"
   ]
 }
