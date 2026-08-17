@@ -1,0 +1,9 @@
+{
+  "os_name": "openSUSE Modern",
+  "grub_background": "artwork/grub-bg.png",
+  "plymouth_theme_dir": "artwork/plymouth-modern",
+  "desktop_wallpaper": "artwork/wallpaper.jpg",
+  "icon_theme": "Papirus-Dark",
+  "gtk_theme": "Adwaita-dark",
+  "color_scheme": "prefer-dark"
+}

@@ -14,6 +14,7 @@ from suse_builder.core.disk_engine import DiskEngine
 from suse_builder.core.container_engine import ContainerEngine, ContainerEngineError
 from suse_builder.core.config_loader import ConfigLoader
 from suse_builder.core.hook_manager import HookManager
+from suse_builder.core.branding_manager import BrandingManager
 from suse_builder.core.path_utils import resolve_from_project, unmount_all_under
 import logging
 
@@ -222,6 +223,10 @@ class BuildOrchestrator:
 
             customizer = SystemCustomizer(chroot, self.config)
             customizer.configure_live_environment()
+
+            # Apply visual branding
+            branding = BrandingManager(chroot, self.config)
+            branding.apply_branding()
 
             # Run in-chroot hooks after all system configuration is done
             hook_manager.run_stage("chroot")
