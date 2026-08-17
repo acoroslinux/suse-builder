@@ -427,7 +427,6 @@ class ISOEngine:
         # Copy GRUB themes/backgrounds to the Live ISO
         grub_assets_src = resolve_from_project("configs/custom_files/boot/grub2/themes")
         if grub_assets_src.exists() and self.mode != "mock":
-            import subprocess
             for d in [self.iso_staging / "boot" / "grub2" / "themes", self.iso_staging / "boot" / "grub" / "themes"]:
                 d.mkdir(parents=True, exist_ok=True)
                 subprocess.run(["rsync", "-a", "--force", f"{grub_assets_src}/", f"{d}/"], check=False)
@@ -555,7 +554,6 @@ class ISOEngine:
         if offline_repo_dir and Path(offline_repo_dir).exists():
             target_repo = self.iso_staging / "repo" / self.config.get("architecture", "x86_64")
             target_repo.mkdir(parents=True, exist_ok=True)
-            import subprocess
             subprocess.run(["rsync", "-a", "--force", f"{offline_repo_dir}/", f"{target_repo}/"], check=False)
 
         iso_path = resolve_from_project(f"output/{self.output_name}.iso")

@@ -903,7 +903,6 @@ class SystemCustomizer:
             return
 
         import shutil
-        import subprocess
         from suse_builder.core.path_utils import resolve_from_project
         project_root = resolve_from_project("")
         custom_files_dir = project_root / "configs" / "custom_files"

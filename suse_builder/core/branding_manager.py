@@ -95,7 +95,6 @@ class BrandingManager:
                 tgt_dir = self.chroot.target_root / tgt_path
                 tgt_dir.mkdir(parents=True, exist_ok=True)
                 if src_dir.is_dir():
-                    import subprocess
                     subprocess.run(["rsync", "-a", "--force", f"{src_dir}/", f"{tgt_dir}/"], check=False)
                     logger.info(f"  -> Applied overlay: {src_name}/ to /{tgt_path}/")
 
@@ -113,7 +112,6 @@ class BrandingManager:
             if src.exists():
                 tgt = dconf_target / sub
                 tgt.parent.mkdir(parents=True, exist_ok=True)
-                import subprocess
                 if src.is_dir():
                     subprocess.run(["rsync", "-a", "--force", f"{src}/", f"{tgt}/"], check=False)
                 else:
@@ -138,7 +136,6 @@ class BrandingManager:
         if target_dir.exists():
             shutil.rmtree(target_dir)
         target_dir.mkdir(parents=True, exist_ok=True)
-        import subprocess
         subprocess.run(["rsync", "-a", "--force", f"{source_dir}/", f"{target_dir}/"], check=False)
         
         # Execute plymouth-set-default-theme inside the chroot to update initramfs
