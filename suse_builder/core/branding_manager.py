@@ -40,6 +40,31 @@ class BrandingManager:
         self._apply_grub_branding()
         self._apply_desktop_branding()
         self._apply_plymouth_branding()
+        self._apply_dconf_branding()
+
+    def _apply_dconf_branding(self):
+        """Copies custom dconf settings (GNOME) and updates the database."""
+        dconf_source = resolve_from_project("configs/custom_files/dconf")
+        if not dconf_source.exists() or not dconf_source.is_dir():
+            return
+            
+        dconf_target = self.chroot.target_root / "etc" / "dconf"
+        
+        # Copy db/local.d and profile over to the chroot
+        for sub in ["db/local.d", "profile"]:
+            src = dconf_source / sub
+            if src.exists():
+                tgt = dconf_target / sub
+                tgt.parent.mkdir(parents=True, exist_ok=True)
+                # If target directory exists, copytree needs dirs_exist_ok=True (Python 3.8+)
+                shutil.copytree(src, tgt, dirs_exist_ok=True) if src.is_dir() else shutil.copy2(src, tgt)
+                
+        # Run dconf update inside chroot
+        try:
+            self.chroot.run_in_chroot(["dconf", "update"], check=False)
+            logger.info("  -> Injected custom dconf settings and updated database")
+        except Exception as e:
+            logger.warning(f"  -> Failed to update dconf: {e}")
 
     def _apply_plymouth_branding(self):
         """Copies Plymouth theme and sets it as default."""
