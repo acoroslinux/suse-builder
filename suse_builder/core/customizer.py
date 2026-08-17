@@ -106,6 +106,14 @@ class SystemCustomizer:
         )
         hosts_file.write_text(hosts_content)
 
+        # Fix DNS resolution in live environment by ensuring netconfig symlink exists
+        resolv_conf = etc_dir / "resolv.conf"
+        if not resolv_conf.exists() and not resolv_conf.is_symlink():
+            try:
+                resolv_conf.symlink_to("/var/run/netconfig/resolv.conf")
+            except Exception as e:
+                logger.warning(f"Failed to create resolv.conf symlink: {e}")
+
     def configure_dbus_launch(self):
         dbus_launch = self.chroot.target_root / "usr" / "bin" / "dbus-launch"
         if not dbus_launch.exists() or dbus_launch.stat().st_size == 0:
