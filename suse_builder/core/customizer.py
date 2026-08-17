@@ -906,27 +906,11 @@ class SystemCustomizer:
         project_root = resolve_from_project("")
         custom_files_dir = project_root / "configs" / "custom_files"
 
-        # 1. Direct overlay from configs/custom_files/ -> target_root/
+        # 1. Direct overlay from configs/custom_files/ has been moved to BrandingManager
+        # to prevent polluting the root directory with flat folder names.
         rsync_log_path = self.target_root.parent.parent / "custom_files_copy.log"
         if rsync_log_path.exists():
             rsync_log_path.unlink()
-
-        if custom_files_dir.exists() and custom_files_dir.is_dir():
-            with open(rsync_log_path, "a") as rsync_log:
-                for item in custom_files_dir.iterdir():
-                    if item.name == ".gitkeep":
-                        continue
-                    dest_path = self.target_root / item.name
-                    if item.is_dir():
-                        dest_path.mkdir(parents=True, exist_ok=True)
-                        proc = subprocess.run(["rsync", "-av", "--force", f"{item}/", f"{dest_path}/"], stdout=rsync_log, stderr=subprocess.STDOUT, check=False)
-                    else:
-                        dest_path.parent.mkdir(parents=True, exist_ok=True)
-                        proc = subprocess.run(["rsync", "-av", "--force", str(item), str(dest_path)], stdout=rsync_log, stderr=subprocess.STDOUT, check=False)
-                    
-                    if proc.returncode != 0 or not dest_path.exists():
-                        logger.error(f"Failed to copy custom file/dir: {item} -> {dest_path}. Check {rsync_log_path} for details.")
-                        raise RuntimeError(f"Custom files overlay validation failed for {item.name}")
 
         # 2. Structured list from JSON config
         custom_files_list = list(self.config.get("custom_files", []))
