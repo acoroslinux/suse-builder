@@ -149,21 +149,7 @@ class SystemCustomizer:
         except Exception as e:
             logger.warning(f"Failed to remove xf86-video-vmware: {e}")
 
-        # Fix invisible mouse cursor in VirtualBox with modesetting driver
-        try:
-            xorg_conf_dir = self.target_root / "etc" / "X11" / "xorg.conf.d"
-            xorg_conf_dir.mkdir(parents=True, exist_ok=True)
-            vbox_mouse_fix = xorg_conf_dir / "20-modesetting.conf"
-            vbox_mouse_fix.write_text(
-                'Section "Device"\n'
-                '    Identifier "modesetting"\n'
-                '    Driver "modesetting"\n'
-                '    Option "SWCursor" "on"\n'
-                'EndSection\n'
-            )
-            logger.info("Added SWCursor fix for modesetting driver.")
-        except Exception as e:
-            logger.warning(f"Failed to write SWCursor fix: {e}")
+        # (Removed dangerous modesetting Xorg override that crashes XFCE)
 
         for auto_svc in auto_services:
             if auto_svc not in services_to_enable:
