@@ -122,6 +122,13 @@ class BuildOrchestrator:
             "grub2", "grub2-x86_64-efi", "grub2-i386-pc", "shim",
             "dosfstools", "mtools", "efibootmgr", "syslinux"
         ]
+        
+        if self.with_calamares:
+            essential_boot_pkgs.extend(["calamares"])
+            
+        if self.with_zram:
+            essential_boot_pkgs.extend(["systemd-zram-service"])
+            
         for pkg in essential_boot_pkgs:
             if pkg not in self.config.get("packages", []):
                 self.config.setdefault("packages", []).append(pkg)
