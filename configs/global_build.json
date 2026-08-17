@@ -6,5 +6,15 @@
   },
   "boot": {
     "kernel_params": "root=live:CDLABEL=OPENSUSE_MODERN rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img quiet splash"
-  }
+  },
+  "packages": [
+    "xdg-user-dirs",
+    "xdg-user-dirs-gtk",
+    "gvfs",
+    "gvfs-backends",
+    "gvfs-backend-samba",
+    "samba",
+    "samba-client",
+    "avahi"
+  ]
 }

@@ -73,6 +73,9 @@ class SystemCustomizer:
                         else:
                             shutil.copy2(item, dest)
 
+            # Create standard XDG directories (Downloads, Documents, etc.)
+            self.chroot.run_in_chroot(["su", "-", live_user, "-c", "xdg-user-dirs-update --force"], check=False)
+
             self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:{live_user}", f"/home/{live_user}"], check=False)
             self.chroot.run_in_chroot(["chmod", "755", f"/home/{live_user}"], check=False)
         except Exception:
