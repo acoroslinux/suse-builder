@@ -99,6 +99,16 @@ class BrandingManager:
                     subprocess.run(["rsync", "-a", "--force", f"{src_dir}/", f"{tgt_dir}/"], check=False)
                     logger.info(f"  -> Applied overlay: {src_name}/ to /{tgt_path}/")
 
+        # Desktop specific skeleton overlay
+        desktop = self.config.get("desktop")
+        if desktop:
+            desktop_skel = custom_base / "desktops" / desktop
+            if desktop_skel.exists() and desktop_skel.is_dir():
+                tgt_dir = self.chroot.target_root / "etc" / "skel"
+                tgt_dir.mkdir(parents=True, exist_ok=True)
+                subprocess.run(["rsync", "-a", "--force", f"{desktop_skel}/", f"{tgt_dir}/"], check=False)
+                logger.info(f"  -> Applied overlay: desktops/{desktop}/ to /etc/skel/")
+
     def _apply_dconf_branding(self):
         dconf_src = resolve_from_project("configs/custom_files/dconf")
         if not dconf_src.exists():
