@@ -135,9 +135,29 @@ class SystemCustomizer:
             elif (self.target_root / "usr" / "sbin" / "lightdm").exists() or (self.target_root / "usr" / "bin" / "lightdm").exists():
                 dm = "lightdm"
 
-        auto_services = ["NetworkManager", "dbus", "avahi-daemon", "smb", "nmb", "sshd"]
+        auto_services = ["NetworkManager", "dbus", "avahi-daemon", "smb", "nmb", "sshd", "cups"]
         if dm:
             auto_services.extend(["display-manager"])
+
+    def configure_network_discovery(self):
+        """Configure /etc/nsswitch.conf to enable mDNS/Avahi local network discovery."""
+        nsswitch = self.target_root / "etc" / "nsswitch.conf"
+        if not nsswitch.exists():
+            return
+            
+        content = nsswitch.read_text()
+        new_lines = []
+        for line in content.splitlines():
+            if line.startswith("hosts:") and "mdns" not in line:
+                # Add mdns4_minimal before dns for .local resolution
+                if "dns" in line:
+                    line = line.replace(" dns", " mdns4_minimal [NOTFOUND=return] dns mdns4")
+                else:
+                    line += " mdns4_minimal [NOTFOUND=return] mdns4"
+            new_lines.append(line)
+            
+        nsswitch.write_text("\n".join(new_lines) + "\n")
+        logger.info("Configured nsswitch.conf for Avahi/mDNS network discovery.")
 
         # Uninstall problematic legacy video drivers that crash Xorg in VMs
         try:
@@ -672,6 +692,7 @@ class SystemCustomizer:
         self.configure_system_defaults()
         self.configure_dbus_launch()
         self.configure_branding()
+        self.configure_network_discovery()
         self.setup_services()
         self.configure_gnome_defaults()
         self.configure_kde_defaults()
