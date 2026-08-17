@@ -13,6 +13,7 @@ from suse_builder.core.iso_engine import ISOEngine
 from suse_builder.core.disk_engine import DiskEngine
 from suse_builder.core.container_engine import ContainerEngine, ContainerEngineError
 from suse_builder.core.config_loader import ConfigLoader
+from suse_builder.core.hook_manager import HookManager
 from suse_builder.core.path_utils import resolve_from_project, unmount_all_under
 import logging
 
@@ -188,7 +189,11 @@ class BuildOrchestrator:
         toolchain.setup()
 
         chroot = ChrootManager(self.target_root, self.mode, cache_dir=resolve_from_project(f"cache/{self.arch}"), arch=self.arch)
+        hook_manager = HookManager(chroot, self.config)
+        
         try:
+            hook_manager.run_stage("pre-chroot")
+            
             toolchain.mount_virtual_fs()
             chroot.mount_virtual_fs()
 
@@ -218,9 +223,15 @@ class BuildOrchestrator:
             customizer = SystemCustomizer(chroot, self.config)
             customizer.configure_live_environment()
 
+            # Run in-chroot hooks after all system configuration is done
+            hook_manager.run_stage("chroot")
+
             self._ensure_iso_boot_artifacts(chroot)
 
             chroot.umount_virtual_fs()
+
+            # Run post-chroot hooks before ISO/Image generation
+            hook_manager.run_stage("post-chroot")
 
             iso_engine = ISOEngine(self.workdir, self.target_root, name, self.config, self.mode, toolchain)
             if self.output_format in {"img", "qcow2", "vmdk", "vhd", "vdi"}:
