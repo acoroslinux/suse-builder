@@ -1,4 +1,4 @@
-/* QML About dialog for Arch Modern Calamares Installer
+/* QML About dialog for openSUSE Modern Calamares Installer
    Adapted from KaOS branding templates
    SPDX-License-Identifier: GPL-3.0-or-later
 */
@@ -48,7 +48,7 @@ ApplicationWindow {
                         Copyright 2014-2017 Teo Mrnjavac &lt;teo@kde.org&gt;<br/>
                         Copyright 2017-2022 Adriaan de Groot &lt;groot&gt;<br/>
                         Thanks to <a href='https://calamares.io/team/' style='color: #47A7F5'>the Calamares team</a>
-                        and the <a href=\"https://github.com/acoroslinux/arch-builder/issues\" style='color: #47A7F5'>Arch Modern
+                        and the <a href=\"https://github.com/acoroslinux/suse-builder/issues\" style='color: #47A7F5'>openSUSE Modern
                         team</a>.<br/><br/>
                         <a href='https://calamares.io/' style='color: #47A7F5'>Calamares</a>
                         development is sponsored by <br/>

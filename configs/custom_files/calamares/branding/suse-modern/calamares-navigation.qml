@@ -1,4 +1,4 @@
-/* QML navigation bar for Arch Modern Calamares Installer
+/* QML navigation bar for openSUSE Modern Calamares Installer
    Adapted from KaOS branding templates
    SPDX-License-Identifier: GPL-3.0-or-later
 */
