@@ -213,21 +213,40 @@ class ISOEngine:
         for fmt, boot_filename in formats_to_build:
             out_binary = efi_tmp / boot_filename
             built = False
-            grub_mk = "grub2-mkstandalone" if (self.toolchain.use_isolated or shutil.which("grub2-mkstandalone")) else ("grub-mkstandalone" if shutil.which("grub-mkstandalone") else None)
-            if grub_mk:
-                res = self.toolchain.run_tool(grub_mk, [
-                    f"--format={fmt}",
-                    "--fonts=",
-                    "--locales=",
-                    "--themes=",
-                    f"--install-modules={efi_modules}",
-                    f"--modules={efi_modules}",
-                    "-o", str(out_binary), f"boot/grub/grub.cfg={embed_cfg}"
-                ], check=False)
-                if res.returncode == 0 and out_binary.exists() and out_binary.stat().st_size > 0:
-                    built = True
-                elif out_binary.exists():
-                    out_binary.unlink(missing_ok=True)
+            
+            # Check for pre-signed openSUSE Secure Boot binaries first
+            signed_shim = self.target_root / "usr" / "share" / "efi" / "x86_64" / "shim.efi"
+            signed_grub = self.target_root / "usr" / "share" / "efi" / "x86_64" / "grub.efi"
+            signed_mok = self.target_root / "usr" / "share" / "efi" / "x86_64" / "MokManager.efi"
+            
+            if fmt == "x86_64-efi" and signed_shim.exists() and signed_grub.exists():
+                shutil.copy2(signed_shim, out_binary)
+                built = True
+                
+                # We also need to copy grub.efi and MokManager to the staging area later
+                # so we append them to a special list
+                created_binaries.append((signed_grub, "grub.efi"))
+                if signed_mok.exists():
+                    created_binaries.append((signed_mok, "MokManager.efi"))
+                    
+                logger.info("Using pre-signed openSUSE shim.efi and grub.efi for Secure Boot!")
+            else:
+                grub_mk = "grub2-mkstandalone" if (self.toolchain.use_isolated or shutil.which("grub2-mkstandalone")) else ("grub-mkstandalone" if shutil.which("grub-mkstandalone") else None)
+                if grub_mk:
+                    res = self.toolchain.run_tool(grub_mk, [
+                        f"--format={fmt}",
+                        "--fonts=",
+                        "--locales=",
+                        "--themes=",
+                        f"--install-modules={efi_modules}",
+                        f"--modules={efi_modules}",
+                        "-o", str(out_binary), f"boot/grub/grub.cfg={embed_cfg}"
+                    ], check=False)
+                    if res.returncode == 0 and out_binary.exists() and out_binary.stat().st_size > 0:
+                        built = True
+                        logger.info(f"Generated standalone unsigned GRUB binary: {boot_filename}")
+                    elif out_binary.exists():
+                        out_binary.unlink(missing_ok=True)
 
             if built or (out_binary.exists() and out_binary.stat().st_size > 0):
                 created_binaries.append((out_binary, boot_filename))
