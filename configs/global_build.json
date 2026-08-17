@@ -18,6 +18,18 @@
     "avahi",
     "plymouth",
     "plymouth-dracut",
-    "plymouth-plugin-script"
+    "plymouth-plugin-script",
+    "yast2",
+    "yast2-x11",
+    "yast2-control-center",
+    "yast2-control-center-qt",
+    "yast2-packager",
+    "yast2-users",
+    "yast2-network",
+    "yast2-storage-ng",
+    "yast2-services-manager",
+    "yast2-firewall",
+    "yast2-bootloader",
+    "yast2-sudo"
   ]
 }
