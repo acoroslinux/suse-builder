@@ -57,12 +57,14 @@ class BrandingManager:
             "dconf": "etc/dconf",
             "default": "etc/default",
             "etc": "etc",
+            "icons": "usr/share/icons",
             "lightdm": "etc/lightdm",
             "plymouth": "usr/share/plymouth",
             "samba": "etc/samba",
             "sddm": "etc/sddm.conf.d",
             "skel": "etc/skel",
             "sudoers.d": "etc/sudoers.d",
+            "themes": "usr/share/themes",
             "usr": "usr"
         }
         

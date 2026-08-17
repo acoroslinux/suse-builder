@@ -2,7 +2,7 @@
   "os_name": "openSUSE Modern",
   "grub_background": "configs/custom_files/boot/grub2/themes/suse-modern/suse-grub-bg.jpg",
   "plymouth_theme_dir": "configs/custom_files/plymouth/themes/suse-modern",
-  "desktop_wallpaper": "configs/custom_files/backgrounds/suse-modern-wallpaper.jpg",
+  "desktop_wallpaper": "configs/custom_files/backgrounds/suse-cyber-chameleon.jpg",
   "icon_theme": "Papirus-Dark",
   "gtk_theme": "Adwaita-dark",
   "color_scheme": "prefer-dark"
