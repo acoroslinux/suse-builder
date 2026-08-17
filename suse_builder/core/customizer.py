@@ -86,6 +86,7 @@ class SystemCustomizer:
         sudoers_file.write_text(f"{live_user} ALL=(ALL) NOPASSWD: ALL\n%wheel ALL=(ALL) NOPASSWD: ALL\n")
         try:
             sudoers_file.chmod(0o440)
+            self.chroot.run_in_chroot(["chown", "-R", "root:root", "/etc/sudoers.d"], check=False)
         except Exception:
             pass
 
@@ -777,6 +778,10 @@ class SystemCustomizer:
                         sf.chmod(0o440)
             except Exception:
                 pass
+        
+        # 3. Ensure root ownership for critical security files (shadow, sudoers, etc.)
+        for path in ["/etc/shadow", "/etc/gshadow", "/etc/sudoers", "/etc/sudoers.d"]:
+            self.chroot.run_in_chroot(["chown", "-R", "root:root", path], check=False)
 
         # 3. PAM directory and files
         pamd = self.target_root / "etc" / "pam.d"
