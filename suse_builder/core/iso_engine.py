@@ -430,7 +430,7 @@ class ISOEngine:
             import subprocess
             for d in [self.iso_staging / "boot" / "grub2" / "themes", self.iso_staging / "boot" / "grub" / "themes"]:
                 d.mkdir(parents=True, exist_ok=True)
-                subprocess.run(["cp", "-af", f"{grub_assets_src}/.", f"{d}/"], check=False)
+                subprocess.run(["rsync", "-a", "--force", f"{grub_assets_src}/", f"{d}/"], check=False)
 
         # Copy GRUB x86_64-efi modules to ISO
         for mod_candidate in [
@@ -556,7 +556,7 @@ class ISOEngine:
             target_repo = self.iso_staging / "repo" / self.config.get("architecture", "x86_64")
             target_repo.mkdir(parents=True, exist_ok=True)
             import subprocess
-            subprocess.run(["cp", "-af", f"{offline_repo_dir}/.", f"{target_repo}/"], check=False)
+            subprocess.run(["rsync", "-a", "--force", f"{offline_repo_dir}/", f"{target_repo}/"], check=False)
 
         iso_path = resolve_from_project(f"output/{self.output_name}.iso")
         iso_path.parent.mkdir(parents=True, exist_ok=True)

@@ -96,48 +96,42 @@ class BrandingManager:
                 tgt_dir.mkdir(parents=True, exist_ok=True)
                 if src_dir.is_dir():
                     import subprocess
-                    subprocess.run(["cp", "-af", f"{src_dir}/.", f"{tgt_dir}/"], check=False)
+                    subprocess.run(["rsync", "-a", "--force", f"{src_dir}/", f"{tgt_dir}/"], check=False)
                     logger.info(f"  -> Applied overlay: {src_name}/ to /{tgt_path}/")
 
     def _apply_dconf_branding(self):
-        """Copies custom dconf settings (GNOME) and updates the database."""
-        dconf_source = resolve_from_project("configs/custom_files/dconf")
-        if not dconf_source.exists() or not dconf_source.is_dir():
+        dconf_src = resolve_from_project("configs/custom_files/dconf")
+        if not dconf_src.exists():
             return
             
         dconf_target = self.chroot.target_root / "etc" / "dconf"
+        dconf_target.mkdir(parents=True, exist_ok=True)
         
-        # Copy db/local.d and profile over to the chroot
-        for sub in ["db/local.d", "profile"]:
-            src = dconf_source / sub
+        # Overlay dconf profile and db files
+        for sub in ["profile", "db"]:
+            src = dconf_src / sub
             if src.exists():
                 tgt = dconf_target / sub
                 tgt.parent.mkdir(parents=True, exist_ok=True)
                 import subprocess
                 if src.is_dir():
-                    subprocess.run(["cp", "-af", f"{src}/.", f"{tgt}/"], check=False)
+                    subprocess.run(["rsync", "-a", "--force", f"{src}/", f"{tgt}/"], check=False)
                 else:
-                    subprocess.run(["cp", "-af", str(src), str(tgt)], check=False)
+                    subprocess.run(["rsync", "-a", "--force", str(src), str(tgt)], check=False)
                 
         # Run dconf update inside chroot
         try:
             self.chroot.run_in_chroot(["dconf", "update"], check=False)
-            logger.info("  -> Injected custom dconf settings and updated database")
+            logger.info("Executed 'dconf update'.")
         except Exception as e:
-            logger.warning(f"  -> Failed to update dconf: {e}")
+            logger.warning(f"dconf update failed: {e}")
 
     def _apply_plymouth_branding(self):
-        """Copies Plymouth theme and sets it as default."""
-        theme_dir_str = self.branding_cfg.get("plymouth_theme_dir")
-        if not theme_dir_str:
+        theme_name = "suse-modern"
+        source_dir = resolve_from_project(f"configs/custom_files/plymouth/themes/{theme_name}")
+        if not source_dir.exists():
             return
             
-        source_dir = resolve_from_project(theme_dir_str)
-        if not source_dir.exists() or not source_dir.is_dir():
-            logger.warning(f"  -> Plymouth theme directory not found at {source_dir}")
-            return
-            
-        theme_name = source_dir.name
         target_dir = self.chroot.target_root / "usr" / "share" / "plymouth" / "themes" / theme_name
         
         # Copy the theme over
@@ -145,7 +139,7 @@ class BrandingManager:
             shutil.rmtree(target_dir)
         target_dir.mkdir(parents=True, exist_ok=True)
         import subprocess
-        subprocess.run(["cp", "-af", f"{source_dir}/.", f"{target_dir}/"], check=False)
+        subprocess.run(["rsync", "-a", "--force", f"{source_dir}/", f"{target_dir}/"], check=False)
         
         # Execute plymouth-set-default-theme inside the chroot to update initramfs
         try:

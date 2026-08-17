@@ -909,17 +909,16 @@ class SystemCustomizer:
 
         # 1. Direct overlay from configs/custom_files/ -> target_root/
         if custom_files_dir.exists() and custom_files_dir.is_dir():
-            import subprocess
             for item in custom_files_dir.iterdir():
                 if item.name == ".gitkeep":
                     continue
                 dest_path = self.target_root / item.name
                 if item.is_dir():
                     dest_path.mkdir(parents=True, exist_ok=True)
-                    subprocess.run(["cp", "-af", f"{item}/.", f"{dest_path}/"], check=False)
+                    subprocess.run(["rsync", "-a", "--force", f"{item}/", f"{dest_path}/"], check=False)
                 else:
                     dest_path.parent.mkdir(parents=True, exist_ok=True)
-                    subprocess.run(["cp", "-af", str(item), str(dest_path)], check=False)
+                    subprocess.run(["rsync", "-a", "--force", str(item), str(dest_path)], check=False)
 
         # 2. Structured list from JSON config
         custom_files_list = list(self.config.get("custom_files", []))
@@ -970,11 +969,11 @@ class SystemCustomizer:
             if src_path.is_dir():
                 dest_path.mkdir(parents=True, exist_ok=True)
                 import subprocess
-                subprocess.run(["cp", "-af", f"{src_path}/.", f"{dest_path}/"], check=False)
+                subprocess.run(["rsync", "-a", "--force", f"{src_path}/", f"{dest_path}/"], check=False)
             else:
                 dest_path.parent.mkdir(parents=True, exist_ok=True)
                 import subprocess
-                subprocess.run(["cp", "-af", str(src_path), str(dest_path)], check=False)
+                subprocess.run(["rsync", "-a", "--force", str(src_path), str(dest_path)], check=False)
 
             mode_str = entry.get("permissions")
             if mode_str:

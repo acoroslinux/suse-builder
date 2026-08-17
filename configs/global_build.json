@@ -17,6 +17,7 @@
     "samba-client",
     "avahi",
     "plymouth",
+    "plymouth-dracut",
     "plymouth-plugin-script"
   ]
 }
