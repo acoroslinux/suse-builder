@@ -142,26 +142,6 @@ class SystemCustomizer:
         if dm:
             auto_services.extend(["display-manager"])
 
-    def configure_network_discovery(self):
-        """Configure /etc/nsswitch.conf to enable mDNS/Avahi local network discovery."""
-        nsswitch = self.target_root / "etc" / "nsswitch.conf"
-        if not nsswitch.exists():
-            return
-            
-        content = nsswitch.read_text()
-        new_lines = []
-        for line in content.splitlines():
-            if line.startswith("hosts:") and "mdns" not in line:
-                # Add mdns4_minimal before dns for .local resolution
-                if "dns" in line:
-                    line = line.replace(" dns", " mdns4_minimal [NOTFOUND=return] dns mdns4")
-                else:
-                    line += " mdns4_minimal [NOTFOUND=return] mdns4"
-            new_lines.append(line)
-            
-        nsswitch.write_text("\n".join(new_lines) + "\n")
-        logger.info("Configured nsswitch.conf for Avahi/mDNS network discovery.")
-
         # Uninstall problematic legacy video drivers that crash Xorg in VMs
         try:
             logger.info("Removing legacy xf86-video-vmware to prevent Xorg crashes...")
@@ -242,6 +222,26 @@ class SystemCustomizer:
             else:
                 sysconfig_dm.parent.mkdir(parents=True, exist_ok=True)
                 sysconfig_dm.write_text(f'DISPLAYMANAGER="{dm}"\n')
+
+    def configure_network_discovery(self):
+        """Configure /etc/nsswitch.conf to enable mDNS/Avahi local network discovery."""
+        nsswitch = self.target_root / "etc" / "nsswitch.conf"
+        if not nsswitch.exists():
+            return
+            
+        content = nsswitch.read_text()
+        new_lines = []
+        for line in content.splitlines():
+            if line.startswith("hosts:") and "mdns" not in line:
+                # Add mdns4_minimal before dns for .local resolution
+                if "dns" in line:
+                    line = line.replace(" dns", " mdns4_minimal [NOTFOUND=return] dns mdns4")
+                else:
+                    line += " mdns4_minimal [NOTFOUND=return] mdns4"
+            new_lines.append(line)
+            
+        nsswitch.write_text("\n".join(new_lines) + "\n")
+        logger.info("Configured nsswitch.conf for Avahi/mDNS network discovery.")
 
     def _detect_desktop_session(self) -> str:
         # Check actual installed sessions first
