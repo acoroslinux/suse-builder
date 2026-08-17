@@ -84,6 +84,7 @@
     "galculator",
     "lightdm-gtk-greeter-settings",
     "noto-fonts",
-    "noto-coloremoji-fonts"
+    "noto-coloremoji-fonts",
+    "nano"
   ]
 }
