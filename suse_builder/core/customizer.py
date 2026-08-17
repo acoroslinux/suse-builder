@@ -147,7 +147,7 @@ class SystemCustomizer:
             elif (self.target_root / "usr" / "sbin" / "lightdm").exists() or (self.target_root / "usr" / "bin" / "lightdm").exists():
                 dm = "lightdm"
 
-        auto_services = ["NetworkManager", "dbus", "avahi-daemon", "smb", "nmb", "sshd", "cups"]
+        auto_services = ["NetworkManager", "dbus", "avahi-daemon", "smb", "nmb", "sshd", "cups", "polkit"]
         if dm:
             auto_services.extend(["display-manager"])
 
