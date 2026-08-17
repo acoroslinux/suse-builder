@@ -73,6 +73,17 @@
     "thunar-media-tags-plugin",
     "thunar-volman",
     "file-roller",
-    "mousepad"
+    "mousepad",
+    "xfce4-terminal",
+    "NetworkManager-applet",
+    "MozillaFirefox",
+    "pavucontrol",
+    "ristretto",
+    "parole",
+    "evince",
+    "galculator",
+    "lightdm-gtk-greeter-settings",
+    "noto-fonts",
+    "noto-coloremoji-fonts"
   ]
 }
