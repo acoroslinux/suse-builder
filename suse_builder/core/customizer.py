@@ -903,6 +903,7 @@ class SystemCustomizer:
             return
 
         import shutil
+        import subprocess
         from suse_builder.core.path_utils import resolve_from_project
         project_root = resolve_from_project("")
         custom_files_dir = project_root / "configs" / "custom_files"
@@ -915,10 +916,14 @@ class SystemCustomizer:
                 dest_path = self.target_root / item.name
                 if item.is_dir():
                     dest_path.mkdir(parents=True, exist_ok=True)
-                    subprocess.run(["rsync", "-a", "--force", f"{item}/", f"{dest_path}/"], check=False)
+                    proc = subprocess.run(["rsync", "-a", "--force", f"{item}/", f"{dest_path}/"], check=False)
                 else:
                     dest_path.parent.mkdir(parents=True, exist_ok=True)
-                    subprocess.run(["rsync", "-a", "--force", str(item), str(dest_path)], check=False)
+                    proc = subprocess.run(["rsync", "-a", "--force", str(item), str(dest_path)], check=False)
+                
+                if proc.returncode != 0 or not dest_path.exists():
+                    logger.error(f"Failed to copy custom file/dir: {item} -> {dest_path}")
+                    raise RuntimeError(f"Custom files overlay validation failed for {item.name}")
 
         # 2. Structured list from JSON config
         custom_files_list = list(self.config.get("custom_files", []))
@@ -968,12 +973,14 @@ class SystemCustomizer:
             dest_path.parent.mkdir(parents=True, exist_ok=True)
             if src_path.is_dir():
                 dest_path.mkdir(parents=True, exist_ok=True)
-                import subprocess
-                subprocess.run(["rsync", "-a", "--force", f"{src_path}/", f"{dest_path}/"], check=False)
+                proc = subprocess.run(["rsync", "-a", "--force", f"{src_path}/", f"{dest_path}/"], check=False)
             else:
                 dest_path.parent.mkdir(parents=True, exist_ok=True)
-                import subprocess
-                subprocess.run(["rsync", "-a", "--force", str(src_path), str(dest_path)], check=False)
+                proc = subprocess.run(["rsync", "-a", "--force", str(src_path), str(dest_path)], check=False)
+
+            if proc.returncode != 0 or not dest_path.exists():
+                logger.error(f"Failed to copy structured custom file/dir: {src_path} -> {dest_path}")
+                raise RuntimeError(f"Structured custom files validation failed for {src_rel}")
 
             mode_str = entry.get("permissions")
             if mode_str:
