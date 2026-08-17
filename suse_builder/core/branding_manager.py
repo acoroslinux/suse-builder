@@ -54,6 +54,7 @@ class BrandingManager:
             "autostart": "etc/xdg/autostart",
             "backgrounds": "usr/share/backgrounds",
             "boot": "boot",
+            "calamares": "etc/calamares",
             "dconf": "etc/dconf",
             "default": "etc/default",
             "etc": "etc",
