@@ -34,3 +34,9 @@ elif loadfont /boot/grub/unicode.pf2 ; then
     insmod gfxterm
     terminal_output gfxterm
 fi
+
+# Load openSUSE Modern Live ISO background
+if [ -f /boot/grub2/themes/suse-modern/suse-grub-bg.jpg ]; then
+    insmod jpeg
+    background_image -m stretch /boot/grub2/themes/suse-modern/suse-grub-bg.jpg
+fi

@@ -424,6 +424,13 @@ class ISOEngine:
                 shutil.copy2(src_initramfs, self.iso_staging / "boot" / initramfs)
                 shutil.copy2(src_initramfs, self.iso_staging / "boot" / "initrd")
 
+        # Copy GRUB themes/backgrounds to the Live ISO
+        grub_assets_src = resolve_from_project("configs/custom_files/boot/grub2/themes")
+        if grub_assets_src.exists() and self.mode != "mock":
+            for d in [self.iso_staging / "boot" / "grub2" / "themes", self.iso_staging / "boot" / "grub" / "themes"]:
+                d.mkdir(parents=True, exist_ok=True)
+                shutil.copytree(grub_assets_src, d, dirs_exist_ok=True)
+
         # Copy GRUB x86_64-efi modules to ISO
         for mod_candidate in [
             self.target_root / "usr" / "lib" / "grub2" / "x86_64-efi",

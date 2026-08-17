@@ -5,7 +5,7 @@
     "iso_label": "OPENSUSE_MODERN"
   },
   "boot": {
-    "kernel_params": "root=live:CDLABEL=OPENSUSE_MODERN rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img quiet splash"
+    "kernel_params": "root=live:CDLABEL=OPENSUSE_MODERN rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img quiet splash plymouth.enable=1 plymouth.theme=suse-modern"
   },
   "packages": [
     "xdg-user-dirs",
@@ -15,6 +15,8 @@
     "gvfs-backend-samba",
     "samba",
     "samba-client",
-    "avahi"
+    "avahi",
+    "plymouth",
+    "plymouth-plugin-script"
   ]
 }

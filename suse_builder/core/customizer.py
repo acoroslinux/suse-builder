@@ -673,9 +673,10 @@ class SystemCustomizer:
         dracut_conf_dir.mkdir(parents=True, exist_ok=True)
         live_conf = dracut_conf_dir / "02-live.conf"
         live_conf.write_text(
-            '# openSUSE Live Dracut Configuration\n'
-            'add_dracutmodules+=" dmsquash-live pollcdrom qemu qemu-net base rootfs-block udev-rules kernel-modules "\n'
+            '# Added by suse-builder for Live ISO generation\n'
+            'add_dracutmodules+=" dmsquash-live pollcdrom qemu qemu-net base rootfs-block udev-rules kernel-modules plymouth "\n'
             'omit_dracutmodules+=" checkisomd5 "\n'
+            'compress="xz"\n'
             'add_drivers+=" squashfs loop overlay iso9660 isofs zstd zstd_decompress dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme "\n'
             'filesystems+=" squashfs iso9660 overlay vfat ext4 "\n'
             'hostonly="no"\n'
