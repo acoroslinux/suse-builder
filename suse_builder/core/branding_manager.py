@@ -36,11 +36,44 @@ class BrandingManager:
         os_name = self.branding_cfg.get('os_name', 'Custom OS')
         logger.info(f"🎨 Applying branding profile: {os_name}")
         
+        self._apply_custom_files_overlay()
         self._apply_os_release()
         self._apply_grub_branding()
         self._apply_desktop_branding()
         self._apply_plymouth_branding()
         self._apply_dconf_branding()
+
+    def _apply_custom_files_overlay(self):
+        """Intelligently copies files from configs/custom_files to their respective system locations."""
+        custom_base = resolve_from_project("configs/custom_files")
+        if not custom_base.exists() or not custom_base.is_dir():
+            return
+            
+        mapping = {
+            "applications": "usr/share/applications",
+            "autostart": "etc/xdg/autostart",
+            "backgrounds": "usr/share/backgrounds",
+            "boot": "boot",
+            "dconf": "etc/dconf",
+            "default": "etc/default",
+            "etc": "etc",
+            "lightdm": "etc/lightdm",
+            "plymouth": "usr/share/plymouth",
+            "samba": "etc/samba",
+            "sddm": "etc/sddm.conf.d",
+            "skel": "etc/skel",
+            "sudoers.d": "etc/sudoers.d",
+            "usr": "usr"
+        }
+        
+        for src_name, tgt_path in mapping.items():
+            src_dir = custom_base / src_name
+            if src_dir.exists():
+                tgt_dir = self.chroot.target_root / tgt_path
+                tgt_dir.mkdir(parents=True, exist_ok=True)
+                if src_dir.is_dir():
+                    shutil.copytree(src_dir, tgt_dir, dirs_exist_ok=True)
+                    logger.info(f"  -> Applied overlay: {src_name}/ to /{tgt_path}/")
 
     def _apply_dconf_branding(self):
         """Copies custom dconf settings (GNOME) and updates the database."""
