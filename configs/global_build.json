@@ -8,6 +8,7 @@
     "kernel_params": "root=live:CDLABEL=OPENSUSE_MODERN rd.live.image rd.live.dir=LiveOS rd.live.squashimg=squashfs.img quiet splash plymouth.enable=1 plymouth.theme=suse-modern"
   },
   "packages": [
+    "polkit-gnome",
     "xdg-user-dirs",
     "xdg-user-dirs-gtk",
     "gvfs",
@@ -30,6 +31,18 @@
     "yast2-services-manager",
     "yast2-firewall",
     "yast2-bootloader",
+    "yast2-sudo",
+    "yast2-firstboot",
+    "yast2-auth-client",
+    "yast2-ntp-client",
+    "yast2-online-update",
+    "yast2-online-frontend",
+    "yast2-services-manager",
+    "yast2-samba-client",
+    "yast2-samba-server",
+    "yast2-scanner",
     "yast2-sudo"
+
+
   ]
 }
