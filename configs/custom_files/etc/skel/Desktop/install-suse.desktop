@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Install openSUSE
+Name[pt_PT]=Instalar o openSUSE
+Comment=Install openSUSE to disk
+Comment[pt_PT]=Instalar o sistema no disco rígido
+Exec=pkexec /usr/bin/calamares
+Icon=system-software-install
+Terminal=false
+Categories=System;Qt;
+StartupNotify=true

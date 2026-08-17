@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<actions>
+<action>
+	<icon>utilities-terminal</icon>
+	<name>Abrir Terminal Aqui</name>
+	<submenu></submenu>
+	<unique-id>1718000000000001</unique-id>
+	<command>xfce4-terminal --working-directory=%f</command>
+	<description>Abre o terminal na pasta atual</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+</action>
+<action>
+	<icon>gksu-root-terminal</icon>
+	<name>Abrir como Administrador</name>
+	<submenu></submenu>
+	<unique-id>1718000000000002</unique-id>
+	<command>thunar admin:///%f</command>
+	<description>Abre a pasta com privilégios root</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+</action>
+<action>
+	<icon>edit-copy</icon>
+	<name>Copiar Caminho</name>
+	<submenu></submenu>
+	<unique-id>1718000000000003</unique-id>
+	<command>echo -n %f | xclip -selection clipboard</command>
+	<description>Copia o caminho absoluto para a área de transferência</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+<action>
+	<icon>image-jpeg</icon>
+	<name>Converter para PNG</name>
+	<submenu></submenu>
+	<unique-id>1718000000000004</unique-id>
+	<command>convert %f %f.png</command>
+	<description>Converte imagem usando o ImageMagick</description>
+	<range></range>
+	<patterns>*.jpg;*.jpeg;*.webp;*.bmp</patterns>
+	<image-files/>
+</action>
+<action>
+	<icon>link</icon>
+	<name>Criar Link Simbólico</name>
+	<submenu></submenu>
+	<unique-id>1786995723-symlink</unique-id>
+	<command>ln -s %f &quot;%f (link)&quot;</command>
+	<description>Criar um link simbólico do ficheiro atual</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+<action>
+	<icon>dialog-password</icon>
+	<name>Calcular SHA256</name>
+	<submenu></submenu>
+	<unique-id>1786995724-sha256</unique-id>
+	<command>sha256sum %f | zenity --text-info --title=&quot;Checksum SHA256&quot; --width=600 --height=100</command>
+	<description>Verificar a integridade do ficheiro</description>
+	<range></range>
+	<patterns>*</patterns>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+<action>
+	<icon>image-jpeg</icon>
+	<name>Redimensionar Imagem (50%)</name>
+	<submenu></submenu>
+	<unique-id>1786995725-resize</unique-id>
+	<command>convert %f -resize 50%% &quot;%f_reduzida.png&quot;</command>
+	<description>Reduzir dimensões da imagem pela metade</description>
+	<range></range>
+	<patterns>*.jpg;*.jpeg;*.png;*.webp</patterns>
+	<image-files/>
+</action>
+<action>
+	<icon>audio-x-generic</icon>
+	<name>Extrair Áudio (MP3)</name>
+	<submenu></submenu>
+	<unique-id>1786995726-mp3</unique-id>
+	<command>ffmpeg -i %f -vn -ar 44100 -ac 2 -b:a 192k &quot;%f.mp3&quot;</command>
+	<description>Converter faixa de vídeo para MP3</description>
+	<range></range>
+	<patterns>*</patterns>
+	<video-files/>
+</action>
+<action>
+	<icon>accessories-text-editor</icon>
+	<name>Editar como Root</name>
+	<submenu></submenu>
+	<unique-id>1786995727-editroot</unique-id>
+	<command>pkexec mousepad %f</command>
+	<description>Abrir ficheiro de configuração como administrador</description>
+	<range></range>
+	<patterns>*</patterns>
+	<text-files/>
+</action>
+</actions>

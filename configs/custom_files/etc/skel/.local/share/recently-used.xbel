@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xbel version="1.0"
+      xmlns:bookmark="http://www.freedesktop.org/standards/desktop-bookmarks"
+      xmlns:mime="http://www.freedesktop.org/standards/shared-mime-info"
+>
+  <bookmark href="file:///backgrounds" added="2026-08-17T18:48:27.832333Z" modified="2026-08-17T18:48:27.832343Z" visited="2026-08-17T18:48:27.832335Z">
+    <info>
+      <metadata owner="http://freedesktop.org">
+        <mime:mime-type type="inode/directory"/>
+        <bookmark:applications>
+          <bookmark:application name="xfdesktop-settings" exec="&apos;xfdesktop-settings %u&apos;" modified="2026-08-17T18:48:27.832340Z" count="1"/>
+        </bookmark:applications>
+      </metadata>
+    </info>
+  </bookmark>
+  <bookmark href="file:///home/liveuser/Downloads/instalar_acoes_thunar.sh" added="2026-08-17T19:32:25.761388Z" modified="2026-08-17T19:37:56.450909Z" visited="2026-08-17T19:32:25.761389Z">
+    <desc>Language: ; Encoding: UTF-8; Cursor: 6:28;</desc>
+    <info>
+      <metadata owner="http://freedesktop.org">
+        <mime:mime-type type="text/plain"/>
+        <bookmark:groups>
+          <bookmark:group>Mousepad</bookmark:group>
+        </bookmark:groups>
+        <bookmark:applications>
+          <bookmark:application name="Firefox" exec="&apos;firefox %u&apos;" modified="2026-08-17T19:32:25.761392Z" count="1"/>
+          <bookmark:application name="Thunar" exec="&apos;thunar %u&apos;" modified="2026-08-17T19:36:32.205260Z" count="1"/>
+          <bookmark:application name="Mousepad" exec="&apos;mousepad %u&apos;" modified="2026-08-17T19:37:56.450906Z" count="2"/>
+        </bookmark:applications>
+      </metadata>
+    </info>
+  </bookmark>
+  <bookmark href="file:///etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml" added="2026-08-17T19:51:46.444074Z" modified="2026-08-17T19:51:46.444084Z" visited="2026-08-17T19:51:46.444076Z">
+    <info>
+      <metadata owner="http://freedesktop.org">
+        <mime:mime-type type="application/xml"/>
+        <bookmark:applications>
+          <bookmark:application name="Thunar" exec="&apos;thunar %u&apos;" modified="2026-08-17T19:51:46.444079Z" count="1"/>
+        </bookmark:applications>
+      </metadata>
+    </info>
+  </bookmark>
+  <bookmark href="file:///etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-session.xml" added="2026-08-17T19:51:50.622845Z" modified="2026-08-17T19:51:50.622855Z" visited="2026-08-17T19:51:50.622847Z">
+    <info>
+      <metadata owner="http://freedesktop.org">
+        <mime:mime-type type="application/xml"/>
+        <bookmark:applications>
+          <bookmark:application name="Thunar" exec="&apos;thunar %u&apos;" modified="2026-08-17T19:51:50.622850Z" count="1"/>
+        </bookmark:applications>
+      </metadata>
+    </info>
+  </bookmark>
+  <bookmark href="file:///etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml" added="2026-08-17T19:51:59.324665Z" modified="2026-08-17T19:51:59.324670Z" visited="2026-08-17T19:51:59.324666Z">
+    <info>
+      <metadata owner="http://freedesktop.org">
+        <mime:mime-type type="application/xml"/>
+        <bookmark:applications>
+          <bookmark:application name="Thunar" exec="&apos;thunar %u&apos;" modified="2026-08-17T19:51:59.324668Z" count="1"/>
+        </bookmark:applications>
+      </metadata>
+    </info>
+  </bookmark>
+</xbel>

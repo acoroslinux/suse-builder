@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <meta name="author" content="Jérôme Belleman">
+  <meta name="description" content="<p>I'm not one for graphical interfaces, never mind complex ones like Xfce. But I have to admit Xfce did make me fall in love with the idea of custom actions.</p>">
+  <title>Xfce Custom Actions – Jérôme Belleman</title>
+  <style>code{white-space: pre;}</style>
+  <style>
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; background-color: #f8f8f8; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+pre, code { background-color: #f8f8f8; }
+code > span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code > span.dt { color: #204a87; } /* DataType */
+code > span.dv { color: #0000cf; } /* DecVal */
+code > span.bn { color: #0000cf; } /* BaseN */
+code > span.fl { color: #0000cf; } /* Float */
+code > span.ch { color: #4e9a06; } /* Char */
+code > span.st { color: #4e9a06; } /* String */
+code > span.co { color: #8f5902; font-style: italic; } /* Comment */
+code > span.ot { color: #8f5902; } /* Other */
+code > span.al { color: #ef2929; } /* Alert */
+code > span.fu { color: #000000; } /* Function */
+code > span.er { color: #a40000; font-weight: bold; } /* Error */
+code > span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #000000; } /* Constant */
+code > span.sc { color: #000000; } /* SpecialChar */
+code > span.vs { color: #4e9a06; } /* VerbatimString */
+code > span.ss { color: #4e9a06; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #000000; } /* Variable */
+code > span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code > span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code > span.ex { } /* Extension */
+code > span.at { color: #c4a000; } /* Attribute */
+code > span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code > span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+  </style>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/functions.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-102432134-2', 'auto');
+  ga('send', 'pageview');
+  </script>
+
+</head>
+<body>
+<div class="header">
+  <div class="titling">
+    <div class="title">Jérôme Belleman</div>
+    <div class="contacts">
+      <img src="/mail.gif" alt="Mail address" width="212"><br>
+      <a href="https://www.instagram.com/jeromebelleman">Instagram</a>
+      &bull; <a href="https://github.com/jeromebelleman">GitHub</a>
+      &bull; <a href="https://gitlab.com/jeromebelleman">GitLab</a>
+      
+    </div>
+  </div>
+  <div class="sections">
+
+    <a href="/">Home</a>
+
+
+     &bull; 
+
+    <a href="/tools">Tools</a>
+
+
+     &bull; 
+
+    <a href="/posts">Posts</a>
+
+
+     &bull; 
+
+    <a href="/talks">Talks</a>
+
+
+     &bull; 
+
+    <a href="/graphics/travels">Travels</a>
+
+
+     &bull; 
+
+    <a href="/graphics">Graphics</a>
+
+
+     &bull; 
+
+    <a href="/about">About Me</a>
+
+
+  </div>
+</div>
+<main>
+<header>
+<h1>Xfce Custom Actions<br></h1>
+<div class="date" style="position:relative;top:-15px">1 Jun 2018</div>
+<ul>
+<li><a href="#custom-actions"><span class="toc-section-number">1</span> Custom Actions?</a></li>
+<li><a href="#defining-and-using-custom-actions"><span class="toc-section-number">2</span> Defining and Using Custom Actions</a></li>
+<li><a href="#examples"><span class="toc-section-number">3</span> Examples</a></li>
+<li><a href="#debugging"><span class="toc-section-number">4</span> Debugging</a></li>
+<li><a href="#nautilus-has-python-extensions"><span class="toc-section-number">5</span> Nautilus Has Python Extensions</a></li>
+<li><a href="#references"><span class="toc-section-number">6</span> References</a></li>
+</ul>
+</header>
+<p>I'm not one for graphical interfaces, never mind complex ones like Xfce. But I have to admit Xfce did make me fall in love with the idea of custom actions.</p>
+<h1 id="custom-actions"><span class="header-section-number">1</span> Custom Actions?</h1>
+<p>Xfce's file manager, Thunar, offers the concept of custom actions, command lines which can be executed from a graphical, contextual menu when you right-click on files. Other desktop environment such as GNOME with <a href="#nautilus-has-python-extensions">Nautilus</a> are capable of similar things.</p>
+<p>I'm not normally using custom actions myself, but I found them terrific for quickly cooking up tailored operations for users who wouldn't usually resort to command-line interfaces, without me having to write a full-fledged application e.g. with Qt. Here's how Thunar does it.</p>
+<h1 id="defining-and-using-custom-actions"><span class="header-section-number">2</span> Defining and Using Custom Actions</h1>
+<p>Thunar can be used seamlessly from any window manager and running the <code>thunar</code> command will open a window showing your files. The documentation explains that, in order to define a custom action, one follows the <em>Edit</em> menu → <em>Configure custom actions...</em> which opens a dialogue from which they can be added, removed or edited.</p>
+<p>A custom action is defined by its name, description, an icon, a command line which accepts what a shell also would – pipes, redirections, control operators, environment variable assignments, command substitution, tilde expansion, the lot. All this, in itself, already makes custom actions very useful to quickly make complex commands available graphically, as would launchers in a panel. What makes custom actions tremendous is that they're designed to act on files selected in the file manager.</p>
+<p>A number of command parameters can be used anywhere in the command line to refer to files in various ways. For instance, the <code>%f</code> parameter resolves to the path of the first selected file, while <code>%F</code> is the path of each selected file, all given in the same command line to the command. Thunar ensures that files with annoying characters such as spaces are correctly quoted for the command to make out the right arguments. What's also interesting, is that a command line with <code>%f</code> will only be available as a custom action in the contextual menu if you select a single file. The <code>%d</code> and <code>%D</code> parameters work much the same way, except that they will have the directory name (as in <code>dirname()</code>) be passed to the command. Likewise, <code>%n</code> and <code>%N</code> will have the base name (as in <code>basename()</code>) be passed to the command.</p>
+<p>Thunar custom actions go beyond counting how many files are selected when choosing whether or not to display their entry in the contextual menu: they also let you specify a file pattern with the usual globbing syntax we all know and love. More conveniently still, you can have files match by type in their broad sense, such that you can target by and large target image files, rather than having to tediously devise a pattern involving <code>*.jpg</code> <code>*.png</code> <code>*.gif</code> <code>*.cr2</code> <code>*.nef</code> <code>*.JPG</code> <code>*.PNG</code> <code>*.GIF</code> <code>*.CR2</code> <code>*.NEF</code>. Other types Thunar knows about include sounds, texts, videos and directories. In fact, even right-clicking in the empty space of an icon window will target a directory. They thought of everything.</p>
+<h1 id="examples"><span class="header-section-number">3</span> Examples</h1>
+<p>The web swarms with ready-to-use examples of custom actions. Once I understood their potential, I took pleasure in writing these ones, literally on a whim, as I felt the need for them:</p>
+<ul>
+<li>If you have a bunch of PDFs which you wish to print duplex without leaving any blank page, a straightforward custom action is to call <code>pdfjoin %F</code> to join them into a single document. The matching pattern should be <code>*.pdf</code>, <em>Other Files</em>.</li>
+<li>Listing files in a directory with a graphical file manager is a bit of a faff, far from the comfort of a shell which lets you do anything from the output of an <code>ls</code> command. With custom actions, just run <code>ls | gvim -</code>, something you want to make possible for directories only.</li>
+<li>During Tango events, cortinas are 30-seconds pieces of unrelated music marking a break between sets of pieces. I wrote a custom action which, given selected music files, runs <code>ffmpeg -r 30</code> on each of them. This involves looping through the arguments, and as this wasn't exactly a one-liner any longer, I chose to write a small Python script to iterate over <code>sys.argv</code>. A neat example of how you can implement a custom action in any language you fancy. I set it all up to appear in the contextual menu only if audio files are selected, passed to my script with <code>%F</code>.</li>
+</ul>
+<h1 id="debugging"><span class="header-section-number">4</span> Debugging</h1>
+<p>I said earlier on that the point in custom actions was that I didn't have to write a full-fledged graphical application with, say, Qt. I'm not going there either even if I want to display stderr in dialogues. Thankfully, there's zenity, which is a command which lets you display fairly sophisticated GTK+ dialogues. See it as xmessage on steroids.</p>
+<p>For development purposes however, simply printing messages to stdout or stderr does the business of displaying them to the terminal where you started Thunar from.</p>
+<h1 id="nautilus-has-python-extensions"><span class="header-section-number">5</span> Nautilus Has Python Extensions</h1>
+<p>Armed with my carefully-set up custom actions, and well on my way to settle down with Thunar, I was heartbroken when I learned it can't undo operations, such as file deletions, moves, and the like. But Nautilus can. And so I wondered what the equivalent of custom actions in Nautilus are like. It's not as glorious as with Thunar, in fairness. You can't have icons – not that I normally care about such things, but since we're in that futile, graphical world, I thought I might as well. Targeting files by pattern and types isn't as seamless. And right-clicking in the empty space of an icon window won't let you target a directory. What's more, the whole situation in the GNOME world is much less clear, as they seem to be in the middle of a transition period towards thinking how they're going to implement their approach of custom actions.</p>
+<p>At the time of writing, the way to go is to install the <code>python-nautilus</code> package which lets you add Python extensions to the contextual menu. Note that it comes with a README file which states that these bindings are still regarded as unstable. The package helpfully comes with examples in <code>/usr/share/doc/python-nautilus/examples</code> which are enough to get you started. And in practice, it does the business, and lets you get there fairly easily. In its simplest form, an extension looks like:</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="im">from</span> gi.repository <span class="im">import</span> Nautilus, GObject
+
+<span class="kw">class</span> MakeCortinas(GObject.GObject, Nautilus.MenuProvider):
+    <span class="kw">def</span> get_file_items(<span class="va">self</span>, _, files):
+        <span class="cf">for</span> fle <span class="kw">in</span> files:
+            <span class="cf">if</span> fle.get_mime_type().split(<span class="st">&#39;/&#39;</span>)[<span class="dv">0</span>] <span class="op">!=</span> <span class="st">&#39;audio&#39;</span>:
+                <span class="cf">return</span>
+
+        item <span class="op">=</span> Nautilus.MenuItem(name<span class="op">=</span><span class="st">&#39;Nautilus::makecortinas&#39;</span>,
+                                 label<span class="op">=</span><span class="st">&#39;Make Cortinas&#39;</span>)
+        item.<span class="ex">connect</span>(<span class="st">&#39;activate&#39;</span>, makecortinas, files)
+        <span class="cf">return</span> item,</code></pre></div>
+<p>I'll spare you the boring details of the <code>makecortinas()</code> function. In essence, there's a class and its <code>get_file_items()</code> function to implement. This function ...</p>
+<ol>
+<li>... can first prematurely return if the files aren't what they should be. Even though you can't tick a checkbox labelled e.g. <em>Audio Files</em>, each file object that Nautilus provides you with has a <code>get_mime_type()</code> method and you can easily match e.g. audio files by looking at what comes before the slash in the mime type.</li>
+<li>... creates a <code>Nautilus.MenuItem()</code> with a unique <code>name</code> and the <code>label</code> which will become visible in the contextual menu.</li>
+<li>... runs the item's <code>connect()</code> function to connect it to a Python function that does all the work.</li>
+<li>... returns the item.</li>
+</ol>
+<p>Annoyingly, you need to restart Nautilus for any change you made to take place, something that isn't necessary with Thunar's custom actions. While Thunar doesn't particularly advertise where in the filesystem custom actions are kept since it's all graphical, the Nautilus extension documentation makes it immediately clear that it's up to you to copy them to <code>~/.local/share/nautilus-python/extensions</code> or <code>/usr/share/nautilus-python/extensions</code>, which is an intention I appreciate. In the end, it took me little effort to rewrite my Thunar custom actions into Nautilus extensions. Let's just hope they still work with the next version.</p>
+<h1 id="references"><span class="header-section-number">6</span> References</h1>
+<ul>
+<li><a href="https://docs.xfce.org/xfce/thunar/custom-actions">Custom Actions</a></li>
+<li><a href="https://wiki.gnome.org/Projects/Zenity">Zenity</a></li>
+<li><a href="https://linux.die.net/man/1/xmessage"><code>xmessage(1)</code></a></li>
+<li><a href="https://askubuntu.com/questions/21953">How do I customize the context menu in Nautilus?</a> shows a discussion where solutions all seem to become outdated as Nautilus evolves.</li>
+<li><a href="https://github.com/jeromebelleman/printrectoverso">printrectoverso</a>, <a href="https://github.com/jeromebelleman/printlabels">printlabels</a>, <a href="https://github.com/jeromebelleman/printfilelist">printfilelist</a> and <a href="https://github.com/jeromebelleman/makecortinas">makecortinas</a> are examples of Nautilus extensions I wrote.</li>
+</ul>
+
+
+</main>
+</body>
+</html>
+p]�P��      j�asj�atI�N�j�c�   y    O^partitionKey=%28https%2Cjeromebelleman.gitlab.io%29,:https://jeromebelleman.gitlab.io/posts/productivity/customactions/ necko:classified 1 peer-ip-address 2600:1901:0:7b8a:: peer-port 443 strongly-framed 1 security-info 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 request-method GET response-head HTTP/2 200 
+cache-control: max-age=600
+content-type: text/html; charset=utf-8
+etag: "354cf96c30c78a69244aa61010020db97d598c564c38da9f1c87ac96493ff2d7"
+expires: Mon, 17 Aug 2026 19:40:59 UTC
+last-modified: Sun, 25 Feb 2024 08:23:01 GMT
+permissions-policy: interest-cohort=()
+vary: Origin
+x-request-id: 01M08K9B4ZS55Q0K162QVY0SDK
+content-length: 15468
+date: Mon, 17 Aug 2026 19:31:00 GMT
+X-Firefox-Spdy: h2
+ original-response-headers cache-control: max-age=600
+content-type: text/html; charset=utf-8
+etag: "354cf96c30c78a69244aa61010020db97d598c564c38da9f1c87ac96493ff2d7"
+expires: Mon, 17 Aug 2026 19:40:59 UTC
+last-modified: Sun, 25 Feb 2024 08:23:01 GMT
+permissions-policy: interest-cohort=()
+vary: Origin
+x-request-id: 01M08K9B4ZS55Q0K162QVY0SDK
+content-length: 15468
+date: Mon, 17 Aug 2026 19:31:00 GMT
+X-Firefox-Spdy: h2
+ ctid 1 net-response-time-onstart 307 net-response-time-onstop 327      <l
