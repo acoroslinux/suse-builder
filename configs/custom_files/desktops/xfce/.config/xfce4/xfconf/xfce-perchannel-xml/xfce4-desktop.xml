@@ -12,7 +12,47 @@
     <property name="screen0" type="empty">
       <property name="monitorVirtual-1" type="empty">
         <property name="workspace0" type="empty">
-          <property name="last-image" type="string" value="/backgrounds/suse-abstract-neon.jpg"/>
+          <property name="last-image" type="string" value="/usr/share/backgrounds/suse-abstract-neon.jpg"/>
+        </property>
+      </property>
+      <property name="monitor0" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="last-image" type="string" value="/usr/share/backgrounds/suse-abstract-neon.jpg"/>
+        </property>
+      </property>
+      <property name="monitoreDP" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="last-image" type="string" value="/usr/share/backgrounds/suse-abstract-neon.jpg"/>
+        </property>
+      </property>
+      <property name="monitoreDP-1" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="last-image" type="string" value="/usr/share/backgrounds/suse-abstract-neon.jpg"/>
+        </property>
+      </property>
+      <property name="monitorHDMI-1" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="last-image" type="string" value="/usr/share/backgrounds/suse-abstract-neon.jpg"/>
+        </property>
+      </property>
+      <property name="monitorHDMI-A-1" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="last-image" type="string" value="/usr/share/backgrounds/suse-abstract-neon.jpg"/>
+        </property>
+      </property>
+      <property name="monitorDP-1" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="last-image" type="string" value="/usr/share/backgrounds/suse-abstract-neon.jpg"/>
+        </property>
+      </property>
+      <property name="monitorDP-2" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="last-image" type="string" value="/usr/share/backgrounds/suse-abstract-neon.jpg"/>
+        </property>
+      </property>
+      <property name="monitorVGA-1" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="last-image" type="string" value="/usr/share/backgrounds/suse-abstract-neon.jpg"/>
         </property>
       </property>
     </property>
