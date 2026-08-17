@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=SUSE Modern
+Description=openSUSE Modern boot splash
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/suse-modern
+ScriptFile=/usr/share/plymouth/themes/suse-modern/suse-modern.script
