@@ -284,6 +284,8 @@ class SystemCustomizer:
             f'DISPLAYMANAGER_AUTOLOGIN="{live_user}"\n'
             'DISPLAYMANAGER_PASSWORD_LESS_LOGIN="no"\n'
             'DISPLAYMANAGER_DEFAULT_MODE="x11"\n'
+            'DISPLAYMANAGER_REMOTE_ACCESS="no"\n'
+            'DISPLAYMANAGER_XSERVER_TCP_PORT_6000_OPEN="no"\n'
         )
         sysconfig_dm.write_text(sysconfig_content)
 
@@ -944,10 +946,10 @@ class SystemCustomizer:
             with open(rsync_log_path, "a") as rsync_log:
                 if src_path.is_dir():
                     dest_path.mkdir(parents=True, exist_ok=True)
-                    proc = subprocess.run(["rsync", "-av", "--force", f"{src_path}/", f"{dest_path}/"], stdout=rsync_log, stderr=subprocess.STDOUT, check=False)
+                    proc = subprocess.run(["rsync", "-av", "--no-o", "--no-g", "--force", f"{src_path}/", f"{dest_path}/"], stdout=rsync_log, stderr=subprocess.STDOUT, check=False)
                 else:
                     dest_path.parent.mkdir(parents=True, exist_ok=True)
-                    proc = subprocess.run(["rsync", "-av", "--force", str(src_path), str(dest_path)], stdout=rsync_log, stderr=subprocess.STDOUT, check=False)
+                    proc = subprocess.run(["rsync", "-av", "--no-o", "--no-g", "--force", str(src_path), str(dest_path)], stdout=rsync_log, stderr=subprocess.STDOUT, check=False)
 
             if proc.returncode != 0 or not dest_path.exists():
                 logger.error(f"Failed to copy structured custom file/dir: {src_path} -> {dest_path}. Check {rsync_log_path} for details.")

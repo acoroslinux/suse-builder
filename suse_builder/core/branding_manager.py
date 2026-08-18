@@ -100,10 +100,10 @@ class BrandingManager:
                 tgt_dir = self.chroot.target_root / tgt_path
                 tgt_dir.mkdir(parents=True, exist_ok=True)
                 if src_dir.is_dir():
-                    subprocess.run(["rsync", "-a", "--force", f"{src_dir}/", f"{tgt_dir}/"], check=False)
+                    subprocess.run(["rsync", "-a", "--no-o", "--no-g", "--force", f"{src_dir}/", f"{tgt_dir}/"], check=False)
                     logger.info(f"  -> Applied overlay: {src_name}/ to /{tgt_path}/")
                     if tgt_path == "etc/skel" and home_dir.exists():
-                        subprocess.run(["rsync", "-a", "--force", f"{src_dir}/", f"{home_dir}/"], check=False)
+                        subprocess.run(["rsync", "-a", "--no-o", "--no-g", "--force", f"{src_dir}/", f"{home_dir}/"], check=False)
                         self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:{live_user}", f"/home/{live_user}"], check=False)
 
         # Desktop specific skeleton overlay
@@ -113,10 +113,10 @@ class BrandingManager:
             if desktop_skel.exists() and desktop_skel.is_dir():
                 tgt_dir = self.chroot.target_root / "etc" / "skel"
                 tgt_dir.mkdir(parents=True, exist_ok=True)
-                subprocess.run(["rsync", "-a", "--force", f"{desktop_skel}/", f"{tgt_dir}/"], check=False)
+                subprocess.run(["rsync", "-a", "--no-o", "--no-g", "--force", f"{desktop_skel}/", f"{tgt_dir}/"], check=False)
                 logger.info(f"  -> Applied overlay: desktops/{desktop}/ to /etc/skel/")
                 if home_dir.exists():
-                    subprocess.run(["rsync", "-a", "--force", f"{desktop_skel}/", f"{home_dir}/"], check=False)
+                    subprocess.run(["rsync", "-a", "--no-o", "--no-g", "--force", f"{desktop_skel}/", f"{home_dir}/"], check=False)
                     self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:{live_user}", f"/home/{live_user}"], check=False)
                     logger.info(f"  -> Applied overlay: desktops/{desktop}/ to /home/{live_user}/")
 
@@ -135,9 +135,9 @@ class BrandingManager:
                 tgt = dconf_target / sub
                 tgt.parent.mkdir(parents=True, exist_ok=True)
                 if src.is_dir():
-                    subprocess.run(["rsync", "-a", "--force", f"{src}/", f"{tgt}/"], check=False)
+                    subprocess.run(["rsync", "-a", "--no-o", "--no-g", "--force", f"{src}/", f"{tgt}/"], check=False)
                 else:
-                    subprocess.run(["rsync", "-a", "--force", str(src), str(tgt)], check=False)
+                    subprocess.run(["rsync", "-a", "--no-o", "--no-g", "--force", str(src), str(tgt)], check=False)
                 
         # Run dconf update inside chroot
         try:
@@ -158,7 +158,7 @@ class BrandingManager:
         if target_dir.exists():
             shutil.rmtree(target_dir)
         target_dir.mkdir(parents=True, exist_ok=True)
-        subprocess.run(["rsync", "-a", "--force", f"{source_dir}/", f"{target_dir}/"], check=False)
+        subprocess.run(["rsync", "-a", "--no-o", "--no-g", "--force", f"{source_dir}/", f"{target_dir}/"], check=False)
         
         # Execute plymouth-set-default-theme inside the chroot to update initramfs
         try:

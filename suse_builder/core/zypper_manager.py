@@ -187,7 +187,7 @@ class ZypperManager:
         if not host_cache.exists():
             return
         target_cache.mkdir(parents=True, exist_ok=True)
-        subprocess.run(["rsync", "-a", "--ignore-existing", f"{host_cache}/", f"{target_cache}/"], check=False)
+        subprocess.run(["rsync", "-a", "--no-o", "--no-g", "--ignore-existing", f"{host_cache}/", f"{target_cache}/"], check=False)
 
     def sync_cache_from_target(self):
         if self.chroot.mode == "mock":
@@ -197,7 +197,7 @@ class ZypperManager:
         if not target_cache.exists():
             return
         host_cache.mkdir(parents=True, exist_ok=True)
-        subprocess.run(["rsync", "-a", "--ignore-existing", f"{target_cache}/", f"{host_cache}/"], check=False)
+        subprocess.run(["rsync", "-a", "--no-o", "--no-g", "--ignore-existing", f"{target_cache}/", f"{host_cache}/"], check=False)
 
     def install_packages(self, packages: List[str]):
         if not packages or self.chroot.mode == "mock":
