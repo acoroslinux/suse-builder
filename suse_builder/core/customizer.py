@@ -394,9 +394,6 @@ class SystemCustomizer:
             "autologin-user-timeout=0\n"
             "autologin-in-background=false\n"
             f"autologin-session={session_name}\n"
-            "pam-service=lightdm-autologin\n"
-            "pam-autologin-service=lightdm-autologin\n"
-            "pam-greeter-service=lightdm-greeter\n"
             "\n"
             "[SeatDefaults]\n"
             "greeter-session=lightdm-gtk-greeter\n"
@@ -406,11 +403,8 @@ class SystemCustomizer:
             "autologin-user-timeout=0\n"
             "autologin-in-background=false\n"
             f"autologin-session={session_name}\n"
-            "pam-service=lightdm-autologin\n"
-            "pam-autologin-service=lightdm-autologin\n"
-            "pam-greeter-service=lightdm-greeter\n"
         )
-        for conf_rel in ["etc/lightdm/lightdm.conf", "etc/lightdm/lightdm.conf.d/50-autologin.conf"]:
+        for conf_rel in ["etc/lightdm/lightdm.conf"]:
             conf_file = self.target_root / conf_rel
             conf_file.parent.mkdir(parents=True, exist_ok=True)
             conf_file.write_text(lightdm_content)
