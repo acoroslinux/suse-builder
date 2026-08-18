@@ -13,7 +13,7 @@
     "wget",
     "ca-certificates",
     "kernel-firmware-all",
-    "dbus-1", "dbus-1-x11", "dbus-1-tools",
+    "dbus-1",
     "xdg-user-dirs",
     "xdg-utils",
     "dracut",
