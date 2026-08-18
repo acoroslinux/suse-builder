@@ -90,7 +90,8 @@ class BrandingManager:
             "usr": "usr"
         }
         
-        live_user = self.config.get("live_user", "liveuser")
+        live_user_cfg = self.config.get("live_user", "liveuser")
+        live_user = live_user_cfg.get("name", "liveuser") if isinstance(live_user_cfg, dict) else str(live_user_cfg)
         home_dir = self.chroot.target_root / "home" / live_user
 
         for src_name, tgt_path in mapping.items():
