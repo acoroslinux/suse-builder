@@ -282,7 +282,7 @@ class SystemCustomizer:
         sysconfig_content = (
             f'DISPLAYMANAGER="{dm}"\n'
             f'DISPLAYMANAGER_AUTOLOGIN="{live_user}"\n'
-            'DISPLAYMANAGER_PASSWORD_LESS_LOGIN="yes"\n'
+            'DISPLAYMANAGER_PASSWORD_LESS_LOGIN="no"\n'
             'DISPLAYMANAGER_DEFAULT_MODE="x11"\n'
         )
         sysconfig_dm.write_text(sysconfig_content)
