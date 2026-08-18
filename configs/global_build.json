@@ -36,7 +36,6 @@
     "yast2-auth-client",
     "yast2-ntp-client",
     "yast2-online-update",
-    "yast2-online-frontend",
     "yast2-samba-client",
     "yast2-samba-server",
     "yast2-scanner",
@@ -45,7 +44,7 @@
     "xfce4-cpufreq-plugin",
     "xfce4-cpugraph-plugin",
     "xfce4-datetime-plugin",
-    "xfce4-dict-plugin",
+    "xfce4-dict",
     "xfce4-diskperf-plugin",
     "xfce4-fsguard-plugin",
     "xfce4-genmon-plugin",
@@ -81,14 +80,14 @@
     "ristretto",
     "parole",
     "evince",
-    "galculator",
+    "gnome-calculator",
     "lightdm-gtk-greeter-settings",
-    "noto-fonts",
-    "noto-coloremoji-fonts",
+    "google-noto-sans-fonts",
+    "google-noto-coloremoji-fonts",
     "nano",
     "vim",
     "neovim",
     "htop",
-    "neofetch"
+    "fastfetch"
   ]
 }
