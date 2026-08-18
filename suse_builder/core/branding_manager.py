@@ -104,7 +104,7 @@ class BrandingManager:
                     logger.info(f"  -> Applied overlay: {src_name}/ to /{tgt_path}/")
                     if tgt_path == "etc/skel" and home_dir.exists():
                         subprocess.run(["rsync", "-a", "--force", f"{src_dir}/", f"{home_dir}/"], check=False)
-                        self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:users", f"/home/{live_user}"], check=False)
+                        self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:{live_user}", f"/home/{live_user}"], check=False)
 
         # Desktop specific skeleton overlay
         desktop = self.config.get("desktop")
@@ -117,7 +117,7 @@ class BrandingManager:
                 logger.info(f"  -> Applied overlay: desktops/{desktop}/ to /etc/skel/")
                 if home_dir.exists():
                     subprocess.run(["rsync", "-a", "--force", f"{desktop_skel}/", f"{home_dir}/"], check=False)
-                    self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:users", f"/home/{live_user}"], check=False)
+                    self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:{live_user}", f"/home/{live_user}"], check=False)
                     logger.info(f"  -> Applied overlay: desktops/{desktop}/ to /home/{live_user}/")
 
     def _apply_dconf_branding(self):

@@ -614,7 +614,7 @@ class SystemCustomizer:
 
         user_home = self.target_root / "home" / live_user
         if user_home.exists():
-            self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:users", f"/home/{live_user}"], check=False)
+            self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:{live_user}", f"/home/{live_user}"], check=False)
             self.chroot.run_in_chroot(["chmod", "0755", f"/home/{live_user}"], check=False)
 
     def configure_branding(self):
@@ -820,7 +820,7 @@ class SystemCustomizer:
         home_dir = self.target_root / "home" / live_user
         if home_dir.exists():
             try:
-                self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:users", f"/home/{live_user}"], check=False)
+                self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:{live_user}", f"/home/{live_user}"], check=False)
                 self.chroot.run_in_chroot(["chmod", "755", f"/home/{live_user}"], check=False)
             except Exception as e:
                 logger.warning(f"Could not fix permissions on /home/{live_user}: {e}")
@@ -1073,7 +1073,7 @@ class SystemCustomizer:
         home_dir = self.target_root / "home" / live_user
         if home_dir.exists():
             try:
-                self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:users", f"/home/{live_user}"], check=False)
+                self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:{live_user}", f"/home/{live_user}"], check=False)
                 self.chroot.run_in_chroot(["chmod", "755", f"/home/{live_user}"], check=False)
             except Exception as e:
                 logger.warning(f"Could not fix permissions on /home/{live_user}: {e}")
