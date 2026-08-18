@@ -4,6 +4,7 @@ set timeout_style=menu
 
 # Ensure root is set to the ISO filesystem
 search --no-floppy --set=root --label @@VOL_ID@@
+set prefix=($root)/boot/grub2
 
 # Source graphical configuration, fonts and display settings
 if [ -f /boot/grub/config.cfg ]; then
