@@ -392,15 +392,6 @@ class SystemCustomizer:
             "autologin-user-timeout=0\n"
             "autologin-in-background=false\n"
             f"autologin-session={session_name}\n"
-            "\n"
-            "[SeatDefaults]\n"
-            "greeter-session=lightdm-gtk-greeter\n"
-            f"user-session={session_name}\n"
-            "autologin-guest=false\n"
-            f"autologin-user={live_user}\n"
-            "autologin-user-timeout=0\n"
-            "autologin-in-background=false\n"
-            f"autologin-session={session_name}\n"
         )
         for conf_rel in ["etc/lightdm/lightdm.conf"]:
             conf_file = self.target_root / conf_rel
