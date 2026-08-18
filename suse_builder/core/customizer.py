@@ -112,21 +112,6 @@ class SystemCustomizer:
             except Exception as e:
                 logger.warning(f"Failed to create resolv.conf symlink: {e}")
 
-    def configure_dbus_launch(self):
-        dbus_launch = self.chroot.target_root / "usr" / "bin" / "dbus-launch"
-        if not dbus_launch.exists() or dbus_launch.stat().st_size == 0:
-            dbus_launch.parent.mkdir(parents=True, exist_ok=True)
-            dbus_launch.write_text(
-                "#!/bin/sh\n"
-                "# dbus-launch compatibility wrapper for live environments\n"
-                "if [ -n \"$DBUS_SESSION_BUS_ADDRESS\" ]; then\n"
-                "    exec \"$@\"\n"
-                "fi\n"
-                "exec dbus-run-session -- \"$@\"\n"
-            )
-            dbus_launch.chmod(0o755)
-            logger.info("dbus-launch compatibility wrapper written.")
-
     def setup_services(self):
         if self.chroot.mode == "mock":
             return
@@ -686,7 +671,6 @@ class SystemCustomizer:
         self.configure_locales()
         self.setup_live_users()
         self.configure_system_defaults()
-        self.configure_dbus_launch()
         self.configure_branding()
         self.configure_network_discovery()
         self.setup_services()
