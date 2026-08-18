@@ -22,21 +22,24 @@ insmod linux
 
 # Load font and setup terminal output
 if loadfont /boot/grub2/fonts/unicode.pf2 ; then
-    set gfxmode=auto
+    set gfxmode=auto,1024x768,800x600,keep
+    set gfxpayload=keep
     insmod gfxterm
     terminal_output gfxterm
 elif loadfont /boot/grub2/unicode.pf2 ; then
-    set gfxmode=auto
+    set gfxmode=auto,1024x768,800x600,keep
+    set gfxpayload=keep
     insmod gfxterm
     terminal_output gfxterm
 elif loadfont /boot/grub/unicode.pf2 ; then
-    set gfxmode=auto
+    set gfxmode=auto,1024x768,800x600,keep
+    set gfxpayload=keep
     insmod gfxterm
     terminal_output gfxterm
 fi
 
 # Load openSUSE Modern Live ISO background
-if [ -f /boot/grub2/themes/suse-modern/suse-grub-bg.jpg ]; then
+if [ -f ($root)/boot/grub2/themes/suse-modern/suse-grub-bg.jpg ]; then
     insmod jpeg
-    background_image -m stretch /boot/grub2/themes/suse-modern/suse-grub-bg.jpg
+    background_image -m stretch ($root)/boot/grub2/themes/suse-modern/suse-grub-bg.jpg
 fi
