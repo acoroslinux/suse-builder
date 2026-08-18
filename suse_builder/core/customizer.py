@@ -334,18 +334,19 @@ class SystemCustomizer:
             "gdm-autologin", "gdm-password",
             "lxdm-autologin",
         ]:
-            pam_file = self.target_root / "etc" / "pam.d" / pam_service
-            pam_file.parent.mkdir(parents=True, exist_ok=True)
-            pam_file.write_text(pam_autologin_content)
-            try:
-                pam_file.chmod(0o644)
-            except Exception:
-                pass
+            if not (self.target_root / "etc" / "pam.d" / pam_service).exists() and not (self.target_root / "usr" / "lib" / "pam.d" / pam_service).exists():
+                pam_file = self.target_root / "etc" / "pam.d" / pam_service
+                pam_file.parent.mkdir(parents=True, exist_ok=True)
+                pam_file.write_text(pam_autologin_content)
+                try:
+                    pam_file.chmod(0o644)
+                except Exception:
+                    pass
 
         # Write fallback PAM for standalone DMs if not provided by distro package
         for standalone_dm in ["lightdm", "sddm", "gdm", "gdm3", "lxdm", "slim"]:
-            pam_file = self.target_root / "etc" / "pam.d" / standalone_dm
-            if not pam_file.exists():
+            if not (self.target_root / "etc" / "pam.d" / standalone_dm).exists() and not (self.target_root / "usr" / "lib" / "pam.d" / standalone_dm).exists():
+                pam_file = self.target_root / "etc" / "pam.d" / standalone_dm
                 pam_file.parent.mkdir(parents=True, exist_ok=True)
                 pam_file.write_text(pam_autologin_content)
                 try:
