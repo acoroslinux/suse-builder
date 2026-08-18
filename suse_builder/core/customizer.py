@@ -587,10 +587,11 @@ class SystemCustomizer:
                     user_desktop.chmod(0o755)
 
     def configure_locales(self):
-        locale_gen = self.chroot.target_root / "etc" / "locale.gen"
+        locale = self.config.get("system", {}).get("locale", "en_US.UTF-8")
+        locale_gen = self.target_root / "etc" / "locale.gen"
         if locale_gen.exists():
             content = locale_gen.read_text()
-            for loc in ["pt_PT.UTF-8 UTF-8", "en_US.UTF-8 UTF-8"]:
+            for loc in [f"{locale} UTF-8"]:
                 if f"# {loc}" in content:
                     content = content.replace(f"# {loc}", loc)
                 elif loc not in content:
@@ -598,12 +599,23 @@ class SystemCustomizer:
             locale_gen.write_text(content)
         else:
             locale_gen.parent.mkdir(parents=True, exist_ok=True)
-            locale_gen.write_text("pt_PT.UTF-8 UTF-8\nen_US.UTF-8 UTF-8\n")
+            locale_gen.write_text(f"{locale} UTF-8\n")
 
-        locale_conf = self.chroot.target_root / "etc" / "locale.conf"
+        locale_conf = self.target_root / "etc" / "locale.conf"
         locale_conf.parent.mkdir(parents=True, exist_ok=True)
-        locale_conf.write_text("LANG=pt_PT.UTF-8\nLC_ALL=pt_PT.UTF-8\n")
-        logger.info("Locale configuration written.")
+        locale_conf.write_text(f"LANG={locale}\nLC_ALL={locale}\n")
+
+        sysconfig_lang = self.target_root / "etc" / "sysconfig" / "language"
+        if sysconfig_lang.exists():
+            content = sysconfig_lang.read_text()
+            import re
+            content = re.sub(r'^RC_LANG=.*$', f'RC_LANG="{locale}"', content, flags=re.MULTILINE)
+            content = re.sub(r'^RC_LC_ALL=.*$', f'RC_LC_ALL="{locale}"', content, flags=re.MULTILINE)
+            sysconfig_lang.write_text(content)
+        else:
+            sysconfig_lang.write_text(f'RC_LANG="{locale}"\nRC_LC_ALL="{locale}"\n')
+
+        logger.info(f"Locale configuration written: {locale}")
 
     def fix_home_permissions(self):
         if self.chroot.mode == "mock":
