@@ -28,7 +28,7 @@ class SystemCustomizer:
 
         # All essential desktop and administrative groups
         groups = self.config.get("live_groups") or cfg_groups or [
-            "wheel", "sudo", "audio", "video", "render", "input", "seat", "disk", "storage", "users", "nopasswdlogin"
+            "wheel", "sudo", "audio", "video", "render", "input", "seat", "disk", "storage", "users", "autologin"
         ]
 
         try:
@@ -37,8 +37,6 @@ class SystemCustomizer:
                 lookup = self.chroot.run_in_chroot(["getent", "group", str(group)], check=False)
                 if lookup.returncode != 0:
                     self.chroot.run_in_chroot(["groupadd", "-f", str(group)], check=False)
-
-            self.chroot.run_in_chroot(["groupadd", "-f", "nopasswdlogin"], check=False)
 
             # 2. Check if user already exists
             user_check = self.chroot.run_in_chroot(["id", "-u", str(live_user)], check=False)
@@ -50,7 +48,6 @@ class SystemCustomizer:
             # 3. Add to groups individually so a missing group never aborts everything
             for group in groups:
                 self.chroot.run_in_chroot(["usermod", "-aG", str(group), str(live_user)], check=False)
-            self.chroot.run_in_chroot(["usermod", "-aG", "nopasswdlogin", str(live_user)], check=False)
 
             # 4. Set passwords for liveuser and root
             self.chroot.run_in_chroot(f"echo '{live_user}:{live_password}' | chpasswd", check=False)
