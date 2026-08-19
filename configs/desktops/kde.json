@@ -7,6 +7,15 @@
     "plasma6-workspace",
     "sddm",
     "xorg-x11-server",
-    "xterm"
+    "konsole",
+    "dolphin",
+    "kate",
+    "spectacle",
+    "ark",
+    "gwenview",
+    "okular",
+    "kcalc",
+    "filelight",
+    "kcolorchooser"
   ]
 }
