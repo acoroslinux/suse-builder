@@ -185,7 +185,13 @@ class BuildOrchestrator:
             if os.geteuid() == 0:
                 unmount_all_under(resolve_from_project("workdir"))
             if self.workdir.exists():
-                shutil.rmtree(self.workdir, ignore_errors=True)
+                import subprocess
+                subprocess.run(["rm", "-rf", str(self.workdir)], check=False)
+                if self.workdir.exists():
+                    logger.error(f"Failed to cleanly wipe {self.workdir}. Some files are locked or are subvolumes.")
+                    raise RuntimeError(f"Cannot proceed: --clean failed on {self.workdir}")
+                else:
+                    logger.info(f"Cleaned workdir: {self.workdir}")
 
         toolchain = ToolchainManager(
             workdir_base=self.workdir,
