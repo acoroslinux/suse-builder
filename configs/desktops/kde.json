@@ -16,6 +16,10 @@
     "okular",
     "kcalc",
     "filelight",
-    "kcolorchooser"
+    "kcolorchooser",
+    "discover",
+    "discover-backend-packagekit",
+    "PackageKit",
+    "PackageKit-backend-zypp"
   ]
 }
