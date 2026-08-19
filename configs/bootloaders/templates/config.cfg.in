@@ -1,45 +1,24 @@
 # Load video and graphical modules
-if [ -e "${prefix}/${grub_cpu}-${grub_platform}/all_video.mod" ]; then
-    insmod all_video
-else
-    insmod efi_gop
-    insmod efi_uga
-    insmod video_bochs
-    insmod video_cirrus
-fi
+# Note: modules are already built-in to the signed grub.efi and our standalone grub.efi
+# so we do not insmod them to avoid Secure Boot lockdown errors.
 
-insmod font
-insmod png
-insmod test
-insmod echo
-insmod part_gpt
-insmod part_msdos
-insmod fat
-insmod iso9660
-insmod ext2
-insmod normal
-insmod linux
 
 # Load font and setup terminal output
 if loadfont /boot/grub2/fonts/unicode.pf2 ; then
     set gfxmode=auto,1024x768,800x600,keep
     set gfxpayload=keep
-    insmod gfxterm
     terminal_output gfxterm
 elif loadfont /boot/grub2/unicode.pf2 ; then
     set gfxmode=auto,1024x768,800x600,keep
     set gfxpayload=keep
-    insmod gfxterm
     terminal_output gfxterm
 elif loadfont /boot/grub/unicode.pf2 ; then
     set gfxmode=auto,1024x768,800x600,keep
     set gfxpayload=keep
-    insmod gfxterm
     terminal_output gfxterm
 fi
 
 # Load openSUSE Modern Live ISO background
 if [ -f ($root)/boot/grub2/themes/suse-modern/suse-grub-bg.jpg ]; then
-    insmod jpeg
     background_image -m stretch ($root)/boot/grub2/themes/suse-modern/suse-grub-bg.jpg
 fi
