@@ -518,17 +518,22 @@ class SystemCustomizer:
         app_desktop.write_text(desktop_entry)
         app_desktop.chmod(0o755)
 
-        # 3. Install into /etc/skel/Desktop for new users
-        skel_desktop = self.target_root / "etc" / "skel" / "Desktop" / "install-suse.desktop"
-        skel_desktop.parent.mkdir(parents=True, exist_ok=True)
-        skel_desktop.write_text(desktop_entry)
-        skel_desktop.chmod(0o755)
+        # 3. (Removed) Do NOT install into /etc/skel/Desktop for new users
 
-        # 4. Helper script to create and trust desktop icon on live session login
+        # 4. Helper script to create and trust desktop icon ONLY for the liveuser
         script_path = self.target_root / "usr" / "local" / "bin" / "add-installer-desktop-icon.sh"
         script_path.parent.mkdir(parents=True, exist_ok=True)
+        live_user_name = "liveuser"
+        if isinstance(self.config.get("live_user"), dict):
+            live_user_name = self.config.get("live_user").get("name", "liveuser")
+        elif self.config.get("live_user"):
+            live_user_name = str(self.config.get("live_user"))
+
         script_content = (
             "#!/bin/sh\n"
+            f"if [ \"$USER\" != \"{live_user_name}\" ]; then\n"
+            "    exit 0\n"
+            "fi\n"
             "desktop_dir=\"$HOME/Desktop\"\n"
             "mkdir -p \"$desktop_dir\"\n"
             "icon_path=\"$desktop_dir/install-suse.desktop\"\n"
