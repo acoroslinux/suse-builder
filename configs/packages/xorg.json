@@ -5,6 +5,17 @@
     "xinit",
     "xf86-input-evdev",
     "xf86-input-libinput",
-    "x11-tools"
+    "x11-tools",
+    "xorg-x11-driver-video",
+    "xf86-video-vmware",
+    "xf86-video-vesa",
+    "xf86-video-qxl",
+    "xf86-video-fbdev",
+    "Mesa",
+    "Mesa-dri",
+    "Mesa-gallium",
+    "Mesa-libEGL1",
+    "Mesa-libGL1",
+    "virtualbox-guest-x11"
   ]
 }
