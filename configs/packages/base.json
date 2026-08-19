@@ -29,6 +29,7 @@
     "xf86-input-libinput",
     "xf86-input-evdev",
     "virtualbox-guest-tools",
-    "qemu-guest-agent"
+    "qemu-guest-agent",
+    "grub2-branding-openSUSE"
   ]
 }

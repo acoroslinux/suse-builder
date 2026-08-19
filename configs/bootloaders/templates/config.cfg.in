@@ -18,7 +18,10 @@ elif loadfont /boot/grub/unicode.pf2 ; then
     terminal_output gfxterm
 fi
 
-# Load openSUSE Modern Live ISO background
-if [ -f ($root)/boot/grub2/themes/suse-modern/suse-grub-bg.jpg ]; then
+# Load openSUSE Modern Live ISO background/theme
+if [ -f ($root)/boot/grub2/themes/openSUSE/theme.txt ]; then
+    set theme=($root)/boot/grub2/themes/openSUSE/theme.txt
+    export theme
+elif [ -f ($root)/boot/grub2/themes/suse-modern/suse-grub-bg.jpg ]; then
     background_image -m stretch ($root)/boot/grub2/themes/suse-modern/suse-grub-bg.jpg
 fi
