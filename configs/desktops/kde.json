@@ -5,6 +5,7 @@
     "patterns-kde-kde_plasma",
     "plasma6-desktop",
     "plasma6-workspace",
+    "plasma6-session-x11",
     "sddm",
     "xorg-x11-server",
     "konsole",
@@ -20,6 +21,10 @@
     "discover",
     "discover-backend-packagekit",
     "PackageKit",
-    "PackageKit-backend-zypp"
+    "PackageKit-backend-zypp",
+    "sddm-theme-openSUSE",
+    "sweeper",
+    "skanlite",
+    "partitionmanager"   
   ]
 }

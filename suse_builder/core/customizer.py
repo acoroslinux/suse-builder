@@ -345,9 +345,19 @@ class SystemCustomizer:
         for sddm_rel in ["etc/sddm.conf.d/autologin.conf", "etc/sddm.conf"]:
             sddm_conf = self.target_root / sddm_rel
             sddm_conf.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Force X11 for KDE to avoid Wayland black screen bugs in VMs
+            if session_name == "plasma" or session_name == "plasma6":
+                session_name = "plasmax11"
+                
             sddm_conf.write_text(
                 f"[Autologin]\nUser={live_user}\nSession={session_name}\nRelogin=false\n"
             )
+            
+        # Force a beautiful SDDM theme (Breeze) instead of the ugly stock one
+        sddm_theme_conf = self.target_root / "etc/sddm.conf.d/theme.conf"
+        sddm_theme_conf.parent.mkdir(parents=True, exist_ok=True)
+        sddm_theme_conf.write_text("[Theme]\nCurrent=breeze\n")
 
         # GDM / GDM3 configuration
         gdm_content = (
