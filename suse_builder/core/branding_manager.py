@@ -201,7 +201,7 @@ class BrandingManager:
             logger.warning(f"  -> GRUB background not found at {source_bg}")
             return
             
-        target_dir = self.chroot.target_root / "boot" / "grub2" / "themes" / "openSUSE"
+        target_dir = self.chroot.target_root / "usr" / "share" / "grub2" / "themes" / "openSUSE"
         target_dir.mkdir(parents=True, exist_ok=True)
         
         target_bg = target_dir / source_bg.name

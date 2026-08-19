@@ -445,7 +445,7 @@ class ISOEngine:
 
         # Copy GRUB themes/backgrounds to the Live ISO
         # First copy the official openSUSE themes installed in the chroot (e.g. by grub2-branding-openSUSE)
-        chroot_themes = self.target_root / "boot" / "grub2" / "themes"
+        chroot_themes = self.target_root / "usr" / "share" / "grub2" / "themes"
         if chroot_themes.exists() and self.mode != "mock":
             for d in [self.iso_staging / "boot" / "grub2" / "themes", self.iso_staging / "boot" / "grub" / "themes"]:
                 d.mkdir(parents=True, exist_ok=True)

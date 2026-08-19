@@ -976,6 +976,16 @@ class SystemCustomizer:
         bg_dir.mkdir(parents=True, exist_ok=True)
 
         from suse_builder.core.path_utils import resolve_from_project
+        
+        grub_bg_src = resolve_from_project("configs/custom_files/boot/grub2/themes/suse-modern/suse-grub-bg.jpg")
+        
+        # Ensure the symlink exists so grub2-mkconfig on the installed system finds the theme
+        boot_themes = self.target_root / "boot" / "grub2" / "themes"
+        boot_themes.mkdir(parents=True, exist_ok=True)
+        boot_theme_link = boot_themes / "openSUSE"
+        if not boot_theme_link.exists() and not boot_theme_link.is_symlink():
+            boot_theme_link.symlink_to("/usr/share/grub2/themes/openSUSE")
+
         custom_wp = resolve_from_project("configs/custom_files/backgrounds/suse-modern-wallpaper.png")
         if custom_wp.exists():
             import shutil
