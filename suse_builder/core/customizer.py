@@ -1008,6 +1008,17 @@ class SystemCustomizer:
         )
         (xfconf_dir / "xfce4-desktop.xml").write_text(xfce_desktop_xml)
 
+        # Configure KDE default wallpaper if present
+        # In openSUSE, KDE Plasma defaults to the openSUSEdefault wallpaper
+        kde_wp_dir = self.target_root / "usr" / "share" / "wallpapers" / "openSUSEdefault" / "contents" / "images"
+        if kde_wp_dir.exists() and custom_wp.exists():
+            default_kde_wp = kde_wp_dir / "default.png"
+            default_dark_kde_wp = kde_wp_dir / "default-dark.png"
+            # Overwrite the default PNGs with our custom wallpaper
+            import shutil
+            shutil.copy2(custom_wp, default_kde_wp)
+            shutil.copy2(custom_wp, default_dark_kde_wp)
+
     def configure_gnome_defaults(self):
         if self.chroot.mode == "mock" or self.config.get("desktop") != "gnome":
             return
