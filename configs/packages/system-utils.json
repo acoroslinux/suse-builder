@@ -15,6 +15,12 @@
     "lsof",
     "avahi",
     "samba",
-    "openssh"
+    "openssh",
+    "bluez",
+    "bluez-cups",
+    "cups",
+    "cups-filters",
+    "hplip",
+    "sane-backends"
   ]
 }
