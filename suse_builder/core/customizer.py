@@ -531,10 +531,14 @@ class SystemCustomizer:
 
         script_content = (
             "#!/bin/sh\n"
-            f"if [ \"$USER\" != \"{live_user_name}\" ]; then\n"
+            "if ! grep -q -E \"(rd\\.live|root=live|boot=live|livecd)\" /proc/cmdline 2>/dev/null; then\n"
             "    exit 0\n"
             "fi\n"
-            "desktop_dir=\"$HOME/Desktop\"\n"
+            "sleep 2\n"
+            "desktop_dir=$(xdg-user-dir DESKTOP 2>/dev/null)\n"
+            "if [ -z \"$desktop_dir\" ]; then\n"
+            "    desktop_dir=\"$HOME/Desktop\"\n"
+            "fi\n"
             "mkdir -p \"$desktop_dir\"\n"
             "icon_path=\"$desktop_dir/install-suse.desktop\"\n"
             "cat << 'EOF' > \"$icon_path\"\n"
