@@ -1,5 +1,19 @@
 {
   "desktop": "hyprland",
   "display_manager": "sddm",
-  "packages": ["hyprland", "sddm"]
+  "packages": [
+    "hyprland",
+    "sddm",
+    "kitty",
+    "waybar",
+    "mako",
+    "hyprpaper",
+    "hypridle",
+    "hyprlock",
+    "grim",
+    "slurp",
+    "wl-clipboard",
+    "rofi-wayland",
+    "thunar"
+  ]
 }

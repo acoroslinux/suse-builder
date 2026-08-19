@@ -1,5 +1,18 @@
 {
   "desktop": "sway",
   "display_manager": "sddm",
-  "packages": ["sway", "sddm"]
+  "packages": [
+    "patterns-sway-sway",
+    "sddm",
+    "foot",
+    "waybar",
+    "mako",
+    "swaybg",
+    "swayidle",
+    "swaylock",
+    "grim",
+    "slurp",
+    "wl-clipboard",
+    "wofi"
+  ]
 }
