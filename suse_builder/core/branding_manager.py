@@ -201,11 +201,15 @@ class BrandingManager:
             logger.warning(f"  -> GRUB background not found at {source_bg}")
             return
             
-        target_dir = self.chroot.target_root / "boot" / "grub2" / "themes"
+        target_dir = self.chroot.target_root / "boot" / "grub2" / "themes" / "openSUSE"
         target_dir.mkdir(parents=True, exist_ok=True)
         
         target_bg = target_dir / source_bg.name
         shutil.copy2(source_bg, target_bg)
+        
+        # Also overwrite the official openSUSE theme background for Secure Boot compliance
+        shutil.copy2(source_bg, target_dir / "background.png")
+        shutil.copy2(source_bg, target_dir / "background.jpg")
         
         # Modify /etc/default/grub
         grub_default = self.chroot.target_root / "etc" / "default" / "grub"
@@ -215,11 +219,20 @@ class BrandingManager:
             has_bg = False
             for i, line in enumerate(lines):
                 if line.startswith("GRUB_BACKGROUND="):
-                    lines[i] = f'GRUB_BACKGROUND="/boot/grub2/themes/{source_bg.name}"'
+                    lines[i] = f'GRUB_BACKGROUND="/boot/grub2/themes/openSUSE/background.png"'
                     has_bg = True
             
             if not has_bg:
-                lines.append(f'GRUB_BACKGROUND="/boot/grub2/themes/{source_bg.name}"')
+                lines.append(f'GRUB_BACKGROUND="/boot/grub2/themes/openSUSE/background.png"')
+                
+            # Also set GRUB_THEME for full Secure Boot compatibility
+            has_theme = False
+            for i, line in enumerate(lines):
+                if line.startswith("GRUB_THEME="):
+                    lines[i] = f'GRUB_THEME="/boot/grub2/themes/openSUSE/theme.txt"'
+                    has_theme = True
+            if not has_theme:
+                lines.append(f'GRUB_THEME="/boot/grub2/themes/openSUSE/theme.txt"')
                 
             grub_default.write_text("\n".join(lines) + "\n")
             logger.info("  -> Injected custom GRUB background")
