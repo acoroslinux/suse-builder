@@ -378,6 +378,10 @@ class SystemCustomizer:
             gdm_conf.write_text(gdm_content)
 
         # LightDM configuration
+        # LightDM configuration
+        if session_name == "cinnamon-wayland" or session_name == "cinnamon2d":
+            session_name = "cinnamon"
+            
         lightdm_content = (
             "[LightDM]\n"
             "run-directory=/run/lightdm\n\n"
