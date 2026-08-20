@@ -76,9 +76,15 @@ class ZypperManager:
             return
 
         repos = self.config.get("repos", [])
+        distro_key = str(self.config.get("distro") or "").lower()
         for r in repos:
             name = r.get("name", "repo")
             url = r.get("url")
+            if name == "packman" and url and "openSUSE_Tumbleweed" in url:
+                if "15." in distro_key or "15" in distro_key:
+                    url = "https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_15.6/"
+                elif "slowroll" in distro_key:
+                    url = "https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Slowroll/Essentials/"
             repo_file = self.target_root / "etc" / "zypp" / "repos.d" / f"{name}.repo"
             if url and not repo_file.exists():
                 ar_args = ["--root", str(self.target_root), "ar", "-f"]
