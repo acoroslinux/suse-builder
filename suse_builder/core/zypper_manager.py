@@ -26,6 +26,8 @@ class ZypperManager:
         package_cache.mkdir(parents=True, exist_ok=True)
 
         full_args = [
+            "--non-interactive",
+            "--gpg-auto-import-keys",
             "--cache-dir", str(metadata_cache),
             "--pkg-cache-dir", str(package_cache),
             *args,
