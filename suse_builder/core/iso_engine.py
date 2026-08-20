@@ -129,6 +129,10 @@ class ISOEngine:
         compression = self.config.get("compression", "zstd")
         num_cpus = os.cpu_count() or 4
         logger.info(f"Creating SquashFS with {compression} compression using {num_cpus} cores...")
+        # Ensure essential mountpoint directories exist in target_root before compressing
+        for d in ["proc", "sys", "dev", "run", "tmp", "var/tmp"]:
+            (source_dir / d).mkdir(parents=True, exist_ok=True)
+
         self.toolchain.run_tool(
             "mksquashfs",
             [
@@ -138,7 +142,8 @@ class ISOEngine:
                 "-b", "1M",
                 "-processors", str(num_cpus),
                 "-noappend",
-                "-e", "proc", "sys", "dev", "tmp", "var/cache/zypp"
+                "-wildcards",
+                "-e", "proc/*", "sys/*", "dev/*", "run/*", "tmp/*", "var/tmp/*", "var/cache/zypp/*"
             ],
         )
 
