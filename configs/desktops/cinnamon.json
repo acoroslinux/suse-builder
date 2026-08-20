@@ -6,7 +6,6 @@
     "cinnamon",
     "cinnamon-session",
     "muffin",
-    "dbus-1-x11",
     "dconf",
     "lightdm",
     "lightdm-gtk-greeter",
