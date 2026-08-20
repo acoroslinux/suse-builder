@@ -3,6 +3,11 @@
   "display_manager": "lightdm",
   "packages": [
     "patterns-cinnamon-cinnamon",
+    "cinnamon",
+    "cinnamon-session",
+    "muffin",
+    "dbus-1-x11",
+    "dconf",
     "lightdm",
     "lightdm-gtk-greeter",
     "nemo",
