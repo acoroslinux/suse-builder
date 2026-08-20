@@ -9,6 +9,14 @@
     {
       "name": "repo-non-oss",
       "url": "http://download.opensuse.org/distribution/leap/15.6/repo/non-oss/"
+    },
+    {
+      "name": "repo-update",
+      "url": "http://download.opensuse.org/update/leap/15.6/oss/"
+    },
+    {
+      "name": "repo-update-non-oss",
+      "url": "http://download.opensuse.org/update/leap/15.6/non-oss/"
     }
   ]
 }
