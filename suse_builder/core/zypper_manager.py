@@ -25,12 +25,13 @@ class ZypperManager:
         metadata_cache.mkdir(parents=True, exist_ok=True)
         package_cache.mkdir(parents=True, exist_ok=True)
 
+        cleaned_args = [a for a in args if a not in ("--non-interactive", "--gpg-auto-import-keys")]
         full_args = [
             "--non-interactive",
             "--gpg-auto-import-keys",
             "--cache-dir", str(metadata_cache),
             "--pkg-cache-dir", str(package_cache),
-            *args,
+            *cleaned_args,
         ]
 
         if self.toolchain:
