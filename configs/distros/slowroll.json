@@ -13,10 +13,6 @@
     {
       "name": "repo-update",
       "url": "http://download.opensuse.org/update/slowroll/repo/oss/"
-    },
-    {
-      "name": "repo-update-non-oss",
-      "url": "http://download.opensuse.org/update/slowroll/repo/non-oss/"
     }
   ]
 }
