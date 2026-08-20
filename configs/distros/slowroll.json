@@ -5,6 +5,18 @@
     {
       "name": "repo-oss",
       "url": "http://download.opensuse.org/slowroll/repo/oss/"
+    },
+    {
+      "name": "repo-non-oss",
+      "url": "http://download.opensuse.org/slowroll/repo/non-oss/"
+    },
+    {
+      "name": "repo-update",
+      "url": "http://download.opensuse.org/update/slowroll/repo/oss/"
+    },
+    {
+      "name": "repo-update-non-oss",
+      "url": "http://download.opensuse.org/update/slowroll/repo/non-oss/"
     }
   ]
 }
