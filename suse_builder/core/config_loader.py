@@ -74,7 +74,10 @@ class ConfigLoader:
 
         # 2. Distro
         if distro:
-            config = self._merge_dicts(config, self.load_profile("distros", distro))
+            distro_name = distro
+            if distro_name == "leap" and not (self.config_root / "distros" / "leap.json").exists():
+                distro_name = "leap-16.0" if (self.config_root / "distros" / "leap-16.0.json").exists() else "leap-15.6"
+            config = self._merge_dicts(config, self.load_profile("distros", distro_name))
 
         # 3. Architecture
         config = self._merge_dicts(config, self.load_profile("architectures", architecture))
