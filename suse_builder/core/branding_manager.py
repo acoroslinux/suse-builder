@@ -201,15 +201,14 @@ class BrandingManager:
             logger.warning(f"  -> GRUB background not found at {source_bg}")
             return
             
-        target_dir = self.chroot.target_root / "usr" / "share" / "grub2" / "themes" / "openSUSE"
-        target_dir.mkdir(parents=True, exist_ok=True)
-        
-        target_bg = target_dir / source_bg.name
-        shutil.copy2(source_bg, target_bg)
-        
-        # Also overwrite the official openSUSE theme background for Secure Boot compliance
-        shutil.copy2(source_bg, target_dir / "background.png")
-        shutil.copy2(source_bg, target_dir / "background.jpg")
+        for t_base in [
+            self.chroot.target_root / "usr" / "share" / "grub2" / "themes" / "openSUSE",
+            self.chroot.target_root / "boot" / "grub2" / "themes" / "openSUSE",
+        ]:
+            t_base.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_bg, t_base / source_bg.name)
+            shutil.copy2(source_bg, t_base / "background.png")
+            shutil.copy2(source_bg, t_base / "background.jpg")
         
         # Modify /etc/default/grub
         grub_default = self.chroot.target_root / "etc" / "default" / "grub"

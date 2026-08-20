@@ -133,14 +133,7 @@ class SystemCustomizer:
         if dm:
             auto_services.extend(["display-manager"])
 
-        # Uninstall problematic legacy video drivers that crash Xorg in VMs
-        try:
-            logger.info("Removing legacy xf86-video-vmware to prevent Xorg crashes...")
-            self.chroot.run_in_chroot(["zypper", "--non-interactive", "rm", "xf86-video-vmware"], check=False)
-        except Exception as e:
-            logger.warning(f"Failed to remove xf86-video-vmware: {e}")
 
-        # (Removed dangerous modesetting Xorg override that crashes XFCE)
 
         for auto_svc in auto_services:
             if auto_svc not in services_to_enable:
@@ -267,7 +260,7 @@ class SystemCustomizer:
         sysconfig_content = (
             f'DISPLAYMANAGER="{dm}"\n'
             f'DISPLAYMANAGER_AUTOLOGIN="{live_user}"\n'
-            'DISPLAYMANAGER_PASSWORD_LESS_LOGIN="no"\n'
+            'DISPLAYMANAGER_PASSWORD_LESS_LOGIN="yes"\n'
             'DISPLAYMANAGER_DEFAULT_MODE="x11"\n'
             'DISPLAYMANAGER_REMOTE_ACCESS="no"\n'
             'DISPLAYMANAGER_XSERVER_TCP_PORT_6000_OPEN="no"\n'

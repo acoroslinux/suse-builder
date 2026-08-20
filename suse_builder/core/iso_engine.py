@@ -444,12 +444,12 @@ class ISOEngine:
                 shutil.copy2(src_initramfs, self.iso_staging / "boot" / "initrd")
 
         # Copy GRUB themes/backgrounds to the Live ISO
-        # First copy the official openSUSE themes installed in the chroot (e.g. by grub2-branding-openSUSE)
-        chroot_themes = self.target_root / "usr" / "share" / "grub2" / "themes"
-        if chroot_themes.exists() and self.mode != "mock":
-            for d in [self.iso_staging / "boot" / "grub2" / "themes", self.iso_staging / "boot" / "grub" / "themes"]:
-                d.mkdir(parents=True, exist_ok=True)
-                subprocess.run(["rsync", "-a", "--no-o", "--no-g", "--force", f"{chroot_themes}/", f"{d}/"], check=False)
+        # First copy official openSUSE themes installed in chroot (usr/share on Tumbleweed, boot on Leap)
+        for chroot_themes in [self.target_root / "usr" / "share" / "grub2" / "themes", self.target_root / "boot" / "grub2" / "themes"]:
+            if chroot_themes.exists() and self.mode != "mock":
+                for d in [self.iso_staging / "boot" / "grub2" / "themes", self.iso_staging / "boot" / "grub" / "themes"]:
+                    d.mkdir(parents=True, exist_ok=True)
+                    subprocess.run(["rsync", "-a", "--no-o", "--no-g", "--force", f"{chroot_themes}/", f"{d}/"], check=False)
 
         # Then overlay our custom local themes
         grub_assets_src = resolve_from_project("configs/custom_files/boot/grub2/themes")
