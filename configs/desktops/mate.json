@@ -19,6 +19,7 @@
     "mate-applet-sensors",
     "mate-applet-softupd",
     "mate-menu",
+    "brisk-menu",
     "mate-polkit",
     "mate-notification-daemon",
     "mate-screensaver",
