@@ -587,13 +587,21 @@ class SystemCustomizer:
             "StartupNotify=true\n"
         )
 
-        # 3. Add launcher to /usr/share/applications/ (and overwrite upstream calamares.desktop)
+        # 3. Add launcher to /usr/share/applications/ (and hide redundant upstream entries)
         apps_dir = self.target_root / "usr" / "share" / "applications"
         apps_dir.mkdir(parents=True, exist_ok=True)
-        for app_name in ["install-suse.desktop", "calamares.desktop", "io.calamares.calamares.desktop"]:
-            app_desktop = apps_dir / app_name
-            app_desktop.write_text(desktop_entry)
-            app_desktop.chmod(0o755)
+        (apps_dir / "install-suse.desktop").write_text(desktop_entry)
+        (apps_dir / "install-suse.desktop").chmod(0o755)
+
+        hidden_entry = (
+            "[Desktop Entry]\n"
+            "Type=Application\n"
+            "NoDisplay=true\n"
+            "Exec=/usr/local/bin/calamares-launcher\n"
+            "Name=Calamares\n"
+        )
+        for old_app in ["calamares.desktop", "io.calamares.calamares.desktop"]:
+            (apps_dir / old_app).write_text(hidden_entry)
 
         # 4. Helper script to create and trust desktop icon ONLY for the liveuser
         script_path = self.target_root / "usr" / "local" / "bin" / "add-installer-desktop-icon.sh"
