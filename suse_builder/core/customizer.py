@@ -1230,26 +1230,24 @@ class SystemCustomizer:
                 default_wp.unlink()
             default_wp.symlink_to(Path("/usr/share/backgrounds/suse-modern-wallpaper.png"))
 
-        # Configure default XFCE desktop wallpaper via xfconf template
-        xfconf_dir = self.target_root / "etc" / "skel" / ".config" / "xfce4" / "xfconf" / "xfce-perchannel-xml"
-        xfconf_dir.mkdir(parents=True, exist_ok=True)
-        xfce_desktop_xml = (
-            '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<channel name="xfce4-desktop" version="1.0">\n'
-            '  <property name="backdrop" type="empty">\n'
-            '    <property name="screen0" type="empty">\n'
-            '      <property name="monitor0" type="empty">\n'
-            '        <property name="workspace0" type="empty">\n'
-            '          <property name="color-style" type="int" value="0"/>\n'
-            '          <property name="image-style" type="int" value="5"/>\n'
-            '          <property name="last-image" type="string" value="/usr/share/backgrounds/default-wallpaper.png"/>\n'
-            '        </property>\n'
-            '      </property>\n'
-            '    </property>\n'
-            '  </property>\n'
-            '</channel>\n'
-        )
-        (xfconf_dir / "xfce4-desktop.xml").write_text(xfce_desktop_xml)
+        # Configure XFCE desktop wallpaper preserving custom configuration
+        xfce_xml_src = resolve_from_project("configs/custom_files/desktops/xfce/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml")
+        if xfce_xml_src.exists():
+            import shutil
+            for dst_dir in [
+                self.target_root / "etc" / "skel" / ".config" / "xfce4" / "xfconf" / "xfce-perchannel-xml",
+                self.target_root / "etc" / "xdg" / "xfce4" / "xfconf" / "xfce-perchannel-xml"
+            ]:
+                dst_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(xfce_xml_src, dst_dir / "xfce4-desktop.xml")
+            
+            # Also create default openSUSE/XFCE wallpaper symlink
+            xfce_wp_dir = self.target_root / "usr" / "share" / "wallpapers" / "xfce"
+            xfce_wp_dir.mkdir(parents=True, exist_ok=True)
+            default_xfce_wp = xfce_wp_dir / "default.wallpaper"
+            if default_xfce_wp.exists() or default_xfce_wp.is_symlink():
+                default_xfce_wp.unlink()
+            default_xfce_wp.symlink_to(Path("/usr/share/backgrounds/suse-cyber-chameleon.jpg"))
 
         # Configure KDE default wallpaper if present
         # In openSUSE, KDE Plasma defaults to the openSUSEdefault wallpaper
