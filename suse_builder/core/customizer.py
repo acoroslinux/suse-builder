@@ -554,6 +554,24 @@ class SystemCustomizer:
             '</policyconfig>\n'
         )
 
+        # 2. Add calamares-launcher wrapper script to forward X11 display and credentials cleanly
+        launcher_path = self.target_root / "usr" / "local" / "bin" / "calamares-launcher"
+        launcher_path.parent.mkdir(parents=True, exist_ok=True)
+        launcher_content = (
+            "#!/bin/sh\n"
+            "# Calamares GUI launcher for live sessions\n"
+            "xhost +si:localuser:root >/dev/null 2>&1 || true\n"
+            "if [ -z \"$DISPLAY\" ]; then\n"
+            "    export DISPLAY=:0\n"
+            "fi\n"
+            "if [ -z \"$XAUTHORITY\" ] && [ -f \"$HOME/.Xauthority\" ]; then\n"
+            "    export XAUTHORITY=\"$HOME/.Xauthority\"\n"
+            "fi\n"
+            "exec sudo -E /usr/bin/calamares \"$@\"\n"
+        )
+        launcher_path.write_text(launcher_content)
+        launcher_path.chmod(0o755)
+
         desktop_entry = (
             "[Desktop Entry]\n"
             "Version=1.0\n"
@@ -562,21 +580,19 @@ class SystemCustomizer:
             "Name[pt_PT]=Instalar o openSUSE\n"
             "Comment=Install openSUSE to disk\n"
             "Comment[pt_PT]=Instalar o sistema no disco rígido\n"
-            "Exec=pkexec /usr/bin/calamares\n"
+            "Exec=/usr/local/bin/calamares-launcher\n"
             "Icon=system-software-install\n"
             "Terminal=false\n"
             "Categories=System;Qt;\n"
             "StartupNotify=true\n"
         )
 
-        # 2. Add launcher to /usr/share/applications/
+        # 3. Add launcher to /usr/share/applications/
         apps_dir = self.target_root / "usr" / "share" / "applications"
         apps_dir.mkdir(parents=True, exist_ok=True)
         app_desktop = apps_dir / "install-suse.desktop"
         app_desktop.write_text(desktop_entry)
         app_desktop.chmod(0o755)
-
-        # 3. (Removed) Do NOT install into /etc/skel/Desktop for new users
 
         # 4. Helper script to create and trust desktop icon ONLY for the liveuser
         script_path = self.target_root / "usr" / "local" / "bin" / "add-installer-desktop-icon.sh"

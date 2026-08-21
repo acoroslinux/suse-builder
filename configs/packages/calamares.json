@@ -1,3 +1,10 @@
 {
-  "packages": ["calamares", "kpmcore"]
+  "packages": [
+    "calamares",
+    "kpmcore",
+    "libxcb-cursor0",
+    "libxcb-xinerama0",
+    "libqt5-qtbase-platformtheme-gtk3",
+    "libqt5-qtwayland"
+  ]
 }
