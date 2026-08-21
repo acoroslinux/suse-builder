@@ -587,12 +587,13 @@ class SystemCustomizer:
             "StartupNotify=true\n"
         )
 
-        # 3. Add launcher to /usr/share/applications/
+        # 3. Add launcher to /usr/share/applications/ (and overwrite upstream calamares.desktop)
         apps_dir = self.target_root / "usr" / "share" / "applications"
         apps_dir.mkdir(parents=True, exist_ok=True)
-        app_desktop = apps_dir / "install-suse.desktop"
-        app_desktop.write_text(desktop_entry)
-        app_desktop.chmod(0o755)
+        for app_name in ["install-suse.desktop", "calamares.desktop", "io.calamares.calamares.desktop"]:
+            app_desktop = apps_dir / app_name
+            app_desktop.write_text(desktop_entry)
+            app_desktop.chmod(0o755)
 
         # 4. Helper script to create and trust desktop icon ONLY for the liveuser
         script_path = self.target_root / "usr" / "local" / "bin" / "add-installer-desktop-icon.sh"
@@ -614,6 +615,7 @@ class SystemCustomizer:
             "    desktop_dir=\"$HOME/Desktop\"\n"
             "fi\n"
             "mkdir -p \"$desktop_dir\"\n"
+            "rm -f \"$desktop_dir/calamares.desktop\" \"$desktop_dir/io.calamares.calamares.desktop\"\n"
             "icon_path=\"$desktop_dir/install-suse.desktop\"\n"
             "cat << 'EOF' > \"$icon_path\"\n"
             f"{desktop_entry}"
