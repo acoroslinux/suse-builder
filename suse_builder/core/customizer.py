@@ -710,6 +710,33 @@ class SystemCustomizer:
         rel_file = etc_dir / "opensuse_modern-release"
         rel_file.write_text("openSUSE Modern release 2026.08\n")
 
+        # Configure Plymouth daemon default theme
+        plymouth_dir = etc_dir / "plymouth"
+        plymouth_dir.mkdir(parents=True, exist_ok=True)
+        (plymouth_dir / "plymouthd.conf").write_text(
+            "[Daemon]\n"
+            "Theme=suse-modern\n"
+            "ShowDelay=0\n"
+            "DeviceTimeout=8\n"
+        )
+
+        # Copy suse-modern plymouth theme to /usr/share/plymouth/themes/
+        from suse_builder.core.path_utils import resolve_from_project
+        plymouth_src = resolve_from_project("configs/custom_files/plymouth/themes/suse-modern")
+        if plymouth_src.exists():
+            import shutil
+            plymouth_dst = self.target_root / "usr" / "share" / "plymouth" / "themes" / "suse-modern"
+            plymouth_dst.mkdir(parents=True, exist_ok=True)
+            for f in plymouth_src.iterdir():
+                if f.is_file():
+                    shutil.copy2(f, plymouth_dst / f.name)
+            
+            # Set default.plymouth symlink
+            def_ply = self.target_root / "usr" / "share" / "plymouth" / "themes" / "default.plymouth"
+            if def_ply.exists() or def_ply.is_symlink():
+                def_ply.unlink()
+            def_ply.symlink_to(Path("suse-modern/suse-modern.plymouth"))
+
     def configure_dracut(self):
         if self.chroot.mode == "mock":
             return
@@ -718,10 +745,10 @@ class SystemCustomizer:
         live_conf = dracut_conf_dir / "02-live.conf"
         live_conf.write_text(
             '# Added by suse-builder for Live ISO generation\n'
-            'add_dracutmodules+=" dmsquash-live pollcdrom qemu qemu-net base rootfs-block udev-rules kernel-modules plymouth "\n'
+            'add_dracutmodules+=" dmsquash-live pollcdrom qemu qemu-net base rootfs-block udev-rules kernel-modules plymouth drm "\n'
             'omit_dracutmodules+=" checkisomd5 "\n'
             'compress="xz"\n'
-            'add_drivers+=" squashfs loop overlay iso9660 isofs zstd zstd_decompress dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme "\n'
+            'add_drivers+=" squashfs loop overlay iso9660 isofs zstd zstd_decompress dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme bochs-drm vmwgfx virtio-gpu qxl nouveau radeon amdgpu i915 "\n'
             'filesystems+=" squashfs iso9660 overlay vfat ext4 "\n'
             'hostonly="no"\n'
         )

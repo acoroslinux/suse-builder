@@ -327,8 +327,8 @@ for kimg in /boot/vmlinuz-*; do
     kver="${kimg#/boot/vmlinuz-}"
     dracut --force --no-hostonly \
       --kver "$kver" \
-      --add "dmsquash-live pollcdrom qemu qemu-net base rootfs-block udev-rules kernel-modules" \
-      --add-drivers "squashfs loop overlay iso9660 isofs zstd zstd_decompress dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme" \
+      --add "dmsquash-live pollcdrom qemu qemu-net base rootfs-block udev-rules kernel-modules plymouth drm" \
+      --add-drivers "squashfs loop overlay iso9660 isofs zstd zstd_decompress dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme bochs-drm vmwgfx virtio-gpu qxl nouveau radeon amdgpu i915" \
       --filesystems "squashfs iso9660 overlay vfat ext4" \
       --include /etc/systemd/system/checkisomd5@.service.d /etc/systemd/system/checkisomd5@.service.d \
       "/boot/initrd-$kver"

@@ -463,6 +463,20 @@ class ISOEngine:
                 d.mkdir(parents=True, exist_ok=True)
                 subprocess.run(["rsync", "-a", "--no-o", "--no-g", "--force", f"{grub_assets_src}/", f"{d}/"], check=False)
 
+        # Ensure our custom background image overwrites any default openSUSE background files on the ISO
+        custom_grub_bg = resolve_from_project("configs/custom_files/boot/grub2/themes/suse-modern/suse-grub-bg.jpg")
+        if custom_grub_bg.exists() and self.mode != "mock":
+            for d in [
+                self.iso_staging / "boot" / "grub2" / "themes" / "openSUSE",
+                self.iso_staging / "boot" / "grub" / "themes" / "openSUSE"
+            ]:
+                if d.exists():
+                    for target_name in [
+                        "background.png", "background.jpg", "ascii-background.png",
+                        "openSUSE.png", "suse-grub-bg.jpg", "suse-grub-bg.png"
+                    ]:
+                        shutil.copy2(custom_grub_bg, d / target_name)
+
         # Copy GRUB x86_64-efi modules to ISO
         for mod_candidate in [
             self.target_root / "usr" / "lib" / "grub2" / "x86_64-efi",
