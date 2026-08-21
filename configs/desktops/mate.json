@@ -6,10 +6,20 @@
     "patterns-mate-mate_basis",
     "lightdm",
     "lightdm-gtk-greeter",
+    "caja",
+    "caja-extension-image-converter",
+    "caja-extension-open-terminal",
+    "engrampa",
+    "pluma",
+    "atril",
+    "mate-calc",
     "mate-terminal",
     "mate-power-manager",
     "mate-media",
     "mate-utils",
-    "mate-control-center"
+    "mate-control-center",
+    "mate-session-manager",
+    "mate-panel",
+    "marco"
   ]
 }
