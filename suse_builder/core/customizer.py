@@ -690,6 +690,15 @@ class SystemCustomizer:
             sysconfig_lang.write_text(content)
         else:
             sysconfig_lang.write_text(f'RC_LANG="{locale}"\nRC_LC_ALL="{locale}"\n')
+        # Ensure /usr/share/i18n/SUPPORTED exists for Calamares locale detection
+        supported_file = self.target_root / "usr" / "share" / "i18n" / "SUPPORTED"
+        if not supported_file.exists():
+            supported_file.parent.mkdir(parents=True, exist_ok=True)
+            locales_sample = [
+                "pt_PT.UTF-8 UTF-8", "pt_BR.UTF-8 UTF-8", "en_US.UTF-8 UTF-8", "en_GB.UTF-8 UTF-8",
+                "es_ES.UTF-8 UTF-8", "fr_FR.UTF-8 UTF-8", "de_DE.UTF-8 UTF-8", "it_IT.UTF-8 UTF-8"
+            ]
+            supported_file.write_text("\n".join(locales_sample) + "\n")
 
         logger.info(f"Locale configuration written: {locale}")
 
