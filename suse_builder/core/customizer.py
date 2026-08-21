@@ -746,6 +746,7 @@ class SystemCustomizer:
         self.configure_autologin()
         self.configure_zram()
         self.configure_flathub()
+        self.configure_fonts()
         self.configure_polkit_power()
         self.configure_calamares()
         self.configure_artwork()
@@ -755,6 +756,55 @@ class SystemCustomizer:
         self.configure_dracut()
         self.configure_machine_id()
         self.fix_system_permissions()
+
+    def configure_fonts(self):
+        """Configure fontconfig for crisp text rendering, subpixel RGB, and proper monospace aliases."""
+        if self.chroot.mode == "mock":
+            return
+        fonts_dir = self.target_root / "etc" / "fonts"
+        fonts_dir.mkdir(parents=True, exist_ok=True)
+        local_conf = fonts_dir / "local.conf"
+        local_conf_content = (
+            '<?xml version="1.0"?>\n'
+            '<!DOCTYPE fontconfig SYSTEM "fonts.dtd">\n'
+            '<fontconfig>\n'
+            '  <!-- Global rendering properties -->\n'
+            '  <match target="font">\n'
+            '    <edit mode="assign" name="antialias"><bool>true</bool></edit>\n'
+            '    <edit mode="assign" name="hinting"><bool>true</bool></edit>\n'
+            '    <edit mode="assign" name="hintstyle"><const>hintslight</const></edit>\n'
+            '    <edit mode="assign" name="rgba"><const>rgb</const></edit>\n'
+            '    <edit mode="assign" name="lcdfilter"><const>lcddefault</const></edit>\n'
+            '  </match>\n'
+            '\n'
+            '  <!-- Default font mappings -->\n'
+            '  <alias>\n'
+            '    <family>sans-serif</family>\n'
+            '    <prefer>\n'
+            '      <family>Noto Sans</family>\n'
+            '      <family>DejaVu Sans</family>\n'
+            '      <family>Cantarell</family>\n'
+            '    </prefer>\n'
+            '  </alias>\n'
+            '  <alias>\n'
+            '    <family>serif</family>\n'
+            '    <prefer>\n'
+            '      <family>Noto Serif</family>\n'
+            '      <family>DejaVu Serif</family>\n'
+            '    </prefer>\n'
+            '  </alias>\n'
+            '  <alias>\n'
+            '    <family>monospace</family>\n'
+            '    <prefer>\n'
+            '      <family>Hack</family>\n'
+            '      <family>DejaVu Sans Mono</family>\n'
+            '      <family>Noto Sans Mono</family>\n'
+            '    </prefer>\n'
+            '  </alias>\n'
+            '</fontconfig>\n'
+        )
+        local_conf.write_text(local_conf_content)
+        logger.info("Configured system font rendering and aliases in /etc/fonts/local.conf.")
 
     def configure_offline_repository(self):
         """Configure /etc/zypp/repos.d/offline-iso.repo pointing to the ISO's offline repository."""
