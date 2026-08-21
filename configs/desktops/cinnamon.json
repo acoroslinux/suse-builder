@@ -10,6 +10,9 @@
     "lightdm",
     "lightdm-gtk-greeter",
     "nemo",
-    "gnome-terminal"
+    "gnome-terminal",
+    "gedit",
+    "gnome-calculator",
+    "gnome-screenshot"
   ]
 }

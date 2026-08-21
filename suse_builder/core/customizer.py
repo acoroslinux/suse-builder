@@ -824,13 +824,35 @@ class SystemCustomizer:
             '    <family>monospace</family>\n'
             '    <prefer>\n'
             '      <family>Hack</family>\n'
+            '      <family>JetBrains Mono</family>\n'
+            '      <family>Fira Code</family>\n'
             '      <family>DejaVu Sans Mono</family>\n'
+            '      <family>Liberation Mono</family>\n'
             '      <family>Noto Sans Mono</family>\n'
             '    </prefer>\n'
             '  </alias>\n'
             '</fontconfig>\n'
         )
         local_conf.write_text(local_conf_content)
+        
+        # Configure default monospace font for GNOME and Cinnamon desktop interfaces
+        schema_dir = self.target_root / "usr" / "share" / "glib-2.0" / "schemas"
+        schema_dir.mkdir(parents=True, exist_ok=True)
+        fonts_override = (
+            "[org.gnome.desktop.interface]\n"
+            "monospace-font-name='Hack 10'\n"
+            "font-name='Noto Sans 10'\n"
+            "\n"
+            "[org.cinnamon.desktop.interface]\n"
+            "monospace-font-name='Hack 10'\n"
+            "font-name='Noto Sans 10'\n"
+        )
+        (schema_dir / "99_opensuse_modern_fonts.gschema.override").write_text(fonts_override)
+        try:
+            self.chroot.run_in_chroot(["glib-compile-schemas", "/usr/share/glib-2.0/schemas/"], check=False)
+        except Exception:
+            pass
+
         logger.info("Configured system font rendering and aliases in /etc/fonts/local.conf.")
 
     def configure_offline_repository(self):
