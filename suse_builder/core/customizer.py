@@ -691,14 +691,27 @@ class SystemCustomizer:
         else:
             sysconfig_lang.write_text(f'RC_LANG="{locale}"\nRC_LC_ALL="{locale}"\n')
         # Ensure /usr/share/i18n/SUPPORTED exists for Calamares locale detection
-        supported_file = self.target_root / "usr" / "share" / "i18n" / "SUPPORTED"
-        if not supported_file.exists():
-            supported_file.parent.mkdir(parents=True, exist_ok=True)
+        from suse_builder.core.path_utils import resolve_from_project
+        supported_src = resolve_from_project("configs/custom_files/usr/share/i18n/SUPPORTED")
+        supported_dst = self.target_root / "usr" / "share" / "i18n" / "SUPPORTED"
+        supported_dst.parent.mkdir(parents=True, exist_ok=True)
+        if supported_src.exists():
+            import shutil
+            shutil.copy2(supported_src, supported_dst)
+            shutil.copy2(supported_src, self.target_root / "etc" / "locale.gen")
+        elif not supported_dst.exists():
             locales_sample = [
                 "pt_PT.UTF-8 UTF-8", "pt_BR.UTF-8 UTF-8", "en_US.UTF-8 UTF-8", "en_GB.UTF-8 UTF-8",
                 "es_ES.UTF-8 UTF-8", "fr_FR.UTF-8 UTF-8", "de_DE.UTF-8 UTF-8", "it_IT.UTF-8 UTF-8"
             ]
-            supported_file.write_text("\n".join(locales_sample) + "\n")
+            supported_dst.write_text("\n".join(locales_sample) + "\n")
+
+        # Compile essential locales
+        for loc, charmap in [("pt_PT", "UTF-8"), ("en_US", "UTF-8")]:
+            try:
+                self.chroot.run_in_chroot(["localedef", "-i", loc, "-f", charmap, f"{loc}.{charmap}"], check=False)
+            except Exception:
+                pass
 
         logger.info(f"Locale configuration written: {locale}")
 
