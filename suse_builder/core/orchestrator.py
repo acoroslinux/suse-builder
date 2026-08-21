@@ -325,10 +325,21 @@ for kimg in /boot/vmlinuz-*; do
     [ -e "$kimg" ] || continue
     found_kernel=1
     kver="${kimg#/boot/vmlinuz-}"
+    wanted_drivers="squashfs loop overlay iso9660 isofs zstd zstd_decompress dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme bochs bochs-drm bochs_drm vmwgfx virtio-gpu qxl nouveau radeon amdgpu i915"
+    avail_drivers=""
+    for d in $wanted_drivers; do
+        d_norm=$(echo "$d" | tr '-' '_')
+        if [ -d "/lib/modules/$kver" ] && find "/lib/modules/$kver" \( -name "${d_norm}.ko*" -o -name "${d}.ko*" \) 2>/dev/null | grep -q .; then
+            avail_drivers="$avail_drivers $d"
+        fi
+    done
+    if [ -z "$avail_drivers" ]; then
+        avail_drivers="squashfs loop overlay iso9660 zstd dm_mod sr_mod cdrom sd_mod ahci"
+    fi
     dracut --force --no-hostonly \
       --kver "$kver" \
       --add "dmsquash-live pollcdrom qemu qemu-net base rootfs-block udev-rules kernel-modules plymouth drm" \
-      --add-drivers "squashfs loop overlay iso9660 isofs zstd zstd_decompress dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme bochs vmwgfx virtio-gpu qxl nouveau radeon amdgpu i915" \
+      --add-drivers "$avail_drivers" \
       --filesystems "squashfs iso9660 overlay vfat ext4" \
       --include /etc/systemd/system/checkisomd5@.service.d /etc/systemd/system/checkisomd5@.service.d \
       "/boot/initrd-$kver"

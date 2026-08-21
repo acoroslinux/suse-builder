@@ -35,7 +35,7 @@
     <shade_type>vertical-gradient</shade_type>
     <pcolor>rgb(88,145,188)</pcolor>
     <scolor>rgb(60,143,37)</scolor>
-    <artist/>
+    <artist>(none)</artist>
   </wallpaper>
   <wallpaper deleted="false">
     <name>Dune</name>
@@ -47,13 +47,13 @@
     <artist>Marco Cogoni, Hylke Bons</artist>
   </wallpaper>
   <wallpaper deleted="false">
-    <name>Green Traditional</name>
-    <filename>/usr/share/backgrounds/mate/desktop/GreenTraditional.jpg</filename>
+    <name>Wood</name>
+    <filename>/usr/share/backgrounds/mate/nature/Wood.jpg</filename>
     <options>zoom</options>
     <shade_type>vertical-gradient</shade_type>
     <pcolor>rgb(88,145,188)</pcolor>
     <scolor>rgb(60,143,37)</scolor>
-    <artist>l0r4n0n</artist>
+    <artist>Jean-Fran&#xE7;ois Fortin Tam</artist>
   </wallpaper>
   <wallpaper deleted="false">
     <name>Green Meadow</name>
@@ -65,13 +65,13 @@
     <artist>Timothy Schellhase, Lapo Calamandrei</artist>
   </wallpaper>
   <wallpaper deleted="false">
-    <name>Wood</name>
-    <filename>/usr/share/backgrounds/mate/nature/Wood.jpg</filename>
+    <name>Green Traditional</name>
+    <filename>/usr/share/backgrounds/mate/desktop/GreenTraditional.jpg</filename>
     <options>zoom</options>
     <shade_type>vertical-gradient</shade_type>
     <pcolor>rgb(88,145,188)</pcolor>
     <scolor>rgb(60,143,37)</scolor>
-    <artist>Jean-Fran&#xE7;ois Fortin Tam</artist>
+    <artist>l0r4n0n</artist>
   </wallpaper>
   <wallpaper deleted="false">
     <name>Yellow Flower</name>
@@ -164,12 +164,12 @@
     <artist>Adam Erdman</artist>
   </wallpaper>
   <wallpaper deleted="false">
-    <name>Arc</name>
-    <filename>/usr/share/backgrounds/mate/abstract/Arc-Colors-Transparent-Wallpaper.png</filename>
+    <name>suse-modern-wallpaper.png</name>
+    <filename>/usr/share/backgrounds/suse-modern-wallpaper.png</filename>
     <options>zoom</options>
     <shade_type>vertical-gradient</shade_type>
-    <pcolor>rgb(39,88,126)</pcolor>
-    <scolor>rgb(98,127,90)</scolor>
+    <pcolor>rgb(88,145,188)</pcolor>
+    <scolor>rgb(60,143,37)</scolor>
     <artist>(none)</artist>
   </wallpaper>
   <wallpaper deleted="false">
@@ -200,8 +200,8 @@
     <artist>Adam Erdman</artist>
   </wallpaper>
   <wallpaper deleted="false">
-    <name>No Desktop Background</name>
-    <filename>(none)</filename>
+    <name>Arc</name>
+    <filename>/usr/share/backgrounds/mate/abstract/Arc-Colors-Transparent-Wallpaper.png</filename>
     <options>zoom</options>
     <shade_type>vertical-gradient</shade_type>
     <pcolor>rgb(39,88,126)</pcolor>
@@ -225,6 +225,15 @@
     <pcolor>rgb(88,145,188)</pcolor>
     <scolor>rgb(60,143,37)</scolor>
     <artist>Rowen Stipe</artist>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>No Desktop Background</name>
+    <filename>(none)</filename>
+    <options>zoom</options>
+    <shade_type>vertical-gradient</shade_type>
+    <pcolor>rgb(39,88,126)</pcolor>
+    <scolor>rgb(98,127,90)</scolor>
+    <artist>(none)</artist>
   </wallpaper>
   <wallpaper deleted="false">
     <name>Spring</name>
@@ -281,6 +290,15 @@
     <artist>Wyng Stancikaite</artist>
   </wallpaper>
   <wallpaper deleted="false">
+    <name>suse-cyber-chameleon.jpg</name>
+    <filename>/usr/share/backgrounds/suse-cyber-chameleon.jpg</filename>
+    <options>zoom</options>
+    <shade_type>vertical-gradient</shade_type>
+    <pcolor>rgb(88,145,188)</pcolor>
+    <scolor>rgb(60,143,37)</scolor>
+    <artist>(none)</artist>
+  </wallpaper>
+  <wallpaper deleted="false">
     <name>Storm</name>
     <filename>/usr/share/backgrounds/mate/nature/Storm.jpg</filename>
     <options>zoom</options>
@@ -297,5 +315,14 @@
     <pcolor>rgb(88,145,188)</pcolor>
     <scolor>rgb(60,143,37)</scolor>
     <artist>Lennart Poettering, Andrea Cimitan</artist>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>suse-abstract-neon.jpg</name>
+    <filename>/usr/share/backgrounds/suse-abstract-neon.jpg</filename>
+    <options>zoom</options>
+    <shade_type>vertical-gradient</shade_type>
+    <pcolor>rgb(88,145,188)</pcolor>
+    <scolor>rgb(60,143,37)</scolor>
+    <artist>(none)</artist>
   </wallpaper>
 </wallpapers>
