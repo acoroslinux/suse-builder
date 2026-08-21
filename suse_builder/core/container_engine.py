@@ -29,7 +29,12 @@ class ContainerEngine:
         out_path.parent.mkdir(parents=True, exist_ok=True)
 
         if self.mode == "mock":
-            out_path.touch()
+            import io, tarfile
+            with tarfile.open(out_path, "w") as tar:
+                for name, content in [("oci-layout", b'{"imageLayoutVersion": "1.0.0"}'), ("index.json", b'{}')]:
+                    ti = tarfile.TarInfo(name=name)
+                    ti.size = len(content)
+                    tar.addfile(ti, io.BytesIO(content))
             return out_path
 
         if not self.target_root.is_dir():

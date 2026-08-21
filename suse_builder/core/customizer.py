@@ -646,7 +646,12 @@ class SystemCustomizer:
             "NoDisplay=true\n"
         )
 
-        # 6. Also install for existing users in /home/*
+        # 6. Also install into /etc/skel/Desktop and for existing users in /home/*
+        skel_desktop = self.target_root / "etc" / "skel" / "Desktop" / "install-suse.desktop"
+        skel_desktop.parent.mkdir(parents=True, exist_ok=True)
+        skel_desktop.write_text(desktop_entry)
+        skel_desktop.chmod(0o755)
+
         home_dir = self.target_root / "home"
         if home_dir.exists():
             for user_dir in home_dir.iterdir():
@@ -676,6 +681,7 @@ class SystemCustomizer:
         locale_conf.write_text(f"LANG={locale}\nLC_ALL={locale}\n")
 
         sysconfig_lang = self.target_root / "etc" / "sysconfig" / "language"
+        sysconfig_lang.parent.mkdir(parents=True, exist_ok=True)
         if sysconfig_lang.exists():
             content = sysconfig_lang.read_text()
             import re
@@ -1081,6 +1087,31 @@ class SystemCustomizer:
         rsync_log_path = self.target_root.parent.parent / "custom_files_copy.log"
         if rsync_log_path.exists():
             rsync_log_path.unlink()
+
+        # Copy desktop-specific configurations from configs/custom_files/desktops/<desktop>
+        desktop = self.config.get("desktop") or self.config.get("desktop_session")
+        if desktop:
+            desktop_custom = project_root / "configs" / "custom_files" / "desktops" / str(desktop)
+            if desktop_custom.is_dir():
+                logger.info(f"Applying custom desktop configurations from {desktop_custom}")
+                live_user = "liveuser"
+                if isinstance(self.config.get("live_user"), dict):
+                    live_user = self.config.get("live_user").get("name", "liveuser")
+                elif self.config.get("live_user"):
+                    live_user = str(self.config.get("live_user"))
+
+                targets = [
+                    self.target_root / "etc" / "skel",
+                    self.target_root / "home" / live_user
+                ]
+                for target_dest in targets:
+                    target_dest.mkdir(parents=True, exist_ok=True)
+                    for item in desktop_custom.iterdir():
+                        dest_item = target_dest / item.name
+                        if item.is_dir():
+                            shutil.copytree(item, dest_item, dirs_exist_ok=True, symlinks=True)
+                        else:
+                            shutil.copy2(item, dest_item)
 
         # 2. Structured list from JSON config
         custom_files_list = list(self.config.get("custom_files", []))
