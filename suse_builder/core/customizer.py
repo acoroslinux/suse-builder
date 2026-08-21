@@ -129,7 +129,10 @@ class SystemCustomizer:
             elif (self.target_root / "usr" / "sbin" / "lightdm").exists() or (self.target_root / "usr" / "bin" / "lightdm").exists():
                 dm = "lightdm"
 
-        auto_services = ["NetworkManager", "dbus", "avahi-daemon", "smb", "nmb", "sshd", "cups", "polkit", "bluetooth"]
+        auto_services = [
+            "NetworkManager", "dbus", "avahi-daemon", "smb", "nmb", "sshd", "cups", "polkit",
+            "bluetooth", "vboxservice", "qemu-guest-agent", "spice-vdagentd"
+        ]
         if dm:
             auto_services.extend(["display-manager"])
 
@@ -470,6 +473,18 @@ class SystemCustomizer:
             return
         polkit_dir = self.target_root / "etc" / "polkit-1" / "rules.d"
         polkit_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 1. Allow liveuser full passwordless administrative privileges in live mode
+        live_rules = polkit_dir / "00-liveuser.rules"
+        live_rules.write_text(
+            "/* Allow live user full administrative rights without password in live environment */\n"
+            "polkit.addRule(function(action, subject) {\n"
+            "    if (subject.isInGroup('wheel') || subject.isInGroup('users') || subject.user === 'liveuser') {\n"
+            "        return polkit.Result.YES;\n"
+            "    }\n"
+            "});\n"
+        )
+
         rule_file = polkit_dir / "10-enable-power-actions.rules"
         rule_content = (
             "polkit.addRule(function(action, subject) {\n"
@@ -483,6 +498,17 @@ class SystemCustomizer:
         with open(rule_file, "w") as f:
             f.write(rule_content)
 
+        # 2. Add VirtualBox Guest agent XDG autostart for seamless mouse and clipboard
+        autostart_dir = self.target_root / "etc" / "xdg" / "autostart"
+        autostart_dir.mkdir(parents=True, exist_ok=True)
+        (autostart_dir / "vboxclient.desktop").write_text(
+            "[Desktop Entry]\n"
+            "Type=Application\n"
+            "Name=VirtualBox Guest Agent\n"
+            "Exec=/usr/bin/VBoxClient-all\n"
+            "Terminal=false\n"
+        )
+
     def configure_calamares(self):
         if self.chroot.mode == "mock":
             return
@@ -495,12 +521,37 @@ class SystemCustomizer:
         (polkit_dir / "49-calamares.rules").write_text(
             "/* Allow live user to launch calamares installer via pkexec without password prompt */\n"
             "polkit.addRule(function(action, subject) {\n"
-            "    if ((action.id === 'org.freedesktop.policykit.exec' && action.lookup('program') === '/usr/bin/calamares') ||\n"
-            "        action.id.indexOf('com.github.calamares.') === 0 ||\n"
-            "        action.id.indexOf('io.calamares.') === 0) {\n"
+            "    if (action.id === 'org.freedesktop.policykit.exec' && action.lookup('program') === '/usr/bin/calamares') {\n"
+            "        return polkit.Result.YES;\n"
+            "    }\n"
+            "    if (action.id.indexOf('com.github.calamares.') === 0 || action.id.indexOf('io.calamares.') === 0) {\n"
             "        return polkit.Result.YES;\n"
             "    }\n"
             "});\n"
+        )
+
+        # 2. Add PolicyKit Action XML for Calamares
+        polkit_actions_dir = self.target_root / "usr" / "share" / "polkit-1" / "actions"
+        polkit_actions_dir.mkdir(parents=True, exist_ok=True)
+        (polkit_actions_dir / "com.github.calamares.calamares.policy").write_text(
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"\n'
+            ' "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">\n'
+            '<policyconfig>\n'
+            '  <vendor>Calamares</vendor>\n'
+            '  <vendor_url>https://calamares.io</vendor_url>\n'
+            '  <action id="com.github.calamares.calamares">\n'
+            '    <description>Run Calamares Installer</description>\n'
+            '    <message>Authentication is required to run the Calamares Installer</message>\n'
+            '    <defaults>\n'
+            '      <allow_any>yes</allow_any>\n'
+            '      <allow_inactive>yes</allow_inactive>\n'
+            '      <allow_active>yes</allow_active>\n'
+            '    </defaults>\n'
+            '    <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/calamares</annotate>\n'
+            '    <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>\n'
+            '  </action>\n'
+            '</policyconfig>\n'
         )
 
         desktop_entry = (
