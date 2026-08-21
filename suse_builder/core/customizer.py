@@ -755,6 +755,11 @@ class SystemCustomizer:
                 def_ply.unlink()
             def_ply.symlink_to(Path("suse-modern/suse-modern.plymouth"))
 
+            try:
+                self.chroot.run_in_chroot(["plymouth-set-default-theme", "suse-modern"], check=False)
+            except Exception:
+                pass
+
     def configure_dracut(self):
         if self.chroot.mode == "mock":
             return
