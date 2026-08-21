@@ -36,6 +36,7 @@
     "iputils",
     "zstd",
     "glibc-locale",
+    "glibc-i18ndata",
     "ca-certificates-mozilla",
     "xf86-input-libinput",
     "xf86-input-evdev",
