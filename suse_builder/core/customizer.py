@@ -619,7 +619,11 @@ class SystemCustomizer:
 
         script_content = (
             "#!/bin/sh\n"
+            "# Exit immediately and clean up if booted on installed disk\n"
             "if ! grep -q -E \"(rd\\.live|root=live|boot=live|livecd)\" /proc/cmdline 2>/dev/null; then\n"
+            "    desktop_dir=$(xdg-user-dir DESKTOP 2>/dev/null)\n"
+            "    [ -z \"$desktop_dir\" ] && desktop_dir=\"$HOME/Desktop\"\n"
+            "    rm -f \"$desktop_dir/install-suse.desktop\" \"$desktop_dir/install.desktop\" \"$desktop_dir/calamares.desktop\" \"$desktop_dir/io.calamares.calamares.desktop\"\n"
             "    exit 0\n"
             "fi\n"
             "sleep 2\n"
@@ -659,20 +663,10 @@ class SystemCustomizer:
             "NoDisplay=true\n"
         )
 
-        # 6. Also install into /etc/skel/Desktop and for existing users in /home/*
+        # 6. Ensure /etc/skel/Desktop is clean of installer shortcuts
         skel_desktop = self.target_root / "etc" / "skel" / "Desktop" / "install-suse.desktop"
-        skel_desktop.parent.mkdir(parents=True, exist_ok=True)
-        skel_desktop.write_text(desktop_entry)
-        skel_desktop.chmod(0o755)
-
-        home_dir = self.target_root / "home"
-        if home_dir.exists():
-            for user_dir in home_dir.iterdir():
-                if user_dir.is_dir():
-                    user_desktop = user_dir / "Desktop" / "install-suse.desktop"
-                    user_desktop.parent.mkdir(parents=True, exist_ok=True)
-                    user_desktop.write_text(desktop_entry)
-                    user_desktop.chmod(0o755)
+        if skel_desktop.exists():
+            skel_desktop.unlink()
 
     def configure_locales(self):
         locale = self.config.get("system", {}).get("locale", "en_US.UTF-8")

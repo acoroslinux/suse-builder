@@ -84,9 +84,19 @@ def test_configure_calamares_populates_skel(tmp_path):
     customizer = SystemCustomizer(chroot, config)
     customizer.configure_calamares()
 
+    apps_desktop = chroot.target_root / "usr" / "share" / "applications" / "install-suse.desktop"
+    assert apps_desktop.exists()
+    assert "calamares" in apps_desktop.read_text()
+
+    autostart_desktop = chroot.target_root / "etc" / "xdg" / "autostart" / "create-install-icon.desktop"
+    assert autostart_desktop.exists()
+
+    add_script = chroot.target_root / "usr" / "local" / "bin" / "add-installer-desktop-icon.sh"
+    assert add_script.exists()
+
+    # Verify installer is NOT leaked statically into /etc/skel
     skel_desktop = chroot.target_root / "etc" / "skel" / "Desktop" / "install-suse.desktop"
-    assert skel_desktop.exists()
-    assert "calamares" in skel_desktop.read_text()
+    assert not skel_desktop.exists()
 
 
 def test_configure_flathub_uses_valid_gpg_url(tmp_path):
