@@ -4,10 +4,23 @@
   "packages": [
     "patterns-lxqt-lxqt",
     "sddm",
-    "qterm",
+    "qterminal",
+    "pcmanfm-qt",
+    "featherpad",
+    "lximage-qt",
+    "lxqt-archiver",
     "pavucontrol-qt",
+    "screengrab",
+    "lxqt-config",
     "lxqt-powermanagement",
     "lxqt-notificationd",
-    "pcmanfm-qt"
+    "lxqt-runner",
+    "lxqt-policykit",
+    "lxqt-themes",
+    "lxqt-theme-openSUSE-default",
+    "obconf-qt",
+    "openbox",
+    "papirus-icon-theme",
+    "xorg-x11-server"
   ]
 }

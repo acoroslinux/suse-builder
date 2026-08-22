@@ -131,3 +131,21 @@ def test_configure_kde_defaults_creates_wallpaper_package_and_autostart(tmp_path
     wp_meta = chroot.target_root / "usr" / "share" / "wallpapers" / "suse-cyber-chameleon" / "metadata.desktop"
     assert wp_meta.exists()
 
+
+def test_configure_lxqt_defaults_creates_pcmanfm_and_lxqt_configs(tmp_path):
+    chroot = DummyChroot()
+    chroot.target_root = tmp_path / "chroot"
+    config = {"desktop": "lxqt"}
+
+    customizer = SystemCustomizer(chroot, config)
+    customizer.configure_lxqt_defaults()
+
+    pcmanfm_cfg = chroot.target_root / "etc" / "skel" / ".config" / "pcmanfm-qt" / "lxqt" / "settings.conf"
+    assert pcmanfm_cfg.exists()
+    assert "suse-cyber-chameleon.jpg" in pcmanfm_cfg.read_text()
+
+    lxqt_cfg = chroot.target_root / "etc" / "skel" / ".config" / "lxqt" / "lxqt.conf"
+    assert lxqt_cfg.exists()
+    assert "Papirus-Dark" in lxqt_cfg.read_text()
+
+

@@ -832,6 +832,7 @@ class SystemCustomizer:
         self.setup_services()
         self.configure_gnome_defaults()
         self.configure_kde_defaults()
+        self.configure_lxqt_defaults()
         self.configure_autologin()
         self.configure_zram()
         self.configure_flathub()
@@ -1405,6 +1406,48 @@ class SystemCustomizer:
             "OnlyShowIn=KDE;\n"
             "NoDisplay=true\n"
         )
+
+    def configure_lxqt_defaults(self):
+        if self.chroot.mode == "mock" or self.config.get("desktop") != "lxqt":
+            return
+
+        logger.info("Configuring custom LXQt defaults (Wallpaper, Theme, Icons, PCManFM-Qt)...")
+
+        pcmanfm_content = (
+            "[Desktop]\n"
+            "Wallpaper=/usr/share/backgrounds/suse-cyber-chameleon.jpg\n"
+            "WallpaperMode=zoom\n"
+            "BgColor=#000000\n"
+            "FgColor=#ffffff\n"
+            "ShowHidden=false\n"
+        )
+
+        lxqt_conf_content = (
+            "[General]\n"
+            "theme=openSUSE-default\n"
+            "icon_theme=Papirus-Dark\n\n"
+            "[Qt]\n"
+            "style=Fusion\n"
+        )
+
+        # Configure skeleton for new users
+        skel_pcmanfm = self.target_root / "etc" / "skel" / ".config" / "pcmanfm-qt" / "lxqt"
+        skel_pcmanfm.mkdir(parents=True, exist_ok=True)
+        (skel_pcmanfm / "settings.conf").write_text(pcmanfm_content)
+
+        skel_lxqt = self.target_root / "etc" / "skel" / ".config" / "lxqt"
+        skel_lxqt.mkdir(parents=True, exist_ok=True)
+        (skel_lxqt / "lxqt.conf").write_text(lxqt_conf_content)
+
+        # Configure live user if already present
+        live_pcmanfm = self.target_root / "home" / "liveuser" / ".config" / "pcmanfm-qt" / "lxqt"
+        if live_pcmanfm.parent.parent.parent.exists():
+            live_pcmanfm.mkdir(parents=True, exist_ok=True)
+            (live_pcmanfm / "settings.conf").write_text(pcmanfm_content)
+
+            live_lxqt = self.target_root / "home" / "liveuser" / ".config" / "lxqt"
+            live_lxqt.mkdir(parents=True, exist_ok=True)
+            (live_lxqt / "lxqt.conf").write_text(lxqt_conf_content)
 
     def fix_home_permissions(self):
         if self.chroot.mode == "mock":
