@@ -1278,27 +1278,32 @@ class SystemCustomizer:
         if self.chroot.mode == "mock" or self.config.get("desktop") != "gnome":
             return
         
-        logger.info("Configuring custom GNOME defaults (extensions, themes, dock)...")
+        logger.info("Configuring custom GNOME defaults (wallpaper, dark theme, button layout)...")
         schema_dir = self.target_root / "usr" / "share" / "glib-2.0" / "schemas"
         schema_dir.mkdir(parents=True, exist_ok=True)
         
         override_content = (
-            "[org.gnome.shell]\n"
-            "enabled-extensions=['dash-to-dock@micxgx.gmail.com', 'appindicatorsupport@rgcjonas.gmail.com']\n"
+            "[org.gnome.desktop.background]\n"
+            "picture-uri='file:///usr/share/backgrounds/suse-cyber-chameleon.jpg'\n"
+            "picture-uri-dark='file:///usr/share/backgrounds/suse-cyber-chameleon.jpg'\n"
+            "picture-options='zoom'\n"
+            "primary-color='#000000'\n"
+            "secondary-color='#000000'\n"
+            "\n"
+            "[org.gnome.desktop.screensaver]\n"
+            "picture-uri='file:///usr/share/backgrounds/suse-cyber-chameleon.jpg'\n"
+            "picture-options='zoom'\n"
             "\n"
             "[org.gnome.desktop.interface]\n"
             "icon-theme='Papirus'\n"
             "color-scheme='prefer-dark'\n"
+            "gtk-theme='Adwaita-dark'\n"
             "\n"
             "[org.gnome.mutter]\n"
             "center-new-windows=true\n"
             "\n"
-            "[org.gnome.shell.extensions.dash-to-dock]\n"
-            "dock-position='BOTTOM'\n"
-            "dash-max-icon-size=48\n"
-            "click-action='minimize'\n"
-            "show-trash=false\n"
-            "show-mounts=false\n"
+            "[org.gnome.desktop.wm.preferences]\n"
+            "button-layout='appmenu:minimize,maximize,close'\n"
         )
         
         (schema_dir / "99_opensuse_modern.gschema.override").write_text(override_content)
