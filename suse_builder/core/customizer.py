@@ -1226,16 +1226,18 @@ class SystemCustomizer:
         if not boot_theme_link.exists() and not boot_theme_link.is_symlink():
             boot_theme_link.symlink_to("/usr/share/grub2/themes/openSUSE")
 
-        custom_wp = resolve_from_project("configs/custom_files/backgrounds/suse-modern-wallpaper.png")
+        custom_wp = resolve_from_project("configs/custom_files/backgrounds/suse-cyber-chameleon.jpg")
+        if not custom_wp.exists():
+            custom_wp = resolve_from_project("configs/custom_files/backgrounds/suse-modern-wallpaper.png")
         if custom_wp.exists():
             import shutil
-            dest_wp = bg_dir / "suse-modern-wallpaper.png"
+            dest_wp = bg_dir / "suse-cyber-chameleon.jpg"
             shutil.copy2(custom_wp, dest_wp)
 
             default_wp = bg_dir / "default-wallpaper.png"
             if default_wp.exists() or default_wp.is_symlink():
                 default_wp.unlink()
-            default_wp.symlink_to(Path("/usr/share/backgrounds/suse-modern-wallpaper.png"))
+            default_wp.symlink_to(Path("/usr/share/backgrounds/suse-cyber-chameleon.jpg"))
 
         # Configure XFCE desktop wallpaper preserving custom configuration
         xfce_xml_src = resolve_from_project("configs/custom_files/desktops/xfce/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml")
@@ -1256,16 +1258,17 @@ class SystemCustomizer:
                 default_xfce_wp.unlink()
             default_xfce_wp.symlink_to(Path("/usr/share/backgrounds/suse-cyber-chameleon.jpg"))
 
-        # Configure KDE default wallpaper if present
-        # In openSUSE, KDE Plasma defaults to the openSUSEdefault wallpaper
-        kde_wp_dir = self.target_root / "usr" / "share" / "wallpapers" / "openSUSEdefault" / "contents" / "images"
-        if kde_wp_dir.exists() and custom_wp.exists():
-            default_kde_wp = kde_wp_dir / "default.png"
-            default_dark_kde_wp = kde_wp_dir / "default-dark.png"
-            # Overwrite the default PNGs with our custom wallpaper
+        # Configure KDE default wallpaper fallback in /usr/share/wallpapers
+        if custom_wp and custom_wp.exists():
             import shutil
-            shutil.copy2(custom_wp, default_kde_wp)
-            shutil.copy2(custom_wp, default_dark_kde_wp)
+            wallpapers_base = self.target_root / "usr" / "share" / "wallpapers"
+            if wallpapers_base.exists():
+                for wp_img_dir in wallpapers_base.glob("*/contents/images"):
+                    for target_name in ["default.png", "default-dark.png", "1920x1080.png", "1920x1080.jpg"]:
+                        try:
+                            shutil.copy2(custom_wp, wp_img_dir / target_name)
+                        except Exception:
+                            pass
 
     def configure_gnome_defaults(self):
         if self.chroot.mode == "mock" or self.config.get("desktop") != "gnome":
@@ -1306,12 +1309,9 @@ class SystemCustomizer:
         if self.chroot.mode == "mock" or self.config.get("desktop") != "kde":
             return
             
-        logger.info("Configuring custom KDE Plasma 6 defaults (Breeze Dark, Wallpaper)...")
-        skel_config = self.target_root / "etc" / "skel" / ".config"
-        skel_config.mkdir(parents=True, exist_ok=True)
+        logger.info("Configuring custom KDE Plasma defaults (Breeze Dark, Wallpaper, Applets)...")
         
         # Force Breeze Dark theme globally
-        kdeglobals = skel_config / "kdeglobals"
         kdeglobals_content = (
             "[KDE]\n"
             "LookAndFeelPackage=org.kde.breezedark.desktop\n"
@@ -1319,15 +1319,46 @@ class SystemCustomizer:
             "[General]\n"
             "ColorScheme=BreezeDark\n"
         )
-        kdeglobals.write_text(kdeglobals_content)
         
         # Disable screen locking in Live ISO
-        kscreenlockerrc = skel_config / "kscreenlockerrc"
-        kscreenlockerrc.write_text(
+        kscreenlockerrc_content = (
             "[Daemon]\n"
             "Autolock=false\n"
             "LockOnResume=false\n"
         )
+
+        # Pre-configure Plasma desktop wallpaper in plasma-org.kde.plasma.desktop-appletsrc
+        plasma_appletsrc_content = (
+            "[Containments][1]\n"
+            "activityId=\n"
+            "formfactor=0\n"
+            "immutability=1\n"
+            "lastScreen=0\n"
+            "location=0\n"
+            "plugin=org.kde.plasma.folder\n"
+            "wallpaperplugin=org.kde.image\n\n"
+            "[Containments][1][Wallpaper][org.kde.image][General]\n"
+            "Image=/usr/share/backgrounds/suse-cyber-chameleon.jpg\n"
+            "FillMode=2\n\n"
+            "[Containments][2]\n"
+            "activityId=\n"
+            "formfactor=0\n"
+            "immutability=1\n"
+            "lastScreen=-1\n"
+            "location=0\n"
+            "plugin=org.kde.plasma.folder\n"
+            "wallpaperplugin=org.kde.image\n\n"
+            "[Containments][2][Wallpaper][org.kde.image][General]\n"
+            "Image=/usr/share/backgrounds/suse-cyber-chameleon.jpg\n"
+            "FillMode=2\n"
+        )
+        
+        for base_dir in [self.target_root / "etc" / "skel" / ".config", self.target_root / "home" / "liveuser" / ".config"]:
+            if base_dir.parent.exists():
+                base_dir.mkdir(parents=True, exist_ok=True)
+                (base_dir / "kdeglobals").write_text(kdeglobals_content)
+                (base_dir / "kscreenlockerrc").write_text(kscreenlockerrc_content)
+                (base_dir / "plasma-org.kde.plasma.desktop-appletsrc").write_text(plasma_appletsrc_content)
 
     def fix_home_permissions(self):
         if self.chroot.mode == "mock":
