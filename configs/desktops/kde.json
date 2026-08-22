@@ -2,10 +2,10 @@
   "desktop": "kde",
   "display_manager": "sddm",
   "packages": [
+    "patterns-kde-kde",
     "patterns-kde-kde_plasma",
-    "plasma6-desktop",
-    "plasma6-workspace",
-    "plasma6-session-x11",
+    "patterns-kde-kde_utilities",
+    "patterns-kde-kde_imaging",
     "sddm",
     "xorg-x11-server",
     "konsole",
@@ -13,13 +13,12 @@
     "kate",
     "spectacle",
     "ark",
-    "gwenview",
     "okular",
     "kcalc",
     "filelight",
     "kcolorchooser",
     "sweeper",
     "skanlite",
-    "partitionmanager"   
+    "partitionmanager"
   ]
 }

@@ -343,8 +343,13 @@ class SystemCustomizer:
             sddm_conf.parent.mkdir(parents=True, exist_ok=True)
             
             # Force X11 for KDE to avoid Wayland black screen bugs in VMs
-            if session_name == "plasma" or session_name == "plasma6":
-                session_name = "plasmax11"
+            if session_name in ("plasma", "plasma6", "plasma-wayland", "plasma5", "plasmax11"):
+                if (self.target_root / "usr" / "share" / "xsessions" / "plasma5.desktop").exists():
+                    session_name = "plasma5"
+                elif (self.target_root / "usr" / "share" / "xsessions" / "plasmax11.desktop").exists():
+                    session_name = "plasmax11"
+                elif (self.target_root / "usr" / "share" / "xsessions" / "plasma.desktop").exists():
+                    session_name = "plasma"
                 
             sddm_conf.write_text(
                 f"[Autologin]\nUser={live_user}\nSession={session_name}\nRelogin=false\n"
