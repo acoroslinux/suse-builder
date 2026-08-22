@@ -833,6 +833,7 @@ class SystemCustomizer:
         self.configure_gnome_defaults()
         self.configure_kde_defaults()
         self.configure_lxqt_defaults()
+        self.configure_lxde_defaults()
         self.configure_autologin()
         self.configure_zram()
         self.configure_flathub()
@@ -1448,6 +1449,71 @@ class SystemCustomizer:
             live_lxqt = self.target_root / "home" / "liveuser" / ".config" / "lxqt"
             live_lxqt.mkdir(parents=True, exist_ok=True)
             (live_lxqt / "lxqt.conf").write_text(lxqt_conf_content)
+
+    def configure_lxde_defaults(self):
+        if self.chroot.mode == "mock" or self.config.get("desktop") != "lxde":
+            return
+
+        logger.info("Configuring custom LXDE defaults (Wallpaper, Theme, Icons, PCManFM)...")
+
+        pcmanfm_content = (
+            "[*]\n"
+            "wallpaper_mode=crop\n"
+            "wallpaper_common=1\n"
+            "wallpaper=/usr/share/backgrounds/suse-cyber-chameleon.jpg\n"
+            "desktop_bg=#000000\n"
+            "desktop_fg=#ffffff\n"
+            "desktop_shadow=#000000\n"
+            "desktop_font=Sans 10\n"
+            "show_wm_menu=0\n"
+            "sort=mtime;ascending;\n"
+            "show_documents=0\n"
+            "show_trash=1\n"
+            "show_mounts=0\n"
+        )
+
+        lxsession_content = (
+            "[GTK]\n"
+            "sNet/ThemeName=Yaru-grey-dark\n"
+            "sNet/IconThemeName=Papirus-Dark\n"
+            "sGtk/FontName=Sans 10\n"
+            "sGtk/ColorScheme=\n"
+            "sGtk/CursorThemeName=Adwaita\n"
+            "iGtk/ToolbarStyle=3\n"
+            "iGtk/ButtonImages=1\n"
+            "iGtk/MenuImages=1\n"
+            "iGtk/CursorThemeSize=18\n"
+            "iGtk/ToolbarIconSize=3\n"
+        )
+
+        # 1. System fallback in /etc/xdg
+        xdg_pcmanfm = self.target_root / "etc" / "xdg" / "pcmanfm" / "LXDE"
+        xdg_pcmanfm.mkdir(parents=True, exist_ok=True)
+        (xdg_pcmanfm / "pcmanfm.conf").write_text(pcmanfm_content)
+
+        xdg_lxsession = self.target_root / "etc" / "xdg" / "lxsession" / "LXDE"
+        xdg_lxsession.mkdir(parents=True, exist_ok=True)
+        (xdg_lxsession / "desktop.conf").write_text(lxsession_content)
+
+        # 2. Skeleton for new users in /etc/skel
+        skel_pcmanfm = self.target_root / "etc" / "skel" / ".config" / "pcmanfm" / "LXDE"
+        skel_pcmanfm.mkdir(parents=True, exist_ok=True)
+        (skel_pcmanfm / "pcmanfm.conf").write_text(pcmanfm_content)
+
+        skel_lxsession = self.target_root / "etc" / "skel" / ".config" / "lxsession" / "LXDE"
+        skel_lxsession.mkdir(parents=True, exist_ok=True)
+        (skel_lxsession / "desktop.conf").write_text(lxsession_content)
+
+        # 3. Live user if present
+        live_user_dir = self.target_root / "home" / "liveuser"
+        if live_user_dir.exists():
+            live_pcmanfm = live_user_dir / ".config" / "pcmanfm" / "LXDE"
+            live_pcmanfm.mkdir(parents=True, exist_ok=True)
+            (live_pcmanfm / "pcmanfm.conf").write_text(pcmanfm_content)
+
+            live_lxsession = live_user_dir / ".config" / "lxsession" / "LXDE"
+            live_lxsession.mkdir(parents=True, exist_ok=True)
+            (live_lxsession / "desktop.conf").write_text(lxsession_content)
 
     def fix_home_permissions(self):
         if self.chroot.mode == "mock":

@@ -3,9 +3,23 @@
   "display_manager": "lightdm",
   "packages": [
     "patterns-lxde-lxde",
+    "lxde-common",
+    "lxpanel",
+    "lxsession",
+    "lxappearance",
+    "lxappearance-obconf",
+    "lxterminal",
+    "pcmanfm",
+    "leafpad",
+    "galculator",
+    "gpicview",
+    "lxtask",
+    "lxrandr",
+    "lxinput",
+    "openbox",
     "lightdm",
     "lightdm-gtk-greeter",
-    "lxterminal",
-    "pcmanfm"
+    "papirus-icon-theme",
+    "xorg-x11-server"
   ]
 }

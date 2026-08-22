@@ -149,3 +149,21 @@ def test_configure_lxqt_defaults_creates_pcmanfm_and_lxqt_configs(tmp_path):
     assert "Papirus-Dark" in lxqt_cfg.read_text()
 
 
+def test_configure_lxde_defaults_creates_pcmanfm_and_lxsession_configs(tmp_path):
+    chroot = DummyChroot()
+    chroot.target_root = tmp_path / "chroot"
+    config = {"desktop": "lxde"}
+
+    customizer = SystemCustomizer(chroot, config)
+    customizer.configure_lxde_defaults()
+
+    pcmanfm_cfg = chroot.target_root / "etc" / "skel" / ".config" / "pcmanfm" / "LXDE" / "pcmanfm.conf"
+    assert pcmanfm_cfg.exists()
+    assert "suse-cyber-chameleon.jpg" in pcmanfm_cfg.read_text()
+
+    lxsession_cfg = chroot.target_root / "etc" / "skel" / ".config" / "lxsession" / "LXDE" / "desktop.conf"
+    assert lxsession_cfg.exists()
+    assert "Yaru-grey-dark" in lxsession_cfg.read_text()
+
+
+
