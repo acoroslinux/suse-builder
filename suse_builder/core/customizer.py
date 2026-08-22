@@ -1309,9 +1309,9 @@ class SystemCustomizer:
         if self.chroot.mode == "mock" or self.config.get("desktop") != "kde":
             return
             
-        logger.info("Configuring custom KDE Plasma defaults (Breeze Dark, Wallpaper, Applets)...")
+        logger.info("Configuring custom KDE Plasma defaults (Breeze Dark, Wallpaper, LookAndFeel)...")
         
-        # Force Breeze Dark theme globally
+        # 1. Force Breeze Dark theme globally in kdeglobals
         kdeglobals_content = (
             "[KDE]\n"
             "LookAndFeelPackage=org.kde.breezedark.desktop\n"
@@ -1320,45 +1320,75 @@ class SystemCustomizer:
             "ColorScheme=BreezeDark\n"
         )
         
-        # Disable screen locking in Live ISO
+        # 2. Disable screen locking in Live ISO
         kscreenlockerrc_content = (
             "[Daemon]\n"
             "Autolock=false\n"
             "LockOnResume=false\n"
         )
 
-        # Pre-configure Plasma desktop wallpaper in plasma-org.kde.plasma.desktop-appletsrc
-        plasma_appletsrc_content = (
-            "[Containments][1]\n"
-            "activityId=\n"
-            "formfactor=0\n"
-            "immutability=1\n"
-            "lastScreen=0\n"
-            "location=0\n"
-            "plugin=org.kde.plasma.folder\n"
-            "wallpaperplugin=org.kde.image\n\n"
-            "[Containments][1][Wallpaper][org.kde.image][General]\n"
-            "Image=/usr/share/backgrounds/suse-cyber-chameleon.jpg\n"
-            "FillMode=2\n\n"
-            "[Containments][2]\n"
-            "activityId=\n"
-            "formfactor=0\n"
-            "immutability=1\n"
-            "lastScreen=-1\n"
-            "location=0\n"
-            "plugin=org.kde.plasma.folder\n"
-            "wallpaperplugin=org.kde.image\n\n"
-            "[Containments][2][Wallpaper][org.kde.image][General]\n"
-            "Image=/usr/share/backgrounds/suse-cyber-chameleon.jpg\n"
-            "FillMode=2\n"
-        )
-        
         for base_dir in [self.target_root / "etc" / "skel" / ".config", self.target_root / "home" / "liveuser" / ".config"]:
             if base_dir.parent.exists():
                 base_dir.mkdir(parents=True, exist_ok=True)
                 (base_dir / "kdeglobals").write_text(kdeglobals_content)
                 (base_dir / "kscreenlockerrc").write_text(kscreenlockerrc_content)
-                (base_dir / "plasma-org.kde.plasma.desktop-appletsrc").write_text(plasma_appletsrc_content)
+                # Remove any partial appletsrc if exists to avoid black screen containment reset
+                partial_appletsrc = base_dir / "plasma-org.kde.plasma.desktop-appletsrc"
+                if partial_appletsrc.exists():
+                    partial_appletsrc.unlink()
+
+        # 3. Create a complete KDE Wallpaper Package in /usr/share/wallpapers/suse-cyber-chameleon/
+        custom_wp = resolve_from_project("configs/custom_files/backgrounds/suse-cyber-chameleon.jpg")
+        if not custom_wp.exists():
+            custom_wp = resolve_from_project("configs/custom_files/backgrounds/suse-modern-wallpaper.png")
+
+        if custom_wp.exists():
+            import shutil
+            wp_pkg_dir = self.target_root / "usr" / "share" / "wallpapers" / "suse-cyber-chameleon"
+            wp_img_dir = wp_pkg_dir / "contents" / "images"
+            wp_img_dir.mkdir(parents=True, exist_ok=True)
+
+            (wp_pkg_dir / "metadata.desktop").write_text(
+                "[Desktop Entry]\n"
+                "Name=openSUSE Cyber Chameleon\n"
+                "X-KDE-PluginInfo-Name=suse-cyber-chameleon\n"
+                "X-KDE-PluginInfo-Author=openSUSE Modern\n"
+            )
+            shutil.copy2(custom_wp, wp_img_dir / "1920x1080.jpg")
+            shutil.copy2(custom_wp, wp_img_dir / "1920x1080.png")
+            shutil.copy2(custom_wp, wp_pkg_dir / "contents" / "screenshot.jpg")
+
+            # 4. Set default wallpaper in all LookAndFeel packages
+            for laf_defaults in self.target_root.glob("usr/share/plasma/look-and-feel/*/contents/defaults"):
+                try:
+                    defaults_text = laf_defaults.read_text() if laf_defaults.exists() else ""
+                    if "[wallpaper]" in defaults_text:
+                        import re
+                        defaults_text = re.sub(r"defaultWallpaperTheme=.*", "defaultWallpaperTheme=suse-cyber-chameleon", defaults_text)
+                        defaults_text = re.sub(r"defaultFile=.*", "defaultFile=/usr/share/backgrounds/suse-cyber-chameleon.jpg", defaults_text)
+                    else:
+                        defaults_text += (
+                            "\n[wallpaper]\n"
+                            "defaultWallpaperTheme=suse-cyber-chameleon\n"
+                            "defaultFile=/usr/share/backgrounds/suse-cyber-chameleon.jpg\n"
+                            "defaultWidth=1920\n"
+                            "defaultHeight=1080\n"
+                        )
+                    laf_defaults.write_text(defaults_text)
+                except Exception:
+                    pass
+
+        # 5. Add universal autostart script to apply wallpaper via Plasma D-Bus API
+        autostart_dir = self.target_root / "etc" / "xdg" / "autostart"
+        autostart_dir.mkdir(parents=True, exist_ok=True)
+        (autostart_dir / "set-plasma-wallpaper.desktop").write_text(
+            "[Desktop Entry]\n"
+            "Type=Application\n"
+            "Name=Set KDE Plasma Wallpaper\n"
+            "Exec=sh -c 'sleep 1; if command -v plasma-apply-wallpaperimage >/dev/null 2>&1; then plasma-apply-wallpaperimage /usr/share/backgrounds/suse-cyber-chameleon.jpg; fi'\n"
+            "OnlyShowIn=KDE;\n"
+            "NoDisplay=true\n"
+        )
 
     def fix_home_permissions(self):
         if self.chroot.mode == "mock":
