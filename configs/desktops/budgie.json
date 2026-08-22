@@ -2,10 +2,24 @@
   "desktop": "budgie",
   "display_manager": "lightdm",
   "packages": [
-    "patterns-budgie-desktop",
+    "patterns-budgie-budgie",
+    "patterns-budgie-budgie_applets",
+    "budgie-desktop",
+    "budgie-control-center",
+    "budgie-desktop-view",
+    "budgie-extras",
+    "budgie-screensaver",
+    "nautilus",
+    "gnome-terminal",
+    "eog",
+    "evince",
+    "file-roller",
+    "gnome-calculator",
+    "gnome-disk-utility",
+    "gnome-system-monitor",
     "lightdm",
     "lightdm-gtk-greeter",
-    "nautilus",
-    "gnome-terminal"
+    "papirus-icon-theme",
+    "xorg-x11-server"
   ]
 }

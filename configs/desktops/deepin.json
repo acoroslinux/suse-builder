@@ -3,9 +3,20 @@
   "display_manager": "lightdm",
   "packages": [
     "patterns-deepin-deepin",
+    "patterns-deepin-deepin_basis",
+    "patterns-deepin-deepin_utilities",
+    "deepin-desktop",
+    "deepin-dock",
+    "deepin-control-center",
+    "deepin-file-manager",
+    "deepin-terminal",
+    "deepin-calculator",
+    "deepin-editor",
+    "deepin-image-viewer",
+    "deepin-system-monitor",
+    "deepin-screen-recorder",
     "lightdm",
     "lightdm-gtk-greeter",
-    "deepin-terminal",
-    "deepin-file-manager"
+    "xorg-x11-server"
   ]
 }

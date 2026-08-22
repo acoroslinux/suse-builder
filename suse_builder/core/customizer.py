@@ -834,6 +834,8 @@ class SystemCustomizer:
         self.configure_kde_defaults()
         self.configure_lxqt_defaults()
         self.configure_lxde_defaults()
+        self.configure_budgie_defaults()
+        self.configure_deepin_defaults()
         self.configure_autologin()
         self.configure_zram()
         self.configure_flathub()
@@ -1514,6 +1516,74 @@ class SystemCustomizer:
             live_lxsession = live_user_dir / ".config" / "lxsession" / "LXDE"
             live_lxsession.mkdir(parents=True, exist_ok=True)
             (live_lxsession / "desktop.conf").write_text(lxsession_content)
+
+    def configure_budgie_defaults(self):
+        if self.chroot.mode == "mock" or self.config.get("desktop") != "budgie":
+            return
+
+        logger.info("Configuring custom Budgie defaults (Wallpaper, Dark Theme, Window Buttons)...")
+        schema_dir = self.target_root / "usr" / "share" / "glib-2.0" / "schemas"
+        schema_dir.mkdir(parents=True, exist_ok=True)
+
+        override_content = (
+            "[org.gnome.desktop.background]\n"
+            "picture-uri='file:///usr/share/backgrounds/suse-cyber-chameleon.jpg'\n"
+            "picture-uri-dark='file:///usr/share/backgrounds/suse-cyber-chameleon.jpg'\n"
+            "picture-options='zoom'\n"
+            "primary-color='#000000'\n"
+            "secondary-color='#000000'\n"
+            "\n"
+            "[org.gnome.desktop.screensaver]\n"
+            "picture-uri='file:///usr/share/backgrounds/suse-cyber-chameleon.jpg'\n"
+            "picture-options='zoom'\n"
+            "\n"
+            "[org.gnome.desktop.interface]\n"
+            "icon-theme='Papirus-Dark'\n"
+            "color-scheme='prefer-dark'\n"
+            "gtk-theme='Adwaita-dark'\n"
+            "\n"
+            "[org.gnome.desktop.wm.preferences]\n"
+            "button-layout='appmenu:minimize,maximize,close'\n"
+            "\n"
+            "[com.solus-project.budgie-panel]\n"
+            "dark-theme=true\n"
+        )
+
+        (schema_dir / "99_budgie_defaults.gschema.override").write_text(override_content)
+
+        try:
+            self.chroot.run_in_chroot(["glib-compile-schemas", "/usr/share/glib-2.0/schemas/"], check=False)
+        except Exception as e:
+            logger.warning(f"Failed to compile Budgie schemas: {e}")
+
+    def configure_deepin_defaults(self):
+        if self.chroot.mode == "mock" or self.config.get("desktop") != "deepin":
+            return
+
+        logger.info("Configuring custom Deepin DDE defaults (Wallpaper, Theme, Dock)...")
+        schema_dir = self.target_root / "usr" / "share" / "glib-2.0" / "schemas"
+        schema_dir.mkdir(parents=True, exist_ok=True)
+
+        override_content = (
+            "[com.deepin.wrap.gnome.desktop.background]\n"
+            "picture-uri='file:///usr/share/backgrounds/suse-cyber-chameleon.jpg'\n"
+            "\n"
+            "[com.deepin.dde.appearance]\n"
+            "background-uri='file:///usr/share/backgrounds/suse-cyber-chameleon.jpg'\n"
+            "gtk-theme='deepin-dark'\n"
+            "icon-theme='papirus'\n"
+            "\n"
+            "[com.deepin.dde.dock]\n"
+            "display-mode='fashion'\n"
+            "hide-mode='keep-showing'\n"
+        )
+
+        (schema_dir / "99_deepin_defaults.gschema.override").write_text(override_content)
+
+        try:
+            self.chroot.run_in_chroot(["glib-compile-schemas", "/usr/share/glib-2.0/schemas/"], check=False)
+        except Exception as e:
+            logger.warning(f"Failed to compile Deepin schemas: {e}")
 
     def fix_home_permissions(self):
         if self.chroot.mode == "mock":

@@ -166,4 +166,33 @@ def test_configure_lxde_defaults_creates_pcmanfm_and_lxsession_configs(tmp_path)
     assert "Yaru-grey-dark" in lxsession_cfg.read_text()
 
 
+def test_configure_budgie_defaults_creates_gschema_override(tmp_path):
+    chroot = DummyChroot()
+    chroot.target_root = tmp_path / "chroot"
+    config = {"desktop": "budgie"}
+
+    customizer = SystemCustomizer(chroot, config)
+    customizer.configure_budgie_defaults()
+
+    override_file = chroot.target_root / "usr" / "share" / "glib-2.0" / "schemas" / "99_budgie_defaults.gschema.override"
+    assert override_file.exists()
+    assert "suse-cyber-chameleon.jpg" in override_file.read_text()
+    assert "Papirus-Dark" in override_file.read_text()
+
+
+def test_configure_deepin_defaults_creates_gschema_override(tmp_path):
+    chroot = DummyChroot()
+    chroot.target_root = tmp_path / "chroot"
+    config = {"desktop": "deepin"}
+
+    customizer = SystemCustomizer(chroot, config)
+    customizer.configure_deepin_defaults()
+
+    override_file = chroot.target_root / "usr" / "share" / "glib-2.0" / "schemas" / "99_deepin_defaults.gschema.override"
+    assert override_file.exists()
+    assert "suse-cyber-chameleon.jpg" in override_file.read_text()
+    assert "deepin-dark" in override_file.read_text()
+
+
+
 
