@@ -110,3 +110,24 @@ def test_configure_flathub_uses_valid_gpg_url(tmp_path):
     flathub_file = chroot.target_root / "etc" / "flatpak" / "remotes.d" / "flathub.flatpakrepo"
     assert flathub_file.exists()
     assert "GPGKey=https://dl.flathub.org/repo/flathub.gpg" in flathub_file.read_text()
+
+
+def test_configure_kde_defaults_creates_wallpaper_package_and_autostart(tmp_path):
+    chroot = DummyChroot()
+    chroot.target_root = tmp_path / "chroot"
+    config = {"desktop": "kde"}
+
+    customizer = SystemCustomizer(chroot, config)
+    customizer.configure_kde_defaults()
+
+    kdeglobals = chroot.target_root / "etc" / "skel" / ".config" / "kdeglobals"
+    assert kdeglobals.exists()
+    assert "BreezeDark" in kdeglobals.read_text()
+
+    autostart = chroot.target_root / "etc" / "xdg" / "autostart" / "set-plasma-wallpaper.desktop"
+    assert autostart.exists()
+    assert "plasma-apply-wallpaperimage" in autostart.read_text()
+
+    wp_meta = chroot.target_root / "usr" / "share" / "wallpapers" / "suse-cyber-chameleon" / "metadata.desktop"
+    assert wp_meta.exists()
+

@@ -1,8 +1,12 @@
+import os
+import shutil
+import re
 import subprocess
 from pathlib import Path
 from typing import Dict, Any
 import logging
 from suse_builder.core.chroot_manager import ChrootManager
+from suse_builder.core.path_utils import resolve_from_project
 
 logger = logging.getLogger("customizer")
 
@@ -1327,15 +1331,22 @@ class SystemCustomizer:
             "LockOnResume=false\n"
         )
 
-        for base_dir in [self.target_root / "etc" / "skel" / ".config", self.target_root / "home" / "liveuser" / ".config"]:
-            if base_dir.parent.exists():
-                base_dir.mkdir(parents=True, exist_ok=True)
-                (base_dir / "kdeglobals").write_text(kdeglobals_content)
-                (base_dir / "kscreenlockerrc").write_text(kscreenlockerrc_content)
-                # Remove any partial appletsrc if exists to avoid black screen containment reset
-                partial_appletsrc = base_dir / "plasma-org.kde.plasma.desktop-appletsrc"
-                if partial_appletsrc.exists():
-                    partial_appletsrc.unlink()
+        skel_config = self.target_root / "etc" / "skel" / ".config"
+        skel_config.mkdir(parents=True, exist_ok=True)
+        (skel_config / "kdeglobals").write_text(kdeglobals_content)
+        (skel_config / "kscreenlockerrc").write_text(kscreenlockerrc_content)
+        partial_appletsrc = skel_config / "plasma-org.kde.plasma.desktop-appletsrc"
+        if partial_appletsrc.exists():
+            partial_appletsrc.unlink()
+
+        liveuser_config = self.target_root / "home" / "liveuser" / ".config"
+        if liveuser_config.parent.exists():
+            liveuser_config.mkdir(parents=True, exist_ok=True)
+            (liveuser_config / "kdeglobals").write_text(kdeglobals_content)
+            (liveuser_config / "kscreenlockerrc").write_text(kscreenlockerrc_content)
+            partial_appletsrc = liveuser_config / "plasma-org.kde.plasma.desktop-appletsrc"
+            if partial_appletsrc.exists():
+                partial_appletsrc.unlink()
 
         # 3. Create a complete KDE Wallpaper Package in /usr/share/wallpapers/suse-cyber-chameleon/
         custom_wp = resolve_from_project("configs/custom_files/backgrounds/suse-cyber-chameleon.jpg")
