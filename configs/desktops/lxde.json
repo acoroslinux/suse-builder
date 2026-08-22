@@ -4,6 +4,9 @@
   "packages": [
     "patterns-lxde-lxde",
     "lxde-common",
+    "lxde-common-branding-openSUSE",
+    "lxmenu-data",
+    "menu-cache",
     "lxpanel",
     "lxsession",
     "lxappearance",
@@ -17,6 +20,8 @@
     "lxrandr",
     "lxinput",
     "openbox",
+    "openbox-adwaita-ob-theme",
+    "dbus-1-x11",
     "lightdm",
     "lightdm-gtk-greeter",
     "papirus-icon-theme",

@@ -1456,7 +1456,7 @@ class SystemCustomizer:
         if self.chroot.mode == "mock" or self.config.get("desktop") != "lxde":
             return
 
-        logger.info("Configuring custom LXDE defaults (Wallpaper, Theme, Icons, PCManFM)...")
+        logger.info("Configuring custom LXDE defaults (Wallpaper, Theme, Icons, Openbox, PCManFM)...")
 
         pcmanfm_content = (
             "[*]\n"
@@ -1475,6 +1475,9 @@ class SystemCustomizer:
         )
 
         lxsession_content = (
+            "[Session]\n"
+            "window_manager=openbox-lxde\n"
+            "\n"
             "[GTK]\n"
             "sNet/ThemeName=Yaru-grey-dark\n"
             "sNet/IconThemeName=Papirus-Dark\n"
@@ -1486,6 +1489,27 @@ class SystemCustomizer:
             "iGtk/MenuImages=1\n"
             "iGtk/CursorThemeSize=18\n"
             "iGtk/ToolbarIconSize=3\n"
+            "\n"
+            "[State]\n"
+            "gesture=0\n"
+        )
+
+        openbox_content = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<openbox_config xmlns="http://openbox.org/3.4/rc">\n'
+            '  <theme>\n'
+            '    <name>Clearlooks</name>\n'
+            '    <titleLayout>NLIMC</titleLayout>\n'
+            '  </theme>\n'
+            '  <desktops>\n'
+            '    <number>2</number>\n'
+            '  </desktops>\n'
+            '  <keyboard>\n'
+            '    <keybind key="A-F4"><action name="Close"/></keybind>\n'
+            '    <keybind key="A-Tab"><action name="NextWindow"/></keybind>\n'
+            '    <keybind key="A-S-Tab"><action name="PreviousWindow"/></keybind>\n'
+            '  </keyboard>\n'
+            '</openbox_config>\n'
         )
 
         # 1. System fallback in /etc/xdg
@@ -1497,6 +1521,10 @@ class SystemCustomizer:
         xdg_lxsession.mkdir(parents=True, exist_ok=True)
         (xdg_lxsession / "desktop.conf").write_text(lxsession_content)
 
+        xdg_openbox = self.target_root / "etc" / "xdg" / "openbox" / "LXDE"
+        xdg_openbox.mkdir(parents=True, exist_ok=True)
+        (xdg_openbox / "rc.xml").write_text(openbox_content)
+
         # 2. Skeleton for new users in /etc/skel
         skel_pcmanfm = self.target_root / "etc" / "skel" / ".config" / "pcmanfm" / "LXDE"
         skel_pcmanfm.mkdir(parents=True, exist_ok=True)
@@ -1505,6 +1533,11 @@ class SystemCustomizer:
         skel_lxsession = self.target_root / "etc" / "skel" / ".config" / "lxsession" / "LXDE"
         skel_lxsession.mkdir(parents=True, exist_ok=True)
         (skel_lxsession / "desktop.conf").write_text(lxsession_content)
+
+        skel_openbox = self.target_root / "etc" / "skel" / ".config" / "openbox"
+        skel_openbox.mkdir(parents=True, exist_ok=True)
+        (skel_openbox / "lxde-rc.xml").write_text(openbox_content)
+        (skel_openbox / "rc.xml").write_text(openbox_content)
 
         # 3. Live user if present
         live_user_dir = self.target_root / "home" / "liveuser"
@@ -1516,6 +1549,11 @@ class SystemCustomizer:
             live_lxsession = live_user_dir / ".config" / "lxsession" / "LXDE"
             live_lxsession.mkdir(parents=True, exist_ok=True)
             (live_lxsession / "desktop.conf").write_text(lxsession_content)
+
+            live_openbox = live_user_dir / ".config" / "openbox"
+            live_openbox.mkdir(parents=True, exist_ok=True)
+            (live_openbox / "lxde-rc.xml").write_text(openbox_content)
+            (live_openbox / "rc.xml").write_text(openbox_content)
 
     def configure_budgie_defaults(self):
         if self.chroot.mode == "mock" or self.config.get("desktop") != "budgie":
