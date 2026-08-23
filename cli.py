@@ -254,6 +254,24 @@ def main():
     )
 
     parser.add_argument(
+        "--tmpfs",
+        action="store_true",
+        help="Build entirely inside RAM (tmpfs) to maximize I/O throughput (3x-5x faster) and avoid SSD wear.",
+    )
+
+    parser.add_argument(
+        "--fast",
+        action="store_true",
+        help="Fast development build mode (ultra-fast ZSTD level 3 SquashFS compression).",
+    )
+
+    parser.add_argument(
+        "--benchmark",
+        action="store_true",
+        help="Record and display a detailed execution timing benchmark report for each build stage.",
+    )
+
+    parser.add_argument(
         "--list-options",
         action="store_true",
         help="List all available configuration profiles and exit.",
@@ -329,6 +347,9 @@ def main():
             use_tarball=args.use_tarball,
             create_tarball=args.create_tarball,
             verify=bool(args.verify),
+            use_tmpfs=args.tmpfs,
+            fast=args.fast,
+            benchmark=args.benchmark,
         )
     except (ConfigLoaderError, BuildOrchestratorError) as exc:
         print(f"❌ Error: {exc}", file=sys.stderr)

@@ -76,3 +76,19 @@ class TestOrchestrator:
         orch._save_build_fingerprint(fingerprint)
 
         assert orch._load_previous_build_fingerprint() == fingerprint
+
+
+def test_orchestrator_tmpfs_fast_benchmark(tmp_path):
+    orch = make_orchestrator(
+        tmp_path=tmp_path,
+        output_format="iso",
+        use_tmpfs=True,
+        fast=True,
+        benchmark=True
+    )
+    assert orch.use_tmpfs is True
+    assert orch.fast is True
+    assert orch.benchmark is True
+    result = orch.build(output_name="test-tmpfs")
+    assert result.exists()
+    assert "total" in orch.timings

@@ -57,6 +57,9 @@ class BuildOrchestrator:
         use_tarball: Optional[str] = None,
         create_tarball: Optional[str] = None,
         verify: bool = False,
+        use_tmpfs: bool = False,
+        fast: bool = False,
+        benchmark: bool = False,
     ):
         self.arch = arch
         self.config_path = config_path
@@ -87,6 +90,14 @@ class BuildOrchestrator:
         self.use_tarball = use_tarball
         self.create_tarball = create_tarball
         self.verify = verify
+        self.use_tmpfs = use_tmpfs
+        self.fast = fast
+        self.benchmark = benchmark
+        self._tmpfs_mounted = False
+        self.timings: Dict[str, float] = {}
+
+        if self.fast:
+            self.compression = "zstd"
 
         if self.multimedia_codecs and "multimedia" not in self.package_profiles:
             self.package_profiles.append("multimedia")
@@ -204,6 +215,32 @@ class BuildOrchestrator:
                 else:
                     logger.info(f"Cleaned workdir: {self.workdir}")
 
+        import time
+        t_total_start = time.perf_counter()
+
+        if self.use_tmpfs:
+            if self.mode == "real" and os.geteuid() == 0:
+                tmpfs_size = "16G"
+                try:
+                    total_kb = 0
+                    with open("/proc/meminfo", "r") as f:
+                        for line in f:
+                            if line.startswith("MemTotal:") or line.startswith("SwapTotal:"):
+                                total_kb += int(line.split()[1])
+                    total_gb = total_kb / (1024 * 1024)
+                    safe_gb = max(12, int(total_gb * 0.75))
+                    tmpfs_size = f"{safe_gb}G"
+                except Exception:
+                    pass
+                logger.info(f"🚀 Mounting tmpfs ({tmpfs_size} RAM disk) on {self.workdir}...")
+                self.workdir.mkdir(parents=True, exist_ok=True)
+                import subprocess
+                subprocess.run(["mount", "-t", "tmpfs", "-o", f"size={tmpfs_size},mode=0755", "tmpfs", str(self.workdir)], check=True)
+                self._tmpfs_mounted = True
+            else:
+                logger.info(f"🚀 [MOCK/SIM] Fast RAM staging enabled for {self.workdir}")
+
+        t0 = time.perf_counter()
         toolchain = ToolchainManager(
             workdir_base=self.workdir,
             mode=self.mode,
@@ -215,6 +252,7 @@ class BuildOrchestrator:
 
         chroot = ChrootManager(self.target_root, self.mode, cache_dir=resolve_from_project(f"cache/{self.arch}"), arch=self.arch)
         hook_manager = HookManager(chroot, self.config)
+        self.timings["setup"] = time.perf_counter() - t0
         
         try:
             hook_manager.run_stage("pre-chroot")
@@ -222,6 +260,7 @@ class BuildOrchestrator:
             toolchain.mount_virtual_fs()
             chroot.mount_virtual_fs()
 
+            t0 = time.perf_counter()
             stage_mgr = StageManager(self.workdir, mode=self.mode, arch=self.arch, distro=self.distro or "leap-15.6")
             if self.use_tarball:
                 tar_path = stage_mgr.resolve_tarball(self.use_tarball)
@@ -233,7 +272,9 @@ class BuildOrchestrator:
             zypper = ZypperManager(chroot, self.config, toolchain=toolchain)
             zypper.add_repositories()
             zypper.refresh()
+            self.timings["bootstrap"] = time.perf_counter() - t0
 
+            t0 = time.perf_counter()
             chroot.prepare_emulation()
 
             pkgs = self.config.get("packages", [])
@@ -255,7 +296,9 @@ class BuildOrchestrator:
                 zypper.download_offline_packages(offline_pkgs, offline_repo_dir)
                 self.config["offline_repo_dir"] = str(offline_repo_dir)
                 self.config["with_offline_repo"] = True
+            self.timings["packages"] = time.perf_counter() - t0
 
+            t0 = time.perf_counter()
             customizer = SystemCustomizer(chroot, self.config)
             customizer.configure_live_environment()
 
@@ -265,14 +308,18 @@ class BuildOrchestrator:
 
             # Run in-chroot hooks after all system configuration is done
             hook_manager.run_stage("chroot")
+            self.timings["customization"] = time.perf_counter() - t0
 
+            t0 = time.perf_counter()
             self._ensure_iso_boot_artifacts(chroot)
+            self.timings["initramfs"] = time.perf_counter() - t0
 
             chroot.umount_virtual_fs()
 
             # Run post-chroot hooks before ISO/Image generation
             hook_manager.run_stage("post-chroot")
 
+            t0 = time.perf_counter()
             iso_engine = ISOEngine(self.workdir, self.target_root, name, self.config, self.mode, toolchain)
             if self.output_format in {"img", "raw", "qcow2", "vmdk", "vhd", "vhdx", "vdi"}:
                 disk_engine = DiskEngine(self.workdir, self.target_root, name, self.config, self.mode)
@@ -297,6 +344,12 @@ class BuildOrchestrator:
             output_dir = resolve_from_project("output")
             self._fix_output_permissions(output_dir)
 
+            self.timings["finalize"] = time.perf_counter() - t0
+            self.timings["total"] = time.perf_counter() - t_total_start
+
+            if self.benchmark:
+                self.print_benchmark_report()
+
             return artifact
         finally:
             try:
@@ -311,8 +364,31 @@ class BuildOrchestrator:
             if self.mode != "mock" and os.geteuid() == 0:
                 unmount_all_under(resolve_from_project("workdir"))
 
+            if self._tmpfs_mounted and self.workdir:
+                try:
+                    import subprocess
+                    subprocess.run(["umount", "-f", str(self.workdir)], check=True)
+                    self._tmpfs_mounted = False
+                    logger.info("Successfully unmounted tmpfs RAM disk.")
+                except Exception as e:
+                    logger.warning(f"Could not unmount tmpfs: {e}")
+
             output_dir = resolve_from_project("output")
             self._fix_output_permissions(output_dir)
+
+    def print_benchmark_report(self):
+        t = self.timings
+        print("\n" + "=" * 58)
+        print(" ⏱️  SUSE-BUILDER BENCHMARK & EXECUTION TIMINGS REPORT")
+        print("=" * 58)
+        print(f"  ├── [1/6] Setup & Toolchain:       {t.get('setup', 0):6.2f}s")
+        print(f"  ├── [2/6] Base Bootstrap:          {t.get('bootstrap', 0):6.2f}s")
+        print(f"  ├── [3/6] Package Installation:    {t.get('packages', 0):6.2f}s")
+        print(f"  ├── [4/6] Live Customization:      {t.get('customization', 0):6.2f}s")
+        print(f"  ├── [5/6] Initramfs (Dracut):      {t.get('initramfs', 0):6.2f}s")
+        print(f"  ├── [6/6] Finalize & Compression:  {t.get('finalize', 0):6.2f}s")
+        print(f"  └── 🏁 TOTAL BUILD TIME:           {t.get('total', 0):6.2f}s")
+        print("=" * 58 + "\n")
 
     def _ensure_iso_boot_artifacts(self, chroot: ChrootManager) -> None:
         """Make sure kernel + initramfs exist before packaging an ISO."""
