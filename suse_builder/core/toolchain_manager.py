@@ -227,11 +227,20 @@ class ToolchainManager:
         return subprocess.run(cmd, check=check)
 
     def _translate_path(self, value: str) -> str:
+        if value.startswith("-") and "=" not in value:
+            return value
+
         if "=" in value:
             prefix, candidate = value.split("=", 1)
             translated = self._translate_path(candidate)
             if translated != candidate:
                 return f"{prefix}={translated}"
+            return value
+
+        # Only translate absolute filesystem paths
+        if not value.startswith("/"):
+            return value
+
         try:
             path = Path(value).resolve()
             # 1. workdir paths
