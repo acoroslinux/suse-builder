@@ -169,10 +169,33 @@ class ToolchainManager:
                 cmd.extend(["-o", opts])
             cmd.extend([src, str(target)])
             subprocess.run(cmd, check=False, stderr=subprocess.DEVNULL)
-        self.project_mount.mkdir(parents=True, exist_ok=True)
-        result = subprocess.run(["mount", "--bind", str(self.project_root), str(self.project_mount)], check=False)
-        if result.returncode:
-            raise ToolchainManagerError("Could not bind the project into the isolated build host.")
+
+        # 1. Mount target architecture workdir with --rbind (crosses tmpfs boundaries seamlessly)
+        target_workdir_mount = self.build_host_dir / "workdir" / self.target_arch
+        target_workdir_mount.mkdir(parents=True, exist_ok=True)
+        self.workdir_base.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["mount", "--rbind", str(self.workdir_base), str(target_workdir_mount)], check=False)
+        subprocess.run(["mount", "--make-rslave", str(target_workdir_mount)], check=False)
+
+        # 2. Mount cache directory
+        cache_mount = self.build_host_dir / "cache"
+        cache_mount.mkdir(parents=True, exist_ok=True)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["mount", "--bind", str(self.cache_dir), str(cache_mount)], check=False)
+
+        # 3. Mount configs directory
+        configs_dir = self.project_root / "configs"
+        if configs_dir.exists():
+            configs_mount = self.build_host_dir / "configs"
+            configs_mount.mkdir(parents=True, exist_ok=True)
+            subprocess.run(["mount", "--bind", str(configs_dir), str(configs_mount)], check=False)
+
+        # 4. Mount output directory
+        output_dir = self.project_root / "output"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_mount = self.build_host_dir / "output"
+        output_mount.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["mount", "--bind", str(output_dir), str(output_mount)], check=False)
 
         self.is_mounted = True
 
@@ -182,14 +205,8 @@ class ToolchainManager:
             self.is_mounted = False
             return
 
-        for path in [
-            self.build_host_dir / "dev",
-            self.build_host_dir / "sys",
-            self.build_host_dir / "proc",
-            self.project_mount,
-        ]:
-            if path.exists():
-                subprocess.run(["umount", "-l", str(path)], check=False, stderr=subprocess.DEVNULL)
+        from suse_builder.core.path_utils import unmount_all_under
+        unmount_all_under(self.build_host_dir)
 
         self.is_mounted = False
 
@@ -216,10 +233,28 @@ class ToolchainManager:
             if translated != candidate:
                 return f"{prefix}={translated}"
         try:
-            path = Path(value)
-            if path.is_absolute() and path.is_relative_to(self.project_root):
-                return str(Path("/project") / path.relative_to(self.project_root))
-        except (TypeError, ValueError):
+            path = Path(value).resolve()
+            # 1. workdir paths
+            workdir_resolved = self.workdir_base.resolve()
+            if path == workdir_resolved or workdir_resolved in path.parents:
+                rel = path.relative_to(workdir_resolved)
+                return str(Path(f"/workdir/{self.target_arch}") / rel)
+
+            # 2. cache paths
+            cache_resolved = self.cache_dir.resolve()
+            if path == cache_resolved or cache_resolved in path.parents:
+                rel = path.relative_to(cache_resolved)
+                return str(Path("/cache") / rel)
+
+            # 3. project root / configs / output paths
+            proj_resolved = self.project_root.resolve()
+            if path == proj_resolved or proj_resolved in path.parents:
+                rel = path.relative_to(proj_resolved)
+                first_part = rel.parts[0] if rel.parts else ""
+                if first_part in ("configs", "output", "artwork"):
+                    return str(Path("/") / rel)
+                return str(Path("/project") / rel)
+        except Exception:
             pass
         return value
 
