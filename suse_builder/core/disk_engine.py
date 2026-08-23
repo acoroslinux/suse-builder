@@ -107,8 +107,14 @@ class DiskEngine:
         suse_efi_dir = esp_dir / "EFI" / "opensuse"
         suse_efi_dir.mkdir(parents=True, exist_ok=True)
 
-        # Write startup.nsh script for instant auto-boot from UEFI Shell
-        (esp_dir / "startup.nsh").write_text("\\EFI\\BOOT\\BOOTX64.EFI\n")
+        # Write standard UEFI Shell startup script with FS0: drive context
+        startup_nsh = (
+            "@echo -off\n"
+            "FS0:\n"
+            "cd \\EFI\\BOOT\n"
+            "BOOTX64.EFI\n"
+        )
+        (esp_dir / "startup.nsh").write_text(startup_nsh)
 
         # Create early bootstrap grub.cfg to embed inside standalone BOOTX64.EFI
         early_cfg = (
@@ -133,20 +139,14 @@ class DiskEngine:
 
         grub_mkstandalone = shutil.which("grub2-mkstandalone") or shutil.which("grub-mkstandalone")
         if grub_mkstandalone:
-            # Build a comprehensive standalone EFI binary containing all partition and filesystem drivers
-            grub_modules = (
-                "part_gpt part_msdos ext2 btrfs fat iso9660 normal search "
-                "search_fs_uuid search_label echo test linux linuxefi configfile "
-                "font gfxterm gfxmenu all_video efi_gop efi_uga ls cat reboot"
-            )
             subprocess.run([
                 grub_mkstandalone,
                 "-O", "x86_64-efi",
                 "-o", str(boot_efi_dir / "BOOTX64.EFI"),
-                "--modules", grub_modules,
                 f"boot/grub/grub.cfg={early_cfg_path}"
             ], capture_output=True, check=False)
             shutil.copy2(boot_efi_dir / "BOOTX64.EFI", suse_efi_dir / "grubx64.efi")
+            shutil.copy2(boot_efi_dir / "BOOTX64.EFI", esp_dir / "bootx64.efi")
         else:
             candidates = [
                 mount_root / "usr" / "lib" / "grub2" / "x86_64-efi" / "grub.efi",
@@ -158,6 +158,7 @@ class DiskEngine:
                 if cand.exists():
                     shutil.copy2(cand, boot_efi_dir / "BOOTX64.EFI")
                     shutil.copy2(cand, suse_efi_dir / "grubx64.efi")
+                    shutil.copy2(cand, esp_dir / "bootx64.efi")
                     break
 
         # Detect exact kernel and initrd filenames under /boot
