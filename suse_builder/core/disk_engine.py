@@ -142,19 +142,16 @@ class DiskEngine:
 
         # Create early bootstrap grub.cfg to embed inside standalone BOOTX64.EFI
         early_cfg = (
-            'set root=($cmdpath)\n'
-            'set prefix=($cmdpath)\n'
-            'if [ -f ($prefix)/grub.cfg ]; then\n'
-            '    configfile ($prefix)/grub.cfg\n'
-            'fi\n'
-            f'search --no-floppy --fs-uuid --set=root {root_uuid}\n'
+            f'search.fs_uuid {root_uuid} root\n'
             'set prefix=($root)/boot/grub2\n'
             'if [ ! -f $prefix/grub.cfg ]; then\n'
             '    set prefix=($root)/boot/grub\n'
             'fi\n'
-            'if [ -f $prefix/grub.cfg ]; then\n'
-            '    configfile $prefix/grub.cfg\n'
+            'if [ ! -f $prefix/grub.cfg ]; then\n'
+            f'    search.fs_uuid {esp_uuid} root\n'
+            '    set prefix=($root)/EFI/BOOT\n'
             'fi\n'
+            'configfile $prefix/grub.cfg\n'
         )
         early_cfg_path = self.workdir / "early_grub.cfg"
         early_cfg_path.write_text(early_cfg)
@@ -197,6 +194,7 @@ class DiskEngine:
                     i_name = f.name
                     break
 
+        fs_type = str(self.config.get("filesystem") or "ext4").lower()
         grub_cfg = (
             'insmod part_gpt\n'
             'insmod part_msdos\n'
@@ -208,11 +206,11 @@ class DiskEngine:
             'set timeout=5\n\n'
             f'search --no-floppy --fs-uuid --set=root {root_uuid}\n\n'
             'menuentry "openSUSE Linux (Leap 15.6)" {\n'
-            f'    linux /boot/{k_name} root=UUID={root_uuid} rw quiet splash console=tty1 console=ttyS0,115200\n'
+            f'    linux /boot/{k_name} root=UUID={root_uuid} rootfstype={fs_type} rw quiet splash console=tty1 console=ttyS0,115200\n'
             f'    initrd /boot/{i_name}\n'
             '}\n'
             'menuentry "openSUSE Linux (Recovery Mode)" {\n'
-            f'    linux /boot/{k_name} root=UUID={root_uuid} single console=tty1 console=ttyS0,115200\n'
+            f'    linux /boot/{k_name} root=UUID={root_uuid} rootfstype={fs_type} single console=tty1 console=ttyS0,115200\n'
             f'    initrd /boot/{i_name}\n'
             '}\n'
         )
