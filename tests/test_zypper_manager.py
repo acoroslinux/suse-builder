@@ -71,7 +71,7 @@ class TestZypperManager:
         monkeypatch.setattr(zypper, "_run_zypper", fake_run_zypper)
         monkeypatch.setattr("suse_builder.core.zypper_manager.subprocess.run", fake_subprocess_run)
 
-        zypper.bootstrap_rootfs("tumbleweed", "x86_64")
+        zypper.bootstrap_rootfs("tumbleweed", "x86_64", use_seed=True)
 
         assert any(cmd[:2] == ["tar", "xzpf"] for cmd in tar_calls)
         assert any("sed" in cmd for cmd in zypper_calls)
@@ -99,7 +99,7 @@ class TestZypperManager:
         monkeypatch.setattr(zypper, "_run_zypper", fake_run_zypper)
         monkeypatch.setattr("suse_builder.core.zypper_manager.subprocess.run", fake_subprocess_run)
 
-        zypper.bootstrap_rootfs("tumbleweed", "x86_64")
+        zypper.bootstrap_rootfs("tumbleweed", "x86_64", create_seed=True)
 
         assert any("pattern" in cmd and "base" in cmd for cmd in zypper_calls)
         assert any("sed" in cmd for cmd in zypper_calls)

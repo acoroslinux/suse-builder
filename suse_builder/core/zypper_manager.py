@@ -155,7 +155,7 @@ class ZypperManager:
                 except Exception:
                     pass
 
-    def bootstrap_rootfs(self, distro: str, arch: str, use_seed: bool = True, reuse_existing: bool = False):
+    def bootstrap_rootfs(self, distro: str, arch: str, use_seed: bool = False, create_seed: bool = False, reuse_existing: bool = False):
         if self.chroot.mode == "mock":
             try:
                 self.target_root.mkdir(parents=True, exist_ok=True)
@@ -222,7 +222,7 @@ class ZypperManager:
         if res.returncode != 0:
             raise ZypperManagerError(f"Could not install rootfs bootstrap utilities (exit code {res.returncode})")
 
-        if not seed_used:
+        if create_seed and not seed_used:
             try:
                 logger.info(f"⚡ Fast-caching rootfs seed tarball to {seed_cache}...")
                 tmp_seed = seed_cache.with_suffix(".tmp")
