@@ -9,7 +9,7 @@ def resolve_from_project(relative_path: str | Path) -> Path:
         return path_obj
     return (_PROJECT_ROOT / path_obj).resolve()
 
-def unmount_all_under(target_dir: Path) -> None:
+def unmount_all_under(target_dir: Path, include_self: bool = False) -> None:
     """
     Scans /proc/mounts for all active mountpoints inside target_dir
     and unmounts them in reverse order (deepest path first).
@@ -33,10 +33,10 @@ def unmount_all_under(target_dir: Path) -> None:
                         try:
                             mp_path = Path(mp).resolve()
                             mp_str = str(mp_path)
-                            if mp_str == target_str or mp_str.startswith(target_str + "/"):
+                            if mp_str.startswith(target_str + "/") or (include_self and mp_str == target_str):
                                 mounts.append(mp_str)
                         except Exception:
-                            if mp == target_str or mp.startswith(target_str + "/"):
+                            if mp.startswith(target_str + "/") or (include_self and mp == target_str):
                                 mounts.append(mp)
         except Exception:
             pass

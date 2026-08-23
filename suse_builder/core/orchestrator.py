@@ -211,42 +211,53 @@ class BuildOrchestrator:
         if self.mode != "mock" and not self.clean and previous_fingerprint and previous_fingerprint != current_fingerprint:
             logger.info("Build choices changed since previous run; forcing rootfs rebuild despite --no-clean.")
 
-        if self.clean and self.mode != "mock":
-            if os.geteuid() == 0:
-                unmount_all_under(resolve_from_project("workdir"))
-            if self.workdir.exists():
-                import subprocess
-                subprocess.run(["rm", "-rf", str(self.workdir)], check=False)
-                if self.workdir.exists():
-                    logger.error(f"Failed to cleanly wipe {self.workdir}. Some files are locked or are subvolumes.")
-                    raise RuntimeError(f"Cannot proceed: --clean failed on {self.workdir}")
-                else:
-                    logger.info(f"Cleaned workdir: {self.workdir}")
-
         import time
         t_total_start = time.perf_counter()
 
         if self.use_tmpfs:
             if self.mode == "real" and os.geteuid() == 0:
-                tmpfs_size = "16G"
-                try:
-                    total_kb = 0
-                    with open("/proc/meminfo", "r") as f:
-                        for line in f:
-                            if line.startswith("MemTotal:") or line.startswith("SwapTotal:"):
-                                total_kb += int(line.split()[1])
-                    total_gb = total_kb / (1024 * 1024)
-                    safe_gb = max(12, int(total_gb * 0.75))
-                    tmpfs_size = f"{safe_gb}G"
-                except Exception:
-                    pass
-                logger.info(f"🚀 Mounting tmpfs ({tmpfs_size} RAM disk) on {self.workdir}...")
                 self.workdir.mkdir(parents=True, exist_ok=True)
-                import subprocess
-                subprocess.run(["mount", "-t", "tmpfs", "-o", f"size={tmpfs_size},mode=0755", "tmpfs", str(self.workdir)], check=True)
-                self._tmpfs_mounted = True
+                if not os.path.ismount(str(self.workdir)):
+                    tmpfs_size = "16G"
+                    try:
+                        total_kb = 0
+                        with open("/proc/meminfo", "r") as f:
+                            for line in f:
+                                if line.startswith("MemTotal:") or line.startswith("SwapTotal:"):
+                                    total_kb += int(line.split()[1])
+                        total_gb = total_kb / (1024 * 1024)
+                        safe_gb = max(12, int(total_gb * 0.75))
+                        tmpfs_size = f"{safe_gb}G"
+                    except Exception:
+                        pass
+                    logger.info(f"🚀 Mounting tmpfs ({tmpfs_size} RAM disk) on {self.workdir}...")
+                    import subprocess
+                    subprocess.run(["mount", "-t", "tmpfs", "-o", f"size={tmpfs_size},mode=0755", "tmpfs", str(self.workdir)], check=True)
+                    self._tmpfs_mounted = True
+                else:
+                    logger.info(f"🚀 Using existing active tmpfs mount on {self.workdir}")
             else:
                 logger.info(f"🚀 [MOCK/SIM] Fast RAM staging enabled for {self.workdir}")
+
+        if self.clean and self.mode != "mock":
+            if os.geteuid() == 0:
+                unmount_all_under(self.workdir)
+            if self.workdir.exists():
+                import subprocess
+                stale_paths = [
+                    self.workdir / "chroot",
+                    self.workdir / "iso-staging",
+                    self.workdir / "build_host",
+                    self.workdir / "mnt_root",
+                ]
+                for p in stale_paths:
+                    if p.exists():
+                        subprocess.run(["rm", "-rf", str(p)], check=False)
+                for f in self.workdir.glob("*.raw"):
+                    f.unlink(missing_ok=True)
+                for f in self.workdir.glob("*.img"):
+                    f.unlink(missing_ok=True)
+                logger.info(f"Cleaned workdir: {self.workdir}")
 
         t0 = time.perf_counter()
         toolchain = ToolchainManager(
