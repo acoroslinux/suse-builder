@@ -16,6 +16,7 @@ from suse_builder.core.config_loader import ConfigLoaderError
 from suse_builder.core.toolchain_manager import ToolchainManagerError
 from suse_builder.core.zypper_manager import ZypperManagerError
 from suse_builder.core.iso_engine import ISOEngineError
+from suse_builder.core.disk_engine import DiskEngineError
 from suse_builder.core.container_engine import ContainerEngineError
 from suse_builder.core.path_utils import resolve_from_project
 
@@ -157,9 +158,9 @@ def main():
     parser.add_argument(
         "-f",
         "--format",
-        choices=["iso", "img", "qcow2", "vmdk", "vhd", "vdi", "tarball", "container"],
+        choices=["iso", "img", "raw", "qcow2", "vmdk", "vhd", "vhdx", "vdi", "tarball", "container", "oci"],
         default="iso",
-        help="Output artifact format: iso, img, qcow2, vmdk, vhd, vdi, tarball, container. Default: iso",
+        help="Output artifact format: iso, img, raw, qcow2, vmdk, vhd, vhdx, vdi, tarball, container, oci. Default: iso",
     )
 
     parser.add_argument(
@@ -309,7 +310,7 @@ def main():
     print(f"🚀 Starting SUSE-Builder [{args.mode.upper()} MODE] for {arch_lower} ({args.distro})...")
     try:
         artifact = orchestrator.build(output_name=args.output)
-    except (BuildOrchestratorError, ToolchainManagerError, ZypperManagerError, ISOEngineError, ContainerEngineError, RuntimeError, subprocess.CalledProcessError) as exc:
+    except (BuildOrchestratorError, ToolchainManagerError, ZypperManagerError, ISOEngineError, DiskEngineError, ContainerEngineError, RuntimeError, subprocess.CalledProcessError) as exc:
         print(f"❌ Error: {exc}", file=sys.stderr)
         sys.exit(1)
     print(f"🎉 Build completed successfully! Output: {artifact}")

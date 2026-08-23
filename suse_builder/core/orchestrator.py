@@ -135,7 +135,7 @@ class BuildOrchestrator:
 
     def validate(self) -> Dict[str, Any]:
         errors = []
-        valid_formats = {"iso", "img", "qcow2", "vmdk", "vhd", "vdi", "tarball", "container"}
+        valid_formats = {"iso", "img", "raw", "qcow2", "vmdk", "vhd", "vhdx", "vdi", "tarball", "container", "oci"}
         if self.arch not in {"x86_64", "amd64", "i686", "i586", "aarch64", "riscv64"}:
             errors.append(f"Unsupported architecture: {self.arch}")
         if self.output_format not in valid_formats:
@@ -153,8 +153,11 @@ class BuildOrchestrator:
                 "arch": self.arch,
                 "distro": self.distro,
                 "desktop": self.desktop or "(none)",
-                "variant": self.variant or "live",
-            }
+                "kernel": self.kernel,
+                "bootloader": self.bootloader,
+                "variant": self.variant,
+                "format": self.output_format,
+            },
         }
 
     def build(self, output_name: Optional[str] = None) -> Path:
@@ -252,7 +255,7 @@ class BuildOrchestrator:
             hook_manager.run_stage("post-chroot")
 
             iso_engine = ISOEngine(self.workdir, self.target_root, name, self.config, self.mode, toolchain)
-            if self.output_format in {"img", "qcow2", "vmdk", "vhd", "vdi"}:
+            if self.output_format in {"img", "raw", "qcow2", "vmdk", "vhd", "vhdx", "vdi"}:
                 disk_engine = DiskEngine(self.workdir, self.target_root, name, self.config, self.mode)
                 artifact = disk_engine.build_disk_image(target_format=self.output_format)
             elif self.output_format == "tarball":

@@ -17,9 +17,11 @@ def test_mock_disk_engine(tmp_path):
         config={},
         mode="mock"
     )
-    result = engine.build_disk_image("img")
-    assert isinstance(result, Path)
-    assert result.name == "test-disk.img"
+    for fmt in ["img", "raw", "qcow2", "vmdk", "vhdx", "vdi"]:
+        result = engine.build_disk_image(fmt)
+        assert isinstance(result, Path)
+        expected_ext = "img" if fmt in {"img", "raw"} else fmt
+        assert result.name == f"test-disk.{expected_ext}"
 
 
 def test_mock_container_engine(tmp_path):
@@ -35,3 +37,5 @@ def test_mock_container_engine(tmp_path):
     result = engine.build_oci_archive()
     assert isinstance(result, Path)
     assert result.name == "test-container.oci.tar"
+    assert result.exists()
+
