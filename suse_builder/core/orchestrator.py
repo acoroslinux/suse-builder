@@ -410,8 +410,8 @@ class BuildOrchestrator:
         print("=" * 58 + "\n")
 
     def _ensure_iso_boot_artifacts(self, chroot: ChrootManager) -> None:
-        """Make sure kernel + initramfs exist before packaging an ISO."""
-        if self.mode == "mock" or self.output_format != "iso":
+        """Make sure kernel + initramfs exist before packaging an ISO or bootable disk image."""
+        if self.mode == "mock" or self.output_format in {"tarball", "container", "oci"}:
             return
 
         boot_dir = self.target_root / "boot"
@@ -430,7 +430,7 @@ class BuildOrchestrator:
                 f"No kernel found in {boot_dir}; expected a file starting with 'vmlinuz'."
             )
 
-        logger.info("Generating live-capable initramfs using dracut...")
+        logger.info("Generating initramfs using dracut...")
         dracut_cmd = r'''
 set -eu
 if ! command -v dracut >/dev/null 2>&1; then
@@ -465,6 +465,9 @@ for kimg in /boot/vmlinuz-*; do
       --add-drivers "$avail_drivers" \
       --filesystems "ext4 btrfs xfs vfat overlay iso9660 squashfs" \
       "/boot/initrd-$kver"
+
+    ln -sf "initrd-$kver" "/boot/initrd"
+    ln -sf "vmlinuz-$kver" "/boot/vmlinuz"
 done
 if [ "$found_kernel" -eq 0 ]; then
     echo "No /boot/vmlinuz-* kernels found for dracut" >&2
