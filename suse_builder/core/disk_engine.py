@@ -142,16 +142,24 @@ class DiskEngine:
 
         # Create early bootstrap grub.cfg to embed inside standalone BOOTX64.EFI
         early_cfg = (
-            f'search.fs_uuid {root_uuid} root\n'
+            'insmod part_gpt\n'
+            'insmod part_msdos\n'
+            'insmod fat\n'
+            'insmod ext2\n'
+            'insmod btrfs\n'
+            'insmod normal\n'
+            'insmod search\n'
+            'insmod search_fs_uuid\n'
+            f'search --no-floppy --fs-uuid --set=root {root_uuid}\n'
             'set prefix=($root)/boot/grub2\n'
-            'if [ ! -f $prefix/grub.cfg ]; then\n'
-            '    set prefix=($root)/boot/grub\n'
+            'if [ -f $prefix/grub.cfg ]; then\n'
+            '    configfile $prefix/grub.cfg\n'
             'fi\n'
-            'if [ ! -f $prefix/grub.cfg ]; then\n'
-            f'    search.fs_uuid {esp_uuid} root\n'
-            '    set prefix=($root)/EFI/BOOT\n'
+            f'search --no-floppy --fs-uuid --set=root {esp_uuid}\n'
+            'set prefix=($root)/EFI/BOOT\n'
+            'if [ -f $prefix/grub.cfg ]; then\n'
+            '    configfile $prefix/grub.cfg\n'
             'fi\n'
-            'configfile $prefix/grub.cfg\n'
         )
         early_cfg_path = self.workdir / "early_grub.cfg"
         early_cfg_path.write_text(early_cfg)
