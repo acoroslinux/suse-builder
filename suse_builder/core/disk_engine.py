@@ -105,27 +105,32 @@ class DiskEngine:
         boot_efi_dir = esp_dir / "EFI" / "BOOT"
         boot_efi_dir.mkdir(parents=True, exist_ok=True)
 
-        candidates = [
-            mount_root / "usr" / "lib" / "grub2" / "x86_64-efi" / "grub.efi",
-            mount_root / "usr" / "share" / "efi" / "x86_64" / "grub.efi",
-            mount_root / "boot" / "efi" / "EFI" / "opensuse" / "grubx64.efi",
-            mount_root / "usr" / "share" / "grub2" / "x86_64-efi" / "core.efi"
-        ]
-
-        copied_binary = False
-        for cand in candidates:
-            if cand.exists():
-                shutil.copy2(cand, boot_efi_dir / "BOOTX64.EFI")
-                copied_binary = True
-                break
-
-        if not copied_binary and shutil.which("grub2-mkstandalone"):
+        grub_mkstandalone = shutil.which("grub2-mkstandalone") or shutil.which("grub-mkstandalone")
+        if grub_mkstandalone:
+            # Build a comprehensive standalone EFI binary containing all partition and filesystem drivers
+            grub_modules = (
+                "part_gpt part_msdos ext2 btrfs fat iso9660 normal search "
+                "search_fs_uuid search_label echo test linux linuxefi configfile "
+                "font gfxterm gfxmenu all_video efi_gop efi_uga ls cat reboot"
+            )
             subprocess.run([
-                "grub2-mkstandalone",
+                grub_mkstandalone,
                 "-O", "x86_64-efi",
                 "-o", str(boot_efi_dir / "BOOTX64.EFI"),
+                "--modules", grub_modules,
                 "boot/grub/grub.cfg=/dev/null"
             ], capture_output=True, check=False)
+        else:
+            candidates = [
+                mount_root / "usr" / "lib" / "grub2" / "x86_64-efi" / "grub.efi",
+                mount_root / "usr" / "share" / "efi" / "x86_64" / "grub.efi",
+                mount_root / "boot" / "efi" / "EFI" / "opensuse" / "grubx64.efi",
+                mount_root / "usr" / "share" / "grub2" / "x86_64-efi" / "core.efi"
+            ]
+            for cand in candidates:
+                if cand.exists():
+                    shutil.copy2(cand, boot_efi_dir / "BOOTX64.EFI")
+                    break
 
         # Detect exact kernel and initrd filenames under /boot
         k_name = "vmlinuz"
@@ -142,6 +147,12 @@ class DiskEngine:
                     break
 
         grub_cfg = (
+            'insmod part_gpt\n'
+            'insmod part_msdos\n'
+            'insmod ext2\n'
+            'insmod btrfs\n'
+            'insmod fat\n'
+            'insmod all_video\n'
             'set default="0"\n'
             'set timeout=5\n\n'
             f'search --no-floppy --fs-uuid --set=root {root_uuid}\n\n'

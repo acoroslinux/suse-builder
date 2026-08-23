@@ -442,26 +442,28 @@ for kimg in /boot/vmlinuz-*; do
     [ -e "$kimg" ] || continue
     found_kernel=1
     kver="${kimg#/boot/vmlinuz-}"
-    wanted_drivers="squashfs loop overlay iso9660 isofs zstd zstd_decompress dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme bochs bochs-drm bochs_drm vmwgfx virtio-gpu qxl nouveau radeon amdgpu i915"
+    wanted_drivers="ext4 btrfs xfs squashfs loop overlay iso9660 isofs zstd zstd_decompress dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio virtio_ring virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme bochs bochs-drm bochs_drm vmwgfx virtio-gpu qxl nouveau radeon amdgpu i915"
     avail_drivers=""
     for d in $wanted_drivers; do
         d_norm=$(echo "$d" | tr '-' '_')
-        if [ -d "/lib/modules/$kver" ] && find "/lib/modules/$kver" \( -name "${d_norm}.ko*" -o -name "${d}.ko*" \) 2>/dev/null | grep -q .; then
-            avail_drivers="$avail_drivers $d"
-        fi
+        for mod_root in "/lib/modules/$kver" "/usr/lib/modules/$kver"; do
+            if [ -d "$mod_root" ] && find "$mod_root" \( -name "${d_norm}.ko*" -o -name "${d}.ko*" \) 2>/dev/null | grep -q .; then
+                avail_drivers="$avail_drivers $d"
+                break
+            fi
+        done
     done
     if [ -z "$avail_drivers" ]; then
-        avail_drivers="squashfs loop overlay iso9660 zstd dm_mod sr_mod cdrom sd_mod ahci"
+        avail_drivers="ext4 virtio_blk virtio_pci virtio_scsi ahci sd_mod dm_mod squashfs loop overlay iso9660 zstd"
     fi
     dracut --force --no-hostonly \
       --kver "$kver" \
       --strip \
       --compress "zstd -15 -T0" \
-      --add "dmsquash-live pollcdrom qemu qemu-net base rootfs-block udev-rules kernel-modules plymouth drm" \
+      --add "base rootfs-block udev-rules kernel-modules drm qemu qemu-net dmsquash-live pollcdrom" \
       --omit "cifs iscsi fcoe fcoe-uefi nfs nbd biosdevname multipath" \
       --add-drivers "$avail_drivers" \
-      --filesystems "squashfs iso9660 overlay vfat ext4" \
-      --include /etc/systemd/system/checkisomd5@.service.d /etc/systemd/system/checkisomd5@.service.d \
+      --filesystems "ext4 btrfs xfs vfat overlay iso9660 squashfs" \
       "/boot/initrd-$kver"
 done
 if [ "$found_kernel" -eq 0 ]; then
