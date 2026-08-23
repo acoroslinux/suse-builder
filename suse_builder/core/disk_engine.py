@@ -193,14 +193,26 @@ class DiskEngine:
         i_name = "initrd"
         boot_dir = mount_root / "boot"
         if boot_dir.exists():
-            for f in sorted(boot_dir.glob("vmlinuz*")):
-                if f.is_file() or f.is_symlink():
+            for f in sorted(boot_dir.glob("vmlinuz-*")):
+                if f.is_file():
                     k_name = f.name
                     break
-            for f in sorted(boot_dir.glob("initrd*")):
-                if f.is_file() or f.is_symlink():
+            for f in sorted(boot_dir.glob("initrd-*")):
+                if f.is_file():
                     i_name = f.name
                     break
+
+            # Create standard symlinks /boot/vmlinuz and /boot/initrd
+            if k_name != "vmlinuz" and not (boot_dir / "vmlinuz").exists():
+                try:
+                    (boot_dir / "vmlinuz").symlink_to(k_name)
+                except Exception:
+                    pass
+            if i_name != "initrd" and not (boot_dir / "initrd").exists():
+                try:
+                    (boot_dir / "initrd").symlink_to(i_name)
+                except Exception:
+                    pass
 
         fs_type = str(self.config.get("filesystem") or "ext4").lower()
         grub_cfg = (
