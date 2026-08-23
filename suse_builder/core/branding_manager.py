@@ -139,12 +139,13 @@ class BrandingManager:
                 else:
                     subprocess.run(["rsync", "-a", "--no-o", "--no-g", "--force", str(src), str(tgt)], check=False)
                 
-        # Run dconf update inside chroot
-        try:
-            self.chroot.run_in_chroot(["dconf", "update"], check=False)
-            logger.info("Executed 'dconf update'.")
-        except Exception as e:
-            logger.warning(f"dconf update failed: {e}")
+        # Run dconf update inside chroot if dconf binary exists
+        if (self.chroot.target_root / "usr" / "bin" / "dconf").exists():
+            try:
+                self.chroot.run_in_chroot(["dconf", "update"], check=False)
+                logger.info("Executed 'dconf update'.")
+            except Exception as e:
+                logger.warning(f"dconf update failed: {e}")
 
     def _apply_plymouth_branding(self):
         theme_name = "suse-modern"
@@ -160,12 +161,19 @@ class BrandingManager:
         target_dir.mkdir(parents=True, exist_ok=True)
         subprocess.run(["rsync", "-a", "--no-o", "--no-g", "--force", f"{source_dir}/", f"{target_dir}/"], check=False)
         
-        # Execute plymouth-set-default-theme inside the chroot to update initramfs
-        try:
-            self.chroot.run_in_chroot(["plymouth-set-default-theme", "-R", theme_name], check=False)
-            logger.info(f"  -> Injected custom Plymouth theme '{theme_name}' and rebuilt initramfs")
-        except Exception as e:
-            logger.warning(f"  -> Failed to set Plymouth theme: {e}")
+        # Execute plymouth-set-default-theme inside the chroot only if available
+        plymouth_tool = None
+        for cand in ["usr/sbin/plymouth-set-default-theme", "usr/bin/plymouth-set-default-theme"]:
+            if (self.chroot.target_root / cand).exists():
+                plymouth_tool = cand
+                break
+
+        if plymouth_tool:
+            try:
+                self.chroot.run_in_chroot(["plymouth-set-default-theme", "-R", theme_name], check=False)
+                logger.info(f"  -> Injected custom Plymouth theme '{theme_name}' and rebuilt initramfs")
+            except Exception as e:
+                logger.warning(f"  -> Failed to set Plymouth theme: {e}")
 
     def _apply_os_release(self):
         """Overrides the PRETTY_NAME and NAME in /etc/os-release to match branding."""

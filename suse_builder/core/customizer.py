@@ -75,7 +75,8 @@ class SystemCustomizer:
                             shutil.copy2(item, dest)
 
             # Create standard XDG directories (Downloads, Documents, etc.)
-            self.chroot.run_in_chroot(["su", "-", live_user, "-c", "xdg-user-dirs-update --force"], check=False)
+            if (self.target_root / "usr" / "bin" / "xdg-user-dirs-update").exists():
+                self.chroot.run_in_chroot(["su", "-", live_user, "-c", "xdg-user-dirs-update --force"], check=False)
 
             self.chroot.run_in_chroot(["chown", "-R", f"{live_user}:{live_user}", f"/home/{live_user}"], check=False)
             self.chroot.run_in_chroot(["chmod", "755", f"/home/{live_user}"], check=False)
@@ -257,6 +258,8 @@ class SystemCustomizer:
                 dm = "gdm"
             elif (self.target_root / "usr" / "sbin" / "lightdm").exists() or (self.target_root / "usr" / "bin" / "lightdm").exists():
                 dm = "lightdm"
+            else:
+                return
 
         session_name = self._detect_desktop_session()
 
@@ -793,10 +796,11 @@ class SystemCustomizer:
                 def_ply.unlink()
             def_ply.symlink_to(Path("suse-modern/suse-modern.plymouth"))
 
-            try:
-                self.chroot.run_in_chroot(["plymouth-set-default-theme", "suse-modern"], check=False)
-            except Exception:
-                pass
+            if (self.target_root / "usr" / "sbin" / "plymouth-set-default-theme").exists() or (self.target_root / "usr" / "bin" / "plymouth-set-default-theme").exists():
+                try:
+                    self.chroot.run_in_chroot(["plymouth-set-default-theme", "suse-modern"], check=False)
+                except Exception:
+                    pass
 
     def configure_dracut(self):
         if self.chroot.mode == "mock":
@@ -992,8 +996,9 @@ class SystemCustomizer:
                 pass
         
         # 3. Ensure root ownership for critical security files (shadow, sudoers, etc.)
-        for path in ["/etc/shadow", "/etc/gshadow", "/etc/sudoers", "/etc/sudoers.d"]:
-            self.chroot.run_in_chroot(["chown", "-R", "root:root", path], check=False)
+        for path in ["etc/shadow", "etc/gshadow", "etc/sudoers", "etc/sudoers.d"]:
+            if (self.target_root / path).exists():
+                self.chroot.run_in_chroot(["chown", "-R", "root:root", f"/{path}"], check=False)
 
         # 3. PAM directory and files
         pamd = self.target_root / "etc" / "pam.d"
@@ -1028,22 +1033,28 @@ class SystemCustomizer:
                     pass
 
         # 6. Display manager runtime directories
-        for dm_dir in ["var/lib/lightdm", "var/lib/lightdm-data", "var/log/lightdm", "var/cache/lightdm"]:
-            dp = self.target_root / dm_dir
-            if dp.exists():
-                try:
-                    self.chroot.run_in_chroot(["chown", "-R", "lightdm:lightdm", f"/{dm_dir}"], check=False)
-                    self.chroot.run_in_chroot(["chmod", "775", f"/{dm_dir}"], check=False)
-                except Exception:
-                    pass
+        passwd_file = self.target_root / "etc" / "passwd"
+        has_passwd = passwd_file.exists()
+        passwd_txt = passwd_file.read_text() if has_passwd else ""
 
-        for sddm_dir in ["var/lib/sddm"]:
-            dp = self.target_root / sddm_dir
-            if dp.exists():
-                try:
-                    self.chroot.run_in_chroot(["chown", "-R", "sddm:sddm", f"/{sddm_dir}"], check=False)
-                except Exception:
-                    pass
+        if "lightdm:" in passwd_txt:
+            for dm_dir in ["var/lib/lightdm", "var/lib/lightdm-data", "var/log/lightdm", "var/cache/lightdm"]:
+                dp = self.target_root / dm_dir
+                if dp.exists():
+                    try:
+                        self.chroot.run_in_chroot(["chown", "-R", "lightdm:lightdm", f"/{dm_dir}"], check=False)
+                        self.chroot.run_in_chroot(["chmod", "775", f"/{dm_dir}"], check=False)
+                    except Exception:
+                        pass
+
+        if "sddm:" in passwd_txt:
+            for sddm_dir in ["var/lib/sddm"]:
+                dp = self.target_root / sddm_dir
+                if dp.exists():
+                    try:
+                        self.chroot.run_in_chroot(["chown", "-R", "sddm:sddm", f"/{sddm_dir}"], check=False)
+                    except Exception:
+                        pass
 
         # 7. User home directory
         home_dir = self.target_root / "home" / live_user
