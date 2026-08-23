@@ -1513,9 +1513,11 @@ class SystemCustomizer:
         )
 
         # 1. System fallback in /etc/xdg
-        xdg_pcmanfm = self.target_root / "etc" / "xdg" / "pcmanfm" / "LXDE"
-        xdg_pcmanfm.mkdir(parents=True, exist_ok=True)
-        (xdg_pcmanfm / "pcmanfm.conf").write_text(pcmanfm_content)
+        for profile in ["LXDE", "default"]:
+            xdg_pcmanfm = self.target_root / "etc" / "xdg" / "pcmanfm" / profile
+            xdg_pcmanfm.mkdir(parents=True, exist_ok=True)
+            (xdg_pcmanfm / "pcmanfm.conf").write_text(pcmanfm_content)
+            (xdg_pcmanfm / "desktop-items-0.conf").write_text(pcmanfm_content)
 
         xdg_lxsession = self.target_root / "etc" / "xdg" / "lxsession" / "LXDE"
         xdg_lxsession.mkdir(parents=True, exist_ok=True)
@@ -1526,9 +1528,11 @@ class SystemCustomizer:
         (xdg_openbox / "rc.xml").write_text(openbox_content)
 
         # 2. Skeleton for new users in /etc/skel
-        skel_pcmanfm = self.target_root / "etc" / "skel" / ".config" / "pcmanfm" / "LXDE"
-        skel_pcmanfm.mkdir(parents=True, exist_ok=True)
-        (skel_pcmanfm / "pcmanfm.conf").write_text(pcmanfm_content)
+        for profile in ["LXDE", "default"]:
+            skel_pcmanfm = self.target_root / "etc" / "skel" / ".config" / "pcmanfm" / profile
+            skel_pcmanfm.mkdir(parents=True, exist_ok=True)
+            (skel_pcmanfm / "pcmanfm.conf").write_text(pcmanfm_content)
+            (skel_pcmanfm / "desktop-items-0.conf").write_text(pcmanfm_content)
 
         skel_lxsession = self.target_root / "etc" / "skel" / ".config" / "lxsession" / "LXDE"
         skel_lxsession.mkdir(parents=True, exist_ok=True)
@@ -1542,9 +1546,11 @@ class SystemCustomizer:
         # 3. Live user if present
         live_user_dir = self.target_root / "home" / "liveuser"
         if live_user_dir.exists():
-            live_pcmanfm = live_user_dir / ".config" / "pcmanfm" / "LXDE"
-            live_pcmanfm.mkdir(parents=True, exist_ok=True)
-            (live_pcmanfm / "pcmanfm.conf").write_text(pcmanfm_content)
+            for profile in ["LXDE", "default"]:
+                live_pcmanfm = live_user_dir / ".config" / "pcmanfm" / profile
+                live_pcmanfm.mkdir(parents=True, exist_ok=True)
+                (live_pcmanfm / "pcmanfm.conf").write_text(pcmanfm_content)
+                (live_pcmanfm / "desktop-items-0.conf").write_text(pcmanfm_content)
 
             live_lxsession = live_user_dir / ".config" / "lxsession" / "LXDE"
             live_lxsession.mkdir(parents=True, exist_ok=True)
@@ -1554,6 +1560,18 @@ class SystemCustomizer:
             live_openbox.mkdir(parents=True, exist_ok=True)
             (live_openbox / "lxde-rc.xml").write_text(openbox_content)
             (live_openbox / "rc.xml").write_text(openbox_content)
+
+        # 4. Autostart wallpaper enforcement for LXDE
+        autostart_dir = self.target_root / "etc" / "xdg" / "autostart"
+        autostart_dir.mkdir(parents=True, exist_ok=True)
+        (autostart_dir / "set-lxde-wallpaper.desktop").write_text(
+            "[Desktop Entry]\n"
+            "Type=Application\n"
+            "Name=Set LXDE Wallpaper\n"
+            "Exec=sh -c 'sleep 1; if command -v pcmanfm >/dev/null 2>&1; then pcmanfm --set-wallpaper=/usr/share/backgrounds/suse-cyber-chameleon.jpg --wallpaper-mode=crop; pcmanfm -w /usr/share/backgrounds/suse-cyber-chameleon.jpg --wallpaper-mode=crop; fi'\n"
+            "OnlyShowIn=LXDE;\n"
+            "NoDisplay=true\n"
+        )
 
     def configure_budgie_defaults(self):
         if self.chroot.mode == "mock" or self.config.get("desktop") != "budgie":
