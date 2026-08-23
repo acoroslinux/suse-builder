@@ -360,7 +360,10 @@ for kimg in /boot/vmlinuz-*; do
     fi
     dracut --force --no-hostonly \
       --kver "$kver" \
+      --strip \
+      --compress "zstd -15 -T0" \
       --add "dmsquash-live pollcdrom qemu qemu-net base rootfs-block udev-rules kernel-modules plymouth drm" \
+      --omit "cifs iscsi fcoe fcoe-uefi nfs nbd biosdevname multipath" \
       --add-drivers "$avail_drivers" \
       --filesystems "squashfs iso9660 overlay vfat ext4" \
       --include /etc/systemd/system/checkisomd5@.service.d /etc/systemd/system/checkisomd5@.service.d \

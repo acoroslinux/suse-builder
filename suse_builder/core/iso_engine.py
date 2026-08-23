@@ -133,19 +133,28 @@ class ISOEngine:
         for d in ["proc", "sys", "dev", "run", "tmp", "var/tmp"]:
             (source_dir / d).mkdir(parents=True, exist_ok=True)
 
-        self.toolchain.run_tool(
-            "mksquashfs",
-            [
-                str(source_dir),
-                str(output_path),
-                "-comp", compression,
-                "-b", "1M",
-                "-processors", str(num_cpus),
-                "-noappend",
-                "-wildcards",
-                "-e", "proc/*", "sys/*", "dev/*", "run/*", "tmp/*", "var/tmp/*", "var/cache/zypp/*"
-            ],
-        )
+        mksquashfs_args = [
+            str(source_dir),
+            str(output_path),
+            "-comp", compression,
+            "-b", "1M",
+            "-processors", str(num_cpus),
+            "-noappend",
+            "-wildcards",
+            "-e", "proc/*", "sys/*", "dev/*", "run/*", "tmp/*", "var/tmp/*", "var/cache/zypp/*"
+        ]
+
+        if compression == "zstd":
+            level = str(self.config.get("zstd_level", "15"))
+            mksquashfs_args.extend(["-Xcompression-level", level])
+        elif compression == "xz":
+            if self.arch in ["x86_64", "i686", "i586"]:
+                mksquashfs_args.extend(["-Xbcj", "x86"])
+            elif self.arch in ["aarch64", "arm"]:
+                mksquashfs_args.extend(["-Xbcj", "arm"])
+            mksquashfs_args.extend(["-Xdict-size", "100%"])
+
+        self.toolchain.run_tool("mksquashfs", mksquashfs_args)
 
     def generate_grub_efi_image(self):
         efiboot_img = self.iso_staging / "boot" / "grub2" / "efiboot.img"

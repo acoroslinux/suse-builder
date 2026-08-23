@@ -72,10 +72,56 @@ class ZypperManager:
         ]
         return all(path.exists() for path in checks)
 
+    def _tune_zypper_performance(self):
+        """Inject parallel download and I/O acceleration settings into /etc/zypp/zypp.conf."""
+        if self.chroot.mode == "mock":
+            return
+        zypp_conf = self.target_root / "etc" / "zypp" / "zypp.conf"
+        zypp_conf.parent.mkdir(parents=True, exist_ok=True)
+        lines = []
+        if zypp_conf.exists():
+            try:
+                lines = zypp_conf.read_text().splitlines()
+            except Exception:
+                pass
+
+        settings = {
+            "download.max_concurrent_connections": "16",
+            "download.min_download_speed": "1000",
+            "commit.downloadMode": "DownloadInAdvance",
+            "rpm.install.excludedocs": "yes",
+            "solver.onlyRequires": "true",
+        }
+
+        new_lines = []
+        applied_keys = set()
+        for line in lines:
+            stripped = line.strip()
+            modified = False
+            for k, v in settings.items():
+                if stripped.startswith(k) or stripped.startswith(f"#{k}") or stripped.startswith(f"# {k}"):
+                    new_lines.append(f"{k} = {v}")
+                    applied_keys.add(k)
+                    modified = True
+                    break
+            if not modified:
+                new_lines.append(line)
+
+        for k, v in settings.items():
+            if k not in applied_keys:
+                new_lines.append(f"{k} = {v}")
+
+        try:
+            zypp_conf.write_text("\n".join(new_lines) + "\n")
+            logger.info("Injected parallel download and I/O acceleration settings into zypp.conf.")
+        except Exception:
+            pass
+
     def add_repositories(self):
         if self.chroot.mode == "mock":
             return
 
+        self._tune_zypper_performance()
         repos = self.config.get("repos", [])
         distro_key = str(self.config.get("distro") or "").lower()
         for r in repos:
