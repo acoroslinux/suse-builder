@@ -18,6 +18,8 @@ from suse_builder.core.zypper_manager import ZypperManagerError
 from suse_builder.core.iso_engine import ISOEngineError
 from suse_builder.core.disk_engine import DiskEngineError
 from suse_builder.core.container_engine import ContainerEngineError
+from suse_builder.core.stage_manager import StageManager, StageManagerError
+from suse_builder.core.verifier import ImageVerifier
 from suse_builder.core.path_utils import resolve_from_project
 
 
@@ -230,6 +232,28 @@ def main():
     )
 
     parser.add_argument(
+        "--use-tarball",
+        type=str,
+        default=None,
+        help="Use pre-built base stage tarball (path, URL, or 'auto') to accelerate bootstrap.",
+    )
+
+    parser.add_argument(
+        "--create-tarball",
+        action="store_true",
+        help="Package base bootstrapped system into a reusable stage tarball seed.",
+    )
+
+    parser.add_argument(
+        "--verify",
+        type=str,
+        nargs="?",
+        const="auto",
+        default=None,
+        help="Verify build artifact integrity and static platform correctness (or supply specific file).",
+    )
+
+    parser.add_argument(
         "--list-options",
         action="store_true",
         help="List all available configuration profiles and exit.",
@@ -243,6 +267,15 @@ def main():
     )
 
     args = parser.parse_args()
+
+    if args.verify and args.verify != "auto":
+        verify_path = Path(args.verify)
+        if not verify_path.exists():
+            print(f"❌ Error: File to verify does not exist: {verify_path}", file=sys.stderr)
+            sys.exit(1)
+        report = ImageVerifier.verify_target(verify_path)
+        report.print_summary()
+        sys.exit(0 if report.all_passed else 1)
 
     config_root = resolve_from_project("configs")
     if args.list_options:
@@ -293,6 +326,9 @@ def main():
             with_offline_repo=args.with_offline_repo,
             offline_repo_packages=parsed_offline_packages,
             force_isolated_toolchain=args.force_isolated_toolchain,
+            use_tarball=args.use_tarball,
+            create_tarball=args.create_tarball,
+            verify=bool(args.verify),
         )
     except (ConfigLoaderError, BuildOrchestratorError) as exc:
         print(f"❌ Error: {exc}", file=sys.stderr)
@@ -310,7 +346,7 @@ def main():
     print(f"🚀 Starting SUSE-Builder [{args.mode.upper()} MODE] for {arch_lower} ({args.distro})...")
     try:
         artifact = orchestrator.build(output_name=args.output)
-    except (BuildOrchestratorError, ToolchainManagerError, ZypperManagerError, ISOEngineError, DiskEngineError, ContainerEngineError, RuntimeError, subprocess.CalledProcessError) as exc:
+    except (BuildOrchestratorError, ToolchainManagerError, ZypperManagerError, ISOEngineError, DiskEngineError, ContainerEngineError, StageManagerError, RuntimeError, subprocess.CalledProcessError) as exc:
         print(f"❌ Error: {exc}", file=sys.stderr)
         sys.exit(1)
     print(f"🎉 Build completed successfully! Output: {artifact}")

@@ -15,6 +15,8 @@ from suse_builder.core.container_engine import ContainerEngine, ContainerEngineE
 from suse_builder.core.config_loader import ConfigLoader
 from suse_builder.core.hook_manager import HookManager
 from suse_builder.core.branding_manager import BrandingManager
+from suse_builder.core.stage_manager import StageManager, StageManagerError
+from suse_builder.core.verifier import ImageVerifier, VerificationReport
 from suse_builder.core.path_utils import resolve_from_project, unmount_all_under
 import logging
 
@@ -52,6 +54,9 @@ class BuildOrchestrator:
         with_offline_repo: bool = False,
         offline_repo_packages: Optional[List[str]] = None,
         force_isolated_toolchain: bool = False,
+        use_tarball: Optional[str] = None,
+        create_tarball: Optional[str] = None,
+        verify: bool = False,
     ):
         self.arch = arch
         self.config_path = config_path
@@ -79,6 +84,9 @@ class BuildOrchestrator:
         self.with_offline_repo = with_offline_repo
         self.offline_repo_packages = offline_repo_packages or []
         self.force_isolated_toolchain = force_isolated_toolchain
+        self.use_tarball = use_tarball
+        self.create_tarball = create_tarball
+        self.verify = verify
 
         if self.multimedia_codecs and "multimedia" not in self.package_profiles:
             self.package_profiles.append("multimedia")
@@ -214,8 +222,15 @@ class BuildOrchestrator:
             toolchain.mount_virtual_fs()
             chroot.mount_virtual_fs()
 
+            stage_mgr = StageManager(self.workdir, mode=self.mode, arch=self.arch, distro=self.distro or "leap-15.6")
+            if self.use_tarball:
+                tar_path = stage_mgr.resolve_tarball(self.use_tarball)
+                stage_mgr.extract_tarball(tar_path, self.target_root)
+            else:
+                zypper = ZypperManager(chroot, self.config, toolchain=toolchain)
+                zypper.bootstrap_rootfs(self.distro, self.arch, reuse_existing=reuse_existing_rootfs)
+
             zypper = ZypperManager(chroot, self.config, toolchain=toolchain)
-            zypper.bootstrap_rootfs(self.distro, self.arch, reuse_existing=reuse_existing_rootfs)
             zypper.add_repositories()
             zypper.refresh()
 
@@ -223,6 +238,10 @@ class BuildOrchestrator:
 
             pkgs = self.config.get("packages", [])
             zypper.install_packages(pkgs)
+
+            if self.create_tarball:
+                tb_target = resolve_from_project(f"output/stage_seeds/suse-base-{self.distro}-{self.arch}.tar.zst")
+                stage_mgr.create_stage_tarball(self.target_root, tb_target)
 
             # Prepare offline package repository if requested
             offline_pkgs = list(self.config.get("offline_repo_packages", []))
@@ -396,18 +415,44 @@ fi
     def _generate_checksums(self, artifact_path: Path):
         if not artifact_path or not artifact_path.exists():
             return
-        import hashlib
+        import hashlib, datetime
         sha256 = hashlib.sha256()
+        sha512 = hashlib.sha512()
         md5 = hashlib.md5()
         with open(artifact_path, "rb") as f:
             for chunk in iter(lambda: f.read(65536), b""):
                 sha256.update(chunk)
+                sha512.update(chunk)
                 md5.update(chunk)
 
+        sha256_val = sha256.hexdigest()
+        sha512_val = sha512.hexdigest()
+        md5_val = md5.hexdigest()
+
         sha256_path = artifact_path.with_name(f"{artifact_path.name}.sha256")
+        sha512_path = artifact_path.with_name(f"{artifact_path.name}.sha512")
         md5_path = artifact_path.with_name(f"{artifact_path.name}.md5")
-        sha256_path.write_text(f"{sha256.hexdigest()}  {artifact_path.name}\n")
-        md5_path.write_text(f"{md5.hexdigest()}  {artifact_path.name}\n")
+        sha256_path.write_text(f"{sha256_val}  {artifact_path.name}\n")
+        sha512_path.write_text(f"{sha512_val}  {artifact_path.name}\n")
+        md5_path.write_text(f"{md5_val}  {artifact_path.name}\n")
+
+        # Generate structured manifest JSON
+        manifest_json_path = artifact_path.with_name(f"{artifact_path.name}.manifest.json")
+        manifest_data = {
+            "artifact": artifact_path.name,
+            "format": self.output_format,
+            "architecture": self.arch,
+            "distro": self.distro,
+            "desktop": self.desktop or "none",
+            "kernel": self.kernel,
+            "size_bytes": artifact_path.stat().st_size if artifact_path.exists() else 0,
+            "sha256": sha256_val,
+            "sha512": sha512_val,
+            "md5": md5_val,
+            "build_timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "packages_count": len(self.config.get("packages", [])),
+        }
+        manifest_json_path.write_text(json.dumps(manifest_data, indent=2))
 
         # Generate package manifest file
         manifest_path = artifact_path.with_name(f"{artifact_path.name}.manifest")
@@ -415,6 +460,11 @@ fi
         manifest_lines = [f"# SUSE-Builder Package Manifest for {artifact_path.name}\n"]
         manifest_lines.extend(f"{pkg}\n" for pkg in pkgs)
         manifest_path.write_text("".join(manifest_lines))
+
+        # Run verification report
+        if self.verify or self.mode == "real":
+            report = ImageVerifier.verify_target(artifact_path)
+            report.print_summary()
 
     def _state_file_path(self) -> Path:
         return self.workdir / ".build_state.json"

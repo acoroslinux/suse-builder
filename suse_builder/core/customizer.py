@@ -1065,38 +1065,44 @@ class SystemCustomizer:
         logger.info("Fixed system permissions on shadow, PAM, sudoers, display manager, and user home.")
 
     def configure_machine_id(self):
-        machine_id_path = self.chroot.target_root / "etc" / "machine-id"
-        machine_id_path.parent.mkdir(parents=True, exist_ok=True)
-        machine_id_path.write_text("")  # Empty = transient live ID
-        logger.info("Set /etc/machine-id to empty (transient live mode).")
+        try:
+            machine_id_path = self.chroot.target_root / "etc" / "machine-id"
+            machine_id_path.parent.mkdir(parents=True, exist_ok=True)
+            machine_id_path.write_text("")  # Empty = transient live ID
+            logger.info("Set /etc/machine-id to empty (transient live mode).")
 
-        dbus_machine_id = self.chroot.target_root / "var" / "lib" / "dbus" / "machine-id"
-        dbus_machine_id.parent.mkdir(parents=True, exist_ok=True)
-        if not dbus_machine_id.is_symlink():
-            if dbus_machine_id.exists():
-                dbus_machine_id.unlink()
-            try:
-                dbus_machine_id.symlink_to("/etc/machine-id")
-            except Exception:
-                dbus_machine_id.write_text("")
+            dbus_machine_id = self.chroot.target_root / "var" / "lib" / "dbus" / "machine-id"
+            dbus_machine_id.parent.mkdir(parents=True, exist_ok=True)
+            if not dbus_machine_id.is_symlink():
+                if dbus_machine_id.exists():
+                    dbus_machine_id.unlink()
+                try:
+                    dbus_machine_id.symlink_to("/etc/machine-id")
+                except Exception:
+                    dbus_machine_id.write_text("")
 
-        # Mask systemd-machine-id-commit to prevent re-commit on read-only rootfs
-        systemd_dir = self.chroot.target_root / "etc" / "systemd" / "system"
-        systemd_dir.mkdir(parents=True, exist_ok=True)
-        commit_mask = systemd_dir / "systemd-machine-id-commit.service"
-        if not commit_mask.exists():
-            commit_mask.symlink_to("/dev/null")
+            # Mask systemd-machine-id-commit to prevent re-commit on read-only rootfs
+            systemd_dir = self.chroot.target_root / "etc" / "systemd" / "system"
+            systemd_dir.mkdir(parents=True, exist_ok=True)
+            commit_mask = systemd_dir / "systemd-machine-id-commit.service"
+            if not commit_mask.exists():
+                commit_mask.symlink_to("/dev/null")
 
-        # Write minimal /etc/fstab if missing
-        fstab = self.chroot.target_root / "etc" / "fstab"
-        if not fstab.exists() or fstab.stat().st_size == 0:
-            fstab.parent.mkdir(parents=True, exist_ok=True)
-            fstab.write_text(
-                "# /etc/fstab: static file system information.\n"
-                "# <file system>  <mount point>  <type>  <options>  <dump>  <pass>\n"
-                "tmpfs  /tmp  tmpfs  defaults,noatime,mode=1777  0  0\n"
-                "tmpfs  /run  tmpfs  defaults,noatime,mode=0755  0  0\n"
-            )
+            # Write minimal /etc/fstab if missing
+            fstab = self.chroot.target_root / "etc" / "fstab"
+            if not fstab.exists() or fstab.stat().st_size == 0:
+                fstab.parent.mkdir(parents=True, exist_ok=True)
+                fstab.write_text(
+                    "# /etc/fstab: static file system information.\n"
+                    "# <file system>  <mount point>  <type>  <options>  <dump>  <pass>\n"
+                    "tmpfs  /tmp  tmpfs  defaults,noatime,mode=1777  0  0\n"
+                    "tmpfs  /run  tmpfs  defaults,noatime,mode=0755  0  0\n"
+                )
+        except PermissionError:
+            if self.chroot.mode == "mock":
+                logger.info("[MOCK] Skipped writing machine-id / fstab due to existing root permissions.")
+            else:
+                raise
 
         # Purge SSH host keys (regenerated on first real boot)
         for key_file in (self.chroot.target_root / "etc" / "ssh").glob("ssh_host_*"):
