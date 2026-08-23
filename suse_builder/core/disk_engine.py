@@ -189,26 +189,52 @@ class DiskEngine:
                     break
 
         # Detect exact kernel and initrd filenames under /boot
-        k_name = "vmlinuz"
-        i_name = "initrd"
-        boot_dir = mount_root / "boot"
-        if boot_dir.exists():
-            for f in sorted(boot_dir.glob("vmlinuz-*")):
-                if f.is_file():
-                    k_name = f.name
-                    break
-            for f in sorted(boot_dir.glob("initrd-*")):
-                if f.is_file():
-                    i_name = f.name
+        k_name = None
+        i_name = None
+        for bdir in [mount_root / "boot", self.target_root / "boot"]:
+            if bdir.exists():
+                for f in sorted(bdir.glob("vmlinuz-*")):
+                    if f.is_file() and not f.is_symlink():
+                        k_name = f.name
+                        break
+                for f in sorted(bdir.glob("initrd-*")):
+                    if f.is_file() and not f.is_symlink():
+                        i_name = f.name
+                        break
+                if k_name and i_name:
                     break
 
-            # Create standard symlinks /boot/vmlinuz and /boot/initrd
-            if k_name != "vmlinuz" and not (boot_dir / "vmlinuz").exists():
+        boot_dir = mount_root / "boot"
+        boot_dir.mkdir(parents=True, exist_ok=True)
+
+        if not k_name:
+            for f in sorted(boot_dir.glob("vmlinuz*")):
+                k_name = f.name
+                break
+            k_name = k_name or "vmlinuz"
+
+        if not i_name:
+            for f in sorted(boot_dir.glob("initrd*")):
+                i_name = f.name
+                break
+            i_name = i_name or "initrd"
+
+        # Create both hardlink and symlink for /boot/vmlinuz and /boot/initrd to guarantee GRUB finds them
+        if k_name != "vmlinuz" and (boot_dir / k_name).exists():
+            (boot_dir / "vmlinuz").unlink(missing_ok=True)
+            try:
+                os.link(str(boot_dir / k_name), str(boot_dir / "vmlinuz"))
+            except Exception:
                 try:
                     (boot_dir / "vmlinuz").symlink_to(k_name)
                 except Exception:
                     pass
-            if i_name != "initrd" and not (boot_dir / "initrd").exists():
+
+        if i_name != "initrd" and (boot_dir / i_name).exists():
+            (boot_dir / "initrd").unlink(missing_ok=True)
+            try:
+                os.link(str(boot_dir / i_name), str(boot_dir / "initrd"))
+            except Exception:
                 try:
                     (boot_dir / "initrd").symlink_to(i_name)
                 except Exception:
