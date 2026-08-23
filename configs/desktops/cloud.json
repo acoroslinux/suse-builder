@@ -10,14 +10,14 @@
     "wget",
     "systemd",
     "openssh",
-    "openssh-server",
     "cloud-init",
+    "cloud-utils-growpart",
     "qemu-guest-agent",
     "open-vm-tools",
-    "hyper-v",
     "rsync",
     "zstd",
-    "growpart",
-    "gptfdisk"
+    "gptfdisk",
+    "htop",
+    "tmux"
   ]
 }

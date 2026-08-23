@@ -150,18 +150,17 @@ class SystemCustomizer:
                         services_to_enable.append(auto_svc)
                         break
 
-        # Set default systemd target to graphical.target for desktop environments
-        if self.config.get("desktop") or dm:
-            try:
-                self.chroot.run_in_chroot(["systemctl", "set-default", "graphical.target"], check=False)
-            except Exception:
-                pass
+        target_name = "graphical.target" if dm else "multi-user.target"
+        try:
+            self.chroot.run_in_chroot(["systemctl", "set-default", target_name], check=False)
+        except Exception:
+            pass
 
-            default_target = self.target_root / "etc" / "systemd" / "system" / "default.target"
-            default_target.parent.mkdir(parents=True, exist_ok=True)
-            if default_target.exists() or default_target.is_symlink():
-                default_target.unlink()
-            default_target.symlink_to("/usr/lib/systemd/system/graphical.target")
+        default_target = self.target_root / "etc" / "systemd" / "system" / "default.target"
+        default_target.parent.mkdir(parents=True, exist_ok=True)
+        if default_target.exists() or default_target.is_symlink():
+            default_target.unlink()
+        default_target.symlink_to(f"/usr/lib/systemd/system/{target_name}")
 
         # Enable services via systemctl and ensure systemd wants symlinks
         graphical_wants = self.target_root / "etc" / "systemd" / "system" / "graphical.target.wants"
