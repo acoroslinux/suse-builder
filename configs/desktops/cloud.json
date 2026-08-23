@@ -1,0 +1,23 @@
+{
+  "desktop": "cloud",
+  "display_manager": null,
+  "packages": [
+    "bash",
+    "coreutils",
+    "iproute2",
+    "iputils",
+    "curl",
+    "wget",
+    "systemd",
+    "openssh",
+    "openssh-server",
+    "cloud-init",
+    "qemu-guest-agent",
+    "open-vm-tools",
+    "hyper-v",
+    "rsync",
+    "zstd",
+    "growpart",
+    "gptfdisk"
+  ]
+}

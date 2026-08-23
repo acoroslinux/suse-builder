@@ -272,6 +272,21 @@ def main():
     )
 
     parser.add_argument(
+        "--disk-size",
+        type=str,
+        default=None,
+        help="Virtual disk or image size (e.g. 4G, 8G, 16G, 32G). Default: 8G",
+    )
+
+    parser.add_argument(
+        "--filesystem",
+        type=str,
+        choices=["ext4", "btrfs"],
+        default="ext4",
+        help="Root filesystem type for disk/VM images (ext4, btrfs). Default: ext4",
+    )
+
+    parser.add_argument(
         "--list-options",
         action="store_true",
         help="List all available configuration profiles and exit.",
@@ -350,6 +365,8 @@ def main():
             use_tmpfs=args.tmpfs,
             fast=args.fast,
             benchmark=args.benchmark,
+            disk_size=args.disk_size,
+            filesystem=args.filesystem,
         )
     except (ConfigLoaderError, BuildOrchestratorError) as exc:
         print(f"❌ Error: {exc}", file=sys.stderr)

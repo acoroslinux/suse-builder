@@ -1,0 +1,25 @@
+{
+  "desktop": "server",
+  "display_manager": null,
+  "packages": [
+    "bash",
+    "coreutils",
+    "iproute2",
+    "iputils",
+    "curl",
+    "wget",
+    "systemd",
+    "openssh",
+    "openssh-server",
+    "htop",
+    "btop",
+    "tmux",
+    "rsync",
+    "tar",
+    "bzip2",
+    "gzip",
+    "zstd",
+    "cronie",
+    "logrotate"
+  ]
+}

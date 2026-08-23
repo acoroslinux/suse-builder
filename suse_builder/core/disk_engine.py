@@ -127,17 +127,31 @@ class DiskEngine:
                 "boot/grub/grub.cfg=/dev/null"
             ], capture_output=True, check=False)
 
+        # Detect exact kernel and initrd filenames under /boot
+        k_name = "vmlinuz"
+        i_name = "initrd"
+        boot_dir = mount_root / "boot"
+        if boot_dir.exists():
+            for f in sorted(boot_dir.glob("vmlinuz*")):
+                if f.is_file() or f.is_symlink():
+                    k_name = f.name
+                    break
+            for f in sorted(boot_dir.glob("initrd*")):
+                if f.is_file() or f.is_symlink():
+                    i_name = f.name
+                    break
+
         grub_cfg = (
             'set default="0"\n'
             'set timeout=5\n\n'
             f'search --no-floppy --fs-uuid --set=root {root_uuid}\n\n'
             'menuentry "openSUSE Linux" {\n'
-            f'    linux /boot/vmlinuz root=UUID={root_uuid} rw splash quiet\n'
-            '    initrd /boot/initrd\n'
+            f'    linux /boot/{k_name} root=UUID={root_uuid} rw splash quiet console=tty1 console=ttyS0,115200\n'
+            f'    initrd /boot/{i_name}\n'
             '}\n'
             'menuentry "openSUSE Linux (Recovery Mode)" {\n'
-            f'    linux /boot/vmlinuz root=UUID={root_uuid} single\n'
-            '    initrd /boot/initrd\n'
+            f'    linux /boot/{k_name} root=UUID={root_uuid} single console=tty1 console=ttyS0,115200\n'
+            f'    initrd /boot/{i_name}\n'
             '}\n'
         )
         (boot_efi_dir / "grub.cfg").write_text(grub_cfg)

@@ -60,6 +60,8 @@ class BuildOrchestrator:
         use_tmpfs: bool = False,
         fast: bool = False,
         benchmark: bool = False,
+        disk_size: Optional[str] = None,
+        filesystem: Optional[str] = None,
     ):
         self.arch = arch
         self.config_path = config_path
@@ -93,6 +95,8 @@ class BuildOrchestrator:
         self.use_tmpfs = use_tmpfs
         self.fast = fast
         self.benchmark = benchmark
+        self.disk_size = disk_size
+        self.filesystem = filesystem
         self._tmpfs_mounted = False
         self.timings: Dict[str, float] = {}
 
@@ -128,6 +132,10 @@ class BuildOrchestrator:
         self.config["with_flathub"] = self.with_flathub
         self.config["with_zram"] = self.with_zram
         self.config["compression"] = self.compression
+        if self.disk_size:
+            self.config["disk_image_size"] = self.disk_size
+        if self.filesystem:
+            self.config["filesystem"] = self.filesystem
         if self.hostname:
             self.config["hostname"] = self.hostname
         if self.live_user:

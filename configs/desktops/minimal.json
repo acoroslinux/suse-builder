@@ -1,0 +1,16 @@
+{
+  "desktop": "minimal",
+  "display_manager": null,
+  "packages": [
+    "bash",
+    "coreutils",
+    "iproute2",
+    "iputils",
+    "curl",
+    "wget",
+    "systemd",
+    "htop",
+    "tmux",
+    "openssh"
+  ]
+}
