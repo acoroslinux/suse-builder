@@ -114,8 +114,8 @@ def main():
     parser.add_argument(
         "--distro",
         type=str,
-        default="tumbleweed",
-        help="Distro profile (tumbleweed, leap-15.6, leap-16.0, slowroll). Default: tumbleweed",
+        default="leap-15.6",
+        help="Distro profile (leap-15.6, tumbleweed, leap-16.0, slowroll). Default: leap-15.6",
     )
 
     parser.add_argument(
