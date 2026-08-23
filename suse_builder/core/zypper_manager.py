@@ -181,8 +181,10 @@ class ZypperManager:
             else:
                 logger.warning("Local seed tarball extraction failed. Falling back to Zypper bootstrap.")
 
+        # Always ensure repository configurations are created and up to date
+        self.add_repositories()
+
         if not seed_used:
-            self.add_repositories()
             cmd_signed = [
                 "--non-interactive", "--gpg-auto-import-keys", "--root", str(self.target_root),
                 "install", "--force-resolution", "-y", "--type", "pattern", "base"
