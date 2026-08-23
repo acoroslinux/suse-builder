@@ -1,0 +1,8 @@
+[org/gnome/file-roller/listing]
+show-path=false
+
+[org/gnome/file-roller/dialogs/new]
+encrypt-header=false
+expand-options=false
+volume-size=0
+default-extension='.tar.gz'
