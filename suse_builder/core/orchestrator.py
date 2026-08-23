@@ -456,12 +456,16 @@ for kimg in /boot/vmlinuz-*; do
     if [ -z "$avail_drivers" ]; then
         avail_drivers="ext4 virtio_blk virtio_pci virtio_scsi ahci sd_mod dm_mod squashfs loop overlay iso9660 zstd"
     fi
+    omit_mods="cifs iscsi fcoe fcoe-uefi nfs nbd biosdevname multipath"
+    if ! command -v plymouth >/dev/null 2>&1; then
+        omit_mods="$omit_mods plymouth"
+    fi
     dracut --force --no-hostonly \
       --kver "$kver" \
       --strip \
       --compress "zstd -15 -T0" \
       --add "base rootfs-block udev-rules kernel-modules drm qemu qemu-net dmsquash-live pollcdrom" \
-      --omit "cifs iscsi fcoe fcoe-uefi nfs nbd biosdevname multipath" \
+      --omit "$omit_mods" \
       --add-drivers "$avail_drivers" \
       --filesystems "ext4 btrfs xfs vfat overlay iso9660 squashfs" \
       "/boot/initrd-$kver"
