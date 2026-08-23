@@ -125,6 +125,19 @@ class ZypperManager:
         self._tune_zypper_performance()
         repos = self.config.get("repos", [])
         distro_key = str(self.config.get("distro") or "").lower()
+
+        repos_d = self.target_root / "etc" / "zypp" / "repos.d"
+        existing_aliases = set()
+        if repos_d.exists():
+            for r_file in repos_d.glob("*.repo"):
+                try:
+                    for line in r_file.read_text().splitlines():
+                        line = line.strip()
+                        if line.startswith("[") and line.endswith("]"):
+                            existing_aliases.add(line[1:-1].strip())
+                except Exception:
+                    pass
+
         for r in repos:
             name = r.get("name", "repo")
             url = r.get("url")
@@ -133,16 +146,20 @@ class ZypperManager:
                     url = "https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_15.6/"
                 elif "slowroll" in distro_key:
                     url = "https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Slowroll/Essentials/"
-            repo_file = self.target_root / "etc" / "zypp" / "repos.d" / f"{name}.repo"
+            
+            if name in existing_aliases:
+                continue
+
+            repo_file = repos_d / f"{name}.repo"
             if url and not repo_file.exists():
                 ar_args = ["--root", str(self.target_root), "ar", "-f"]
                 if r.get("gpgcheck") is False:
                     ar_args.append("--no-gpgcheck")
                 ar_args.extend([url, name])
                 self._run_zypper(ar_args)
+                existing_aliases.add(name)
 
         # Enforce keeppackages=1 on all repository definitions
-        repos_d = self.target_root / "etc" / "zypp" / "repos.d"
         if repos_d.exists():
             for r_file in repos_d.glob("*.repo"):
                 try:
