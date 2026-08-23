@@ -52,7 +52,7 @@ class TestZypperManager:
         cache_dir = tmp_path / "cache" / "x86_64" / "zypper"
         seed_cache = cache_dir.parent / "seed-tumbleweed-x86_64.tar.gz"
         seed_cache.parent.mkdir(parents=True, exist_ok=True)
-        seed_cache.write_bytes(b"seed")
+        seed_cache.write_bytes(b"0" * 1024)
 
         zypper = ZypperManager(chroot, config={"system": {"zypper_cache": str(cache_dir)}})
 
