@@ -116,23 +116,45 @@ class DiskEngine:
         )
         (esp_dir / "startup.nsh").write_text(startup_nsh)
 
+        # Copy GRUB x86_64-efi modules directory so GRUB has all drivers available at runtime
+        mod_src = None
+        for cand_dir in [
+            mount_root / "usr" / "share" / "grub2" / "x86_64-efi",
+            mount_root / "usr" / "lib" / "grub2" / "x86_64-efi",
+            Path("/usr/lib/grub/x86_64-efi"),
+            Path("/usr/share/grub2/x86_64-efi")
+        ]:
+            if cand_dir.is_dir() and any(cand_dir.glob("*.mod")):
+                mod_src = cand_dir
+                break
+
+        if mod_src:
+            for dst_dir in [
+                mount_root / "boot" / "grub2" / "x86_64-efi",
+                mount_root / "boot" / "grub" / "x86_64-efi",
+                boot_efi_dir / "x86_64-efi"
+            ]:
+                dst_dir.mkdir(parents=True, exist_ok=True)
+                for mod_file in mod_src.glob("*"):
+                    if mod_file.is_file():
+                        shutil.copy2(mod_file, dst_dir / mod_file.name)
+            logger.info(f"Copied GRUB EFI modules from {mod_src} to /boot/grub2/x86_64-efi.")
+
         # Create early bootstrap grub.cfg to embed inside standalone BOOTX64.EFI
         early_cfg = (
-            'insmod part_gpt\n'
-            'insmod part_msdos\n'
-            'insmod fat\n'
-            'insmod ext2\n'
-            'insmod btrfs\n'
+            'set root=($cmdpath)\n'
+            'set prefix=($cmdpath)\n'
+            'if [ -f ($prefix)/grub.cfg ]; then\n'
+            '    configfile ($prefix)/grub.cfg\n'
+            'fi\n'
             f'search --no-floppy --fs-uuid --set=root {root_uuid}\n'
             'set prefix=($root)/boot/grub2\n'
             'if [ ! -f $prefix/grub.cfg ]; then\n'
             '    set prefix=($root)/boot/grub\n'
             'fi\n'
-            'if [ ! -f $prefix/grub.cfg ]; then\n'
-            f'    search --no-floppy --fs-uuid --set=root {esp_uuid}\n'
-            '    set prefix=($root)/EFI/BOOT\n'
+            'if [ -f $prefix/grub.cfg ]; then\n'
+            '    configfile $prefix/grub.cfg\n'
             'fi\n'
-            'configfile $prefix/grub.cfg\n'
         )
         early_cfg_path = self.workdir / "early_grub.cfg"
         early_cfg_path.write_text(early_cfg)
@@ -185,8 +207,8 @@ class DiskEngine:
             'set default="0"\n'
             'set timeout=5\n\n'
             f'search --no-floppy --fs-uuid --set=root {root_uuid}\n\n'
-            'menuentry "openSUSE Linux" {\n'
-            f'    linux /boot/{k_name} root=UUID={root_uuid} rw splash quiet console=tty1 console=ttyS0,115200\n'
+            'menuentry "openSUSE Linux (Leap 15.6)" {\n'
+            f'    linux /boot/{k_name} root=UUID={root_uuid} rw quiet splash console=tty1 console=ttyS0,115200\n'
             f'    initrd /boot/{i_name}\n'
             '}\n'
             'menuentry "openSUSE Linux (Recovery Mode)" {\n'
