@@ -40,12 +40,26 @@ class ChrootManager:
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(qemu_path, destination)
 
+    def ensure_usrmerge_symlinks(self):
+        """Ensure standard UsrMerge symlinks (/bin -> usr/bin, /sbin -> usr/sbin, /lib -> usr/lib, /lib64 -> usr/lib64)."""
+        if self.mode == "mock":
+            return
+        for link_name, target in [("bin", "usr/bin"), ("sbin", "usr/sbin"), ("lib", "usr/lib"), ("lib64", "usr/lib64")]:
+            link_path = self.target_root / link_name
+            target_path = self.target_root / target
+            if target_path.exists() and not link_path.exists() and not link_path.is_symlink():
+                try:
+                    link_path.symlink_to(target)
+                except Exception:
+                    pass
+
     def mount_virtual_fs(self):
         if self.mode == "mock":
             logger.info("[MOCK CHROOT] Simulating mounting virtual filesystems.")
             return
 
         self.target_root.mkdir(parents=True, exist_ok=True)
+        self.ensure_usrmerge_symlinks()
         mounts = [
             ("proc", self.target_root / "proc", "proc", None),
             ("sysfs", self.target_root / "sys", "sysfs", None),
@@ -96,10 +110,11 @@ class ChrootManager:
             logger.info(f"[MOCK CHROOT EXEC] {cmd_str}")
             return subprocess.CompletedProcess(args=command, returncode=0, stdout="", stderr="")
 
+        env_prefix = ["/usr/bin/env", "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C.UTF-8", "LC_ALL=C.UTF-8"]
         if isinstance(command, str):
-            cmd = ["chroot", str(self.target_root), "/bin/sh", "-c", command]
+            cmd = ["chroot", str(self.target_root)] + env_prefix + ["/bin/sh", "-c", command]
         else:
-            cmd = ["chroot", str(self.target_root)] + command
+            cmd = ["chroot", str(self.target_root)] + env_prefix + list(command)
 
         full_env = os.environ.copy()
         full_env["PATH"] = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
