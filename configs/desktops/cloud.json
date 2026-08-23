@@ -11,12 +11,12 @@
     "systemd",
     "openssh",
     "cloud-init",
-    "cloud-utils-growpart",
     "qemu-guest-agent",
     "open-vm-tools",
     "rsync",
     "zstd",
     "gptfdisk",
+    "parted",
     "htop",
     "tmux"
   ]
