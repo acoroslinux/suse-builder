@@ -100,10 +100,36 @@ class DiskEngine:
         except Exception:
             return ""
 
-    def _install_uefi_bootloader(self, mount_root: Path, esp_dir: Path, root_uuid: str) -> None:
+    def _install_uefi_bootloader(self, mount_root: Path, esp_dir: Path, root_uuid: str, esp_uuid: str) -> None:
         """Populate the ESP with EFI binaries and standalone grub.cfg for UEFI booting."""
         boot_efi_dir = esp_dir / "EFI" / "BOOT"
         boot_efi_dir.mkdir(parents=True, exist_ok=True)
+        suse_efi_dir = esp_dir / "EFI" / "opensuse"
+        suse_efi_dir.mkdir(parents=True, exist_ok=True)
+
+        # Write startup.nsh script for instant auto-boot from UEFI Shell
+        (esp_dir / "startup.nsh").write_text("\\EFI\\BOOT\\BOOTX64.EFI\n")
+
+        # Create early bootstrap grub.cfg to embed inside standalone BOOTX64.EFI
+        early_cfg = (
+            'insmod part_gpt\n'
+            'insmod part_msdos\n'
+            'insmod fat\n'
+            'insmod ext2\n'
+            'insmod btrfs\n'
+            f'search --no-floppy --fs-uuid --set=root {root_uuid}\n'
+            'set prefix=($root)/boot/grub2\n'
+            'if [ ! -f $prefix/grub.cfg ]; then\n'
+            '    set prefix=($root)/boot/grub\n'
+            'fi\n'
+            'if [ ! -f $prefix/grub.cfg ]; then\n'
+            f'    search --no-floppy --fs-uuid --set=root {esp_uuid}\n'
+            '    set prefix=($root)/EFI/BOOT\n'
+            'fi\n'
+            'configfile $prefix/grub.cfg\n'
+        )
+        early_cfg_path = self.workdir / "early_grub.cfg"
+        early_cfg_path.write_text(early_cfg)
 
         grub_mkstandalone = shutil.which("grub2-mkstandalone") or shutil.which("grub-mkstandalone")
         if grub_mkstandalone:
@@ -118,8 +144,9 @@ class DiskEngine:
                 "-O", "x86_64-efi",
                 "-o", str(boot_efi_dir / "BOOTX64.EFI"),
                 "--modules", grub_modules,
-                "boot/grub/grub.cfg=/dev/null"
+                f"boot/grub/grub.cfg={early_cfg_path}"
             ], capture_output=True, check=False)
+            shutil.copy2(boot_efi_dir / "BOOTX64.EFI", suse_efi_dir / "grubx64.efi")
         else:
             candidates = [
                 mount_root / "usr" / "lib" / "grub2" / "x86_64-efi" / "grub.efi",
@@ -130,6 +157,7 @@ class DiskEngine:
             for cand in candidates:
                 if cand.exists():
                     shutil.copy2(cand, boot_efi_dir / "BOOTX64.EFI")
+                    shutil.copy2(cand, suse_efi_dir / "grubx64.efi")
                     break
 
         # Detect exact kernel and initrd filenames under /boot
@@ -166,9 +194,6 @@ class DiskEngine:
             '}\n'
         )
         (boot_efi_dir / "grub.cfg").write_text(grub_cfg)
-
-        suse_efi_dir = esp_dir / "EFI" / "opensuse"
-        suse_efi_dir.mkdir(parents=True, exist_ok=True)
         (suse_efi_dir / "grub.cfg").write_text(grub_cfg)
 
         # Also write grub.cfg to rootfs /boot/grub2/ and /boot/grub/ for Legacy BIOS booting
@@ -177,10 +202,9 @@ class DiskEngine:
             (gdir / "grub.cfg").write_text(grub_cfg)
 
     def _build_partitioned_disk(self, out_path: Path, label: str) -> None:
-        """Create a Hybrid BIOS + UEFI GPT partitioned image (bios_grub + ESP + rootfs)."""
+        """Create a GPT partitioned image with EFI System Partition (ESP) as partition 1 and rootfs as partition 2."""
         sfdisk_script = (
             "label: gpt\n"
-            "type=21686148-6449-6E6F-744E-656564454649, size=2M, name=\"BIOS boot partition\"\n"
             "type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, size=256M, name=\"EFI System Partition\"\n"
             "type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, name=\"Linux rootfs\"\n"
         )
@@ -192,34 +216,33 @@ class DiskEngine:
         loop_dev = loop_res.stdout.strip()
 
         try:
-            p1_bios = f"{loop_dev}p1"
-            p2_esp = f"{loop_dev}p2"
-            p3_root = f"{loop_dev}p3"
+            p1_esp = f"{loop_dev}p1"
+            p2_root = f"{loop_dev}p2"
             fs_type = str(self.config.get("filesystem") or "ext4").lower()
 
             if shutil.which("mkfs.vfat"):
-                subprocess.run(["mkfs.vfat", "-F", "32", "-n", "EFI", p2_esp], check=True, stdout=subprocess.DEVNULL)
+                subprocess.run(["mkfs.vfat", "-F", "32", "-n", "EFI", p1_esp], check=True, stdout=subprocess.DEVNULL)
 
             if fs_type == "btrfs" and shutil.which("mkfs.btrfs"):
-                subprocess.run(["mkfs.btrfs", "-f", "-L", label, p3_root], check=True, stdout=subprocess.DEVNULL)
+                subprocess.run(["mkfs.btrfs", "-f", "-L", label, p2_root], check=True, stdout=subprocess.DEVNULL)
                 mount_root = self.workdir / "mnt_root"
                 mount_root.mkdir(parents=True, exist_ok=True)
-                subprocess.run(["mount", p3_root, str(mount_root)], check=True)
+                subprocess.run(["mount", p2_root, str(mount_root)], check=True)
                 try:
                     subprocess.run(["cp", "-a", f"{self.target_root}/.", str(mount_root)], check=True)
                 finally:
                     subprocess.run(["umount", str(mount_root)], check=False)
             else:
                 fs_type = "ext4"
-                subprocess.run(["mkfs.ext4", "-F", "-L", label, "-d", str(self.target_root), p3_root], check=True, stdout=subprocess.DEVNULL)
+                subprocess.run(["mkfs.ext4", "-F", "-L", label, "-d", str(self.target_root), p2_root], check=True, stdout=subprocess.DEVNULL)
 
             # Mount to configure fstab, EFI binaries, and GRUB
             mount_root = self.workdir / "mnt_root"
             mount_root.mkdir(parents=True, exist_ok=True)
-            subprocess.run(["mount", p3_root, str(mount_root)], check=True)
+            subprocess.run(["mount", p2_root, str(mount_root)], check=True)
             try:
-                esp_uuid = self._get_device_uuid(p2_esp)
-                root_uuid = self._get_device_uuid(p3_root)
+                esp_uuid = self._get_device_uuid(p1_esp)
+                root_uuid = self._get_device_uuid(p2_root)
 
                 fstab_path = mount_root / "etc" / "fstab"
                 fstab_path.parent.mkdir(parents=True, exist_ok=True)
@@ -233,26 +256,11 @@ class DiskEngine:
 
                 esp_dir = mount_root / "boot" / "efi"
                 esp_dir.mkdir(parents=True, exist_ok=True)
-                subprocess.run(["mount", p2_esp, str(esp_dir)], check=True)
+                subprocess.run(["mount", p1_esp, str(esp_dir)], check=True)
                 try:
-                    self._install_uefi_bootloader(mount_root, esp_dir, root_uuid)
+                    self._install_uefi_bootloader(mount_root, esp_dir, root_uuid, esp_uuid)
                 finally:
                     subprocess.run(["umount", str(esp_dir)], check=False)
-
-                # Install Legacy BIOS GRUB into MBR / bios_grub partition for SeaBIOS compatibility
-                for grub_tool in ["grub2-install", "grub-install"]:
-                    if shutil.which(grub_tool):
-                        try:
-                            subprocess.run([
-                                grub_tool,
-                                "--target=i386-pc",
-                                f"--boot-directory={mount_root}/boot",
-                                loop_dev
-                            ], capture_output=True, check=False)
-                            logger.info(f"Installed Legacy BIOS GRUB to {loop_dev} via {grub_tool}.")
-                            break
-                        except Exception as e:
-                            logger.debug(f"Legacy BIOS GRUB install via {grub_tool} skipped: {e}")
             finally:
                 subprocess.run(["umount", str(mount_root)], check=False)
 
