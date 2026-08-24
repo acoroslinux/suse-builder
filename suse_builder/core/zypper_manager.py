@@ -37,15 +37,17 @@ class ZypperManager:
         full_args = [
             "--non-interactive",
             "--gpg-auto-import-keys",
-            "--arch", target_arch,
             "--cache-dir", str(metadata_cache),
             "--pkg-cache-dir", str(package_cache),
             *cleaned_args,
         ]
 
+        env = os.environ.copy()
+        env["ZYPP_ARCH"] = target_arch
+
         if self.toolchain:
-            return self.toolchain.run_tool("zypper", full_args, check=check)
-        return subprocess.run(["zypper", *full_args], check=check)
+            return self.toolchain.run_tool("zypper", full_args, check=check, env={"ZYPP_ARCH": target_arch})
+        return subprocess.run(["zypper", *full_args], env=env, check=check)
 
     def _run_prefer_signed(self, signed_args: List[str], fallback_args: Optional[List[str]] = None):
         """Try signed operation first and gracefully fallback when keys are unavailable."""

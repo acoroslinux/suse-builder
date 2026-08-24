@@ -210,7 +210,7 @@ class ToolchainManager:
 
         self.is_mounted = False
 
-    def run_tool(self, tool_binary: str, args: List[str], check: bool = True) -> subprocess.CompletedProcess:
+    def run_tool(self, tool_binary: str, args: List[str], check: bool = True, env: Optional[Dict[str, str]] = None) -> subprocess.CompletedProcess:
         if self.mode == "mock":
             cmd_str = f"{tool_binary} {' '.join(args)}"
             logger.info(f"[MOCK TOOL EXEC] {cmd_str}")
@@ -220,11 +220,15 @@ class ToolchainManager:
             if not self.is_mounted:
                 raise ToolchainManagerError("Isolated build host is not mounted.")
             translated = [self._translate_path(arg) for arg in args]
-            cmd = ["chroot", str(self.build_host_dir), tool_binary] + translated
+            env_prefix = [f"{k}={v}" for k, v in (env or {}).items()]
+            cmd = ["chroot", str(self.build_host_dir)] + (["env"] + env_prefix if env_prefix else []) + [tool_binary] + translated
+            return subprocess.run(cmd, check=check)
         else:
+            merged_env = os.environ.copy()
+            if env:
+                merged_env.update(env)
             cmd = [tool_binary] + args
-
-        return subprocess.run(cmd, check=check)
+            return subprocess.run(cmd, env=merged_env, check=check)
 
     def _translate_path(self, value: str) -> str:
         if value.startswith("-") and "=" not in value:
