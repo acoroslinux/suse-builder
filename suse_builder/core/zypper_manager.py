@@ -25,6 +25,23 @@ class ZypperManager:
         metadata_cache.mkdir(parents=True, exist_ok=True)
         package_cache.mkdir(parents=True, exist_ok=True)
 
+        self._tune_zypper_performance()
+
+        zypp_conf_path = self.target_root / "etc" / "zypp" / "zypp.conf"
+
+        cleaned_args = [a for a in args if a not in ("--non-interactive", "--gpg-auto-import-keys")]
+        full_args = [
+            "--non-interactive",
+            "--gpg-auto-import-keys",
+            "--config", str(zypp_conf_path),
+            "--cache-dir", str(metadata_cache),
+            "--pkg-cache-dir", str(package_cache),
+            *cleaned_args,
+        ]
+
+        env = os.environ.copy()
+        env["ZYPP_CONF"] = str(zypp_conf_path)
+
         target_arch = str(getattr(self.chroot, "arch", "") or self.config.get("arch", "x86_64")).lower()
         if target_arch in {"amd64"}:
             target_arch = "x86_64"
@@ -32,21 +49,10 @@ class ZypperManager:
             target_arch = "aarch64"
         elif target_arch in {"i686", "i386"}:
             target_arch = "i586"
-
-        cleaned_args = [a for a in args if a not in ("--non-interactive", "--gpg-auto-import-keys")]
-        full_args = [
-            "--non-interactive",
-            "--gpg-auto-import-keys",
-            "--cache-dir", str(metadata_cache),
-            "--pkg-cache-dir", str(package_cache),
-            *cleaned_args,
-        ]
-
-        env = os.environ.copy()
         env["ZYPP_ARCH"] = target_arch
 
         if self.toolchain:
-            return self.toolchain.run_tool("zypper", full_args, check=check, env={"ZYPP_ARCH": target_arch})
+            return self.toolchain.run_tool("zypper", full_args, check=check, env={"ZYPP_CONF": str(zypp_conf_path), "ZYPP_ARCH": target_arch})
         return subprocess.run(["zypper", *full_args], env=env, check=check)
 
     def _run_prefer_signed(self, signed_args: List[str], fallback_args: Optional[List[str]] = None):
@@ -89,12 +95,6 @@ class ZypperManager:
             return
         zypp_conf = self.target_root / "etc" / "zypp" / "zypp.conf"
         zypp_conf.parent.mkdir(parents=True, exist_ok=True)
-        lines = []
-        if zypp_conf.exists():
-            try:
-                lines = zypp_conf.read_text().splitlines()
-            except Exception:
-                pass
 
         arch_val = str(getattr(self.chroot, "arch", "") or self.config.get("arch", "x86_64")).lower()
         if arch_val in {"arm64"}:
@@ -114,29 +114,34 @@ class ZypperManager:
             "keeppackages": "1",
         }
 
-        new_lines = []
-        applied_keys = set()
-        for line in lines:
-            stripped = line.strip()
-            modified = False
-            for k, v in settings.items():
-                if stripped.startswith(k) or stripped.startswith(f"#{k}") or stripped.startswith(f"# {k}"):
-                    new_lines.append(f"{k} = {v}")
-                    applied_keys.add(k)
-                    modified = True
-                    break
-            if not modified:
-                new_lines.append(line)
-
-        for k, v in settings.items():
-            if k not in applied_keys:
+        if not zypp_conf.exists() or zypp_conf.stat().st_size == 0:
+            content = "[main]\n" + "\n".join(f"{k} = {v}" for k, v in settings.items()) + "\n"
+            zypp_conf.write_text(content)
+        else:
+            try:
+                lines = zypp_conf.read_text().splitlines()
+            except Exception:
+                lines = []
+            new_lines = []
+            has_main = False
+            remaining = dict(settings)
+            for line in lines:
+                if line.strip() == "[main]":
+                    has_main = True
+                key = line.split("=")[0].strip() if "=" in line else ""
+                if key in remaining:
+                    new_lines.append(f"{key} = {remaining[key]}")
+                    remaining.pop(key, None)
+                else:
+                    new_lines.append(line)
+            if not has_main:
+                new_lines.insert(0, "[main]")
+            for k, v in remaining.items():
                 new_lines.append(f"{k} = {v}")
-
-        try:
-            zypp_conf.write_text("\n".join(new_lines) + "\n")
-            logger.info("Injected parallel download and I/O acceleration settings into zypp.conf.")
-        except Exception:
-            pass
+            try:
+                zypp_conf.write_text("\n".join(new_lines) + "\n")
+            except Exception:
+                pass
 
     def add_repositories(self):
         if self.chroot.mode == "mock":
