@@ -443,15 +443,15 @@ class SystemCustomizer:
             conf_file.parent.mkdir(parents=True, exist_ok=True)
             conf_file.write_text(lightdm_content)
 
-        # Ensure LightDM runtime directories exist and have proper ownership
-        for ldir in ["var/lib/lightdm", "var/lib/lightdm-data", "var/log/lightdm", "var/cache/lightdm"]:
-            (self.target_root / ldir).mkdir(parents=True, exist_ok=True)
-        try:
-            self.chroot.run_in_chroot(["chown", "-R", "lightdm:lightdm", "/var/lib/lightdm", "/var/lib/lightdm-data", "/var/log/lightdm", "/var/cache/lightdm"], check=False)
-            for g in ["video", "render", "input", "tty", "users"]:
-                self.chroot.run_in_chroot(["usermod", "-aG", g, "lightdm"], check=False)
-        except Exception:
-            pass
+        passwd_file = self.target_root / "etc" / "passwd"
+        has_lightdm_user = passwd_file.exists() and "lightdm:" in passwd_file.read_text()
+        if has_lightdm_user:
+            try:
+                self.chroot.run_in_chroot(["chown", "-R", "lightdm:lightdm", "/var/lib/lightdm", "/var/lib/lightdm-data", "/var/log/lightdm", "/var/cache/lightdm"], check=False)
+                for g in ["video", "render", "input", "tty", "users"]:
+                    self.chroot.run_in_chroot(["usermod", "-aG", g, "lightdm"], check=False)
+            except Exception:
+                pass
 
         # LXDM configuration
         lxdm_conf = self.target_root / "etc" / "lxdm" / "lxdm.conf"

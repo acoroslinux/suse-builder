@@ -457,15 +457,15 @@ class BuildOrchestrator:
             raise BuildOrchestratorError(f"Missing boot directory in rootfs: {boot_dir}")
 
         kernels = sorted(
-            f.name for f in boot_dir.iterdir() if f.is_file() and f.name.startswith("vmlinuz")
+            f.name for f in boot_dir.iterdir() if f.is_file() and any(f.name.startswith(p) for p in ["vmlinuz", "Image", "vmlinux"])
         )
         initrds = sorted(
-            f.name for f in boot_dir.iterdir() if f.is_file() and f.name.startswith("initrd")
+            f.name for f in boot_dir.iterdir() if f.is_file() and any(f.name.startswith(p) for p in ["initrd", "initramfs"])
         )
 
         if not kernels:
             raise BuildOrchestratorError(
-                f"No kernel found in {boot_dir}; expected a file starting with 'vmlinuz'."
+                f"No kernel found in {boot_dir}; expected a file starting with 'vmlinuz', 'Image', or 'vmlinux'."
             )
 
         logger.info("Generating initramfs using dracut...")
@@ -476,10 +476,11 @@ if ! command -v dracut >/dev/null 2>&1; then
     exit 1
 fi
 found_kernel=0
-for kimg in /boot/vmlinuz-*; do
+for kimg in /boot/vmlinuz-* /boot/Image-* /boot/vmlinux-*; do
     [ -e "$kimg" ] || continue
     found_kernel=1
-    kver="${kimg#/boot/vmlinuz-}"
+    kname=$(basename "$kimg")
+    kver=$(echo "$kname" | sed -E 's/^(vmlinuz|Image|vmlinux)-//')
     wanted_drivers="ext4 btrfs xfs squashfs loop overlay iso9660 isofs zstd zstd_decompress dm_mod sr_mod cdrom sd_mod ahci ata_piix ata_generic pata_acpi pata_serverworks virtio virtio_ring virtio_blk virtio_scsi virtio_pci virtio_net uas usb_storage nvme bochs bochs-drm bochs_drm vmwgfx virtio-gpu qxl nouveau radeon amdgpu i915"
     avail_drivers=""
     for d in $wanted_drivers; do
@@ -502,21 +503,23 @@ for kimg in /boot/vmlinuz-*; do
     if [ "''' + self.output_format + r'''" = "iso" ]; then
         add_mods="$add_mods dmsquash-live pollcdrom"
     fi
+    out_initrd="/boot/initrd-$kver"
     dracut --force --no-hostonly \
       --kver "$kver" \
       --strip \
       --compress "zstd -15 -T0" \
       --add "$add_mods" \
       --omit "$omit_mods" \
-      --add-drivers "$avail_drivers" \
-      --filesystems "ext4 btrfs xfs vfat overlay iso9660 squashfs" \
-      "/boot/initrd-$kver"
-
+      --drivers "$avail_drivers" \
+      "$out_initrd" "$kver"
+    ln -sf "$kname" "/boot/vmlinuz"
+    if [ "$kname" != "Image" ]; then
+        ln -sf "$kname" "/boot/Image"
+    fi
     ln -sf "initrd-$kver" "/boot/initrd"
-    ln -sf "vmlinuz-$kver" "/boot/vmlinuz"
 done
 if [ "$found_kernel" -eq 0 ]; then
-    echo "No /boot/vmlinuz-* kernels found for dracut" >&2
+    echo "No /boot/vmlinuz-* or /boot/Image-* kernels found for dracut" >&2
     exit 1
 fi
 '''

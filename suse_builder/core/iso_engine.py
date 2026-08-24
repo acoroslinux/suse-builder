@@ -110,9 +110,9 @@ class ISOEngine:
         if boot_dir.exists():
             for f in sorted(boot_dir.iterdir()):
                 if f.is_file():
-                    if f.name.startswith("vmlinuz"):
+                    if any(f.name.startswith(p) for p in ["vmlinuz", "Image", "vmlinux"]):
                         kernel = f.name
-                    elif f.name.startswith("initrd"):
+                    elif any(f.name.startswith(p) for p in ["initrd", "initramfs"]):
                         initramfs = f.name
 
         return kernel, initramfs
