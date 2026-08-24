@@ -473,11 +473,15 @@ for kimg in /boot/vmlinuz-*; do
     if ! command -v plymouth >/dev/null 2>&1; then
         omit_mods="$omit_mods plymouth"
     fi
+    add_mods="base rootfs-block udev-rules kernel-modules drm qemu qemu-net"
+    if [ "''' + self.output_format + r'''" = "iso" ]; then
+        add_mods="$add_mods dmsquash-live pollcdrom"
+    fi
     dracut --force --no-hostonly \
       --kver "$kver" \
       --strip \
       --compress "zstd -15 -T0" \
-      --add "base rootfs-block udev-rules kernel-modules drm qemu qemu-net dmsquash-live pollcdrom" \
+      --add "$add_mods" \
       --omit "$omit_mods" \
       --add-drivers "$avail_drivers" \
       --filesystems "ext4 btrfs xfs vfat overlay iso9660 squashfs" \

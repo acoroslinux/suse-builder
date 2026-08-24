@@ -239,6 +239,18 @@ class ZypperManager:
         if res.returncode != 0:
             raise ZypperManagerError(f"Could not install rootfs bootstrap utilities (exit code {res.returncode})")
 
+        # Import GPG keys into RPM database to eliminate NOKEY signature warnings
+        for key_dir in [
+            self.target_root / "usr" / "lib" / "sysimage" / "rpm",
+            self.target_root / "etc" / "pki" / "rpm-gpg",
+            self.target_root / "usr" / "share" / "doc" / "packages" / "openSUSE-release"
+        ]:
+            if key_dir.exists():
+                for key_file in key_dir.glob("*.gpg"):
+                    subprocess.run(["rpm", "--root", str(self.target_root), "--import", str(key_file)], capture_output=True, check=False)
+                for key_file in key_dir.glob("gpg-pubkey*"):
+                    subprocess.run(["rpm", "--root", str(self.target_root), "--import", str(key_file)], capture_output=True, check=False)
+
         if create_seed and not seed_used:
             try:
                 logger.info(f"⚡ Fast-caching rootfs seed tarball to {seed_cache}...")
