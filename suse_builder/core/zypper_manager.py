@@ -314,6 +314,22 @@ class ZypperManager:
         if res.returncode != 0:
             raise ZypperManagerError(f"Zypper package installation failed with exit code {res.returncode}")
 
+        # Import all repository GPG keys into RPM database and pre-trust them in Zypper
+        for key_dir in [
+            self.target_root / "usr" / "lib" / "sysimage" / "rpm",
+            self.target_root / "etc" / "pki" / "rpm-gpg",
+            self.target_root / "usr" / "share" / "doc" / "packages" / "openSUSE-release"
+        ]:
+            if key_dir.exists():
+                for key_file in key_dir.glob("*.gpg"):
+                    subprocess.run(["rpm", "--root", str(self.target_root), "--import", str(key_file)], capture_output=True, check=False)
+                for key_file in key_dir.glob("gpg-pubkey*"):
+                    subprocess.run(["rpm", "--root", str(self.target_root), "--import", str(key_file)], capture_output=True, check=False)
+        try:
+            self.chroot.run_in_chroot(["zypper", "--non-interactive", "--gpg-auto-import-keys", "refresh"], check=False)
+        except Exception:
+            pass
+
     def clean_cache(self):
         if self.chroot.mode == "mock":
             return
