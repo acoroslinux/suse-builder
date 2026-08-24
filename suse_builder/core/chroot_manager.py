@@ -25,20 +25,41 @@ class ChrootManager:
         if self.mode == "mock":
             return
         host_arch = platform.machine().lower()
-        native = {"x86_64": {"x86_64", "amd64"}, "i386": {"i386", "i486", "i586", "i686"}}
+        native = {"x86_64": {"x86_64", "amd64"}, "i386": {"i386", "i486", "i586", "i686"}, "aarch64": {"aarch64", "arm64"}}
         if self.arch in native.get(host_arch, {host_arch}):
             return
-        qemu_names = {"aarch64": "qemu-aarch64-static", "riscv64": "qemu-riscv64-static", "i586": "qemu-i386-static", "i686": "qemu-i386-static"}
-        qemu_name = qemu_names.get(self.arch)
-        qemu_path = shutil.which(qemu_name) if qemu_name else None
-        if not qemu_path:
-            raise ChrootManagerError(f"Foreign architecture {self.arch} requires {qemu_name}; install or provide qemu-user-static.")
-        binfmt_entry = Path("/proc/sys/fs/binfmt_misc") / qemu_name.removesuffix("-static")
-        if not binfmt_entry.exists():
-            raise ChrootManagerError(f"{qemu_name} is installed but binfmt_misc is not registered. Enable it with: sudo update-binfmts --enable {qemu_name.removesuffix('-static')}")
-        destination = self.target_root / "usr" / "bin" / qemu_name
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(qemu_path, destination)
+
+        arch_key = "aarch64" if self.arch in {"aarch64", "arm64"} else self.arch
+        qemu_candidates = [
+            f"qemu-{arch_key}-static",
+            f"qemu-{arch_key}",
+            f"qemu-{arch_key}-binfmt"
+        ]
+        qemu_path = None
+        for cand in qemu_candidates:
+            which_p = shutil.which(cand)
+            if which_p:
+                qemu_path = Path(which_p)
+                break
+            for fallback_dir in ["/usr/bin", "/usr/local/bin"]:
+                cand_path = Path(fallback_dir) / cand
+                if cand_path.exists():
+                    qemu_path = cand_path
+                    break
+            if qemu_path:
+                break
+
+        if qemu_path and qemu_path.exists():
+            for dst_name in [qemu_path.name, f"qemu-{arch_key}-static", f"qemu-{arch_key}"]:
+                dst = self.target_root / "usr" / "bin" / dst_name
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    shutil.copy2(qemu_path, dst)
+                except Exception:
+                    pass
+            logger.info(f"Configured foreign emulation with {qemu_path} for {self.arch}.")
+        else:
+            logger.warning(f"Could not find qemu-user-static for {self.arch}; foreign chroot scriptlets may fail if binfmt is not host-mounted.")
 
     def ensure_usrmerge_symlinks(self):
         """Ensure standard UsrMerge symlinks (/bin -> usr/bin, /sbin -> usr/sbin, /lib -> usr/lib, /lib64 -> usr/lib64)."""

@@ -25,10 +25,19 @@ class ZypperManager:
         metadata_cache.mkdir(parents=True, exist_ok=True)
         package_cache.mkdir(parents=True, exist_ok=True)
 
+        target_arch = str(getattr(self.chroot, "arch", "") or self.config.get("arch", "x86_64")).lower()
+        if target_arch in {"amd64"}:
+            target_arch = "x86_64"
+        elif target_arch in {"arm64"}:
+            target_arch = "aarch64"
+        elif target_arch in {"i686", "i386"}:
+            target_arch = "i586"
+
         cleaned_args = [a for a in args if a not in ("--non-interactive", "--gpg-auto-import-keys")]
         full_args = [
             "--non-interactive",
             "--gpg-auto-import-keys",
+            "--arch", target_arch,
             "--cache-dir", str(metadata_cache),
             "--pkg-cache-dir", str(package_cache),
             *cleaned_args,
@@ -73,7 +82,7 @@ class ZypperManager:
         return all(path.exists() for path in checks)
 
     def _tune_zypper_performance(self):
-        """Inject parallel download and I/O acceleration settings into /etc/zypp/zypp.conf."""
+        """Inject parallel download, architecture, and I/O acceleration settings into /etc/zypp/zypp.conf."""
         if self.chroot.mode == "mock":
             return
         zypp_conf = self.target_root / "etc" / "zypp" / "zypp.conf"
@@ -85,7 +94,16 @@ class ZypperManager:
             except Exception:
                 pass
 
+        arch_val = str(getattr(self.chroot, "arch", "") or self.config.get("arch", "x86_64")).lower()
+        if arch_val in {"arm64"}:
+            arch_val = "aarch64"
+        elif arch_val in {"amd64"}:
+            arch_val = "x86_64"
+        elif arch_val in {"i686", "i386"}:
+            arch_val = "i586"
+
         settings = {
+            "arch": arch_val,
             "download.max_concurrent_connections": "16",
             "download.min_download_speed": "1000",
             "commit.downloadMode": "DownloadInAdvance",
