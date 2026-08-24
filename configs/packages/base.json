@@ -40,6 +40,8 @@
     "ca-certificates-mozilla",
     "xf86-input-libinput",
     "xf86-input-evdev",
+    "NetworkManager",
+    "NetworkManager-wifi",
     "virtualbox-guest-tools",
     "qemu-guest-agent",
     "grub2-branding-openSUSE"

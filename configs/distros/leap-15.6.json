@@ -17,6 +17,14 @@
     {
       "name": "repo-update-non-oss",
       "url": "http://download.opensuse.org/update/leap/15.6/non-oss/"
+    },
+    {
+      "name": "repo-sle-update",
+      "url": "http://download.opensuse.org/update/leap/15.6/sle/"
+    },
+    {
+      "name": "repo-backports-update",
+      "url": "http://download.opensuse.org/update/leap/15.6/backports/"
     }
   ]
 }
