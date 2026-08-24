@@ -1,0 +1,16 @@
+{
+  "device": "apple-silicon",
+  "name": "Apple Silicon (M1/M2/M3)",
+  "arch": "aarch64",
+  "soc": "Apple M-Series",
+  "packages": [
+    "kernel-default",
+    "kernel-firmware-all",
+    "m1n1",
+    "u-boot-asahi",
+    "asahi-fwextract",
+    "asahi-scripts",
+    "mesa-dri-gallium"
+  ],
+  "kernel_cmdline": "console=tty0 earlycon=apple_uart,0x39b200000 plymouth.enable=0"
+}

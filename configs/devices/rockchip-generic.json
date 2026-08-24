@@ -1,0 +1,14 @@
+{
+  "device": "rockchip-generic",
+  "name": "Generic Rockchip SBCs (Orange Pi 5, Radxa Rock, Quartz64)",
+  "arch": "aarch64",
+  "soc": "Rockchip RK3588 / RK3566 / RK3399",
+  "packages": [
+    "kernel-default",
+    "kernel-firmware-all",
+    "dtb-rockchip",
+    "u-boot-tools",
+    "mesa-dri-panfrost"
+  ],
+  "kernel_cmdline": "console=tty0 console=ttyFIQ0,1500000 console=ttyS2,1500000 plymouth.enable=0"
+}

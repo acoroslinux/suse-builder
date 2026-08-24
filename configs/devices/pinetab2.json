@@ -1,0 +1,16 @@
+{
+  "device": "pinetab2",
+  "name": "Pine64 PineTab 2",
+  "arch": "aarch64",
+  "soc": "Rockchip RK3566",
+  "packages": [
+    "kernel-default",
+    "kernel-firmware-all",
+    "dtb-rockchip",
+    "u-boot-tools",
+    "mesa-dri-panfrost",
+    "bes2600-firmware",
+    "alsa-utils"
+  ],
+  "kernel_cmdline": "console=tty0 console=ttyS2,1500000 earlycon=uart8250,mmio32,0xfe660000 plymouth.enable=0"
+}

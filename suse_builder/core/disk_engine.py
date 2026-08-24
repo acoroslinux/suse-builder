@@ -107,45 +107,79 @@ class DiskEngine:
         suse_efi_dir = esp_dir / "EFI" / "opensuse"
         suse_efi_dir.mkdir(parents=True, exist_ok=True)
 
+        arch = str(self.config.get("arch") or "x86_64").lower()
+        if arch in {"aarch64", "arm64"}:
+            efi_target = "arm64-efi"
+            efi_bin_name = "BOOTAA64.EFI"
+            suse_efi_bin = "grubaa64.efi"
+            mod_subdirs = ["arm64-efi", "aarch64-efi"]
+            default_consoles = "console=tty0 console=ttyAMA0,115200 console=ttyS0,115200"
+        elif arch in {"i586", "i686", "i386"}:
+            efi_target = "i386-efi"
+            efi_bin_name = "BOOTIA32.EFI"
+            suse_efi_bin = "grubia32.efi"
+            mod_subdirs = ["i386-efi"]
+            default_consoles = "console=tty1 console=ttyS0,115200"
+        elif arch in {"riscv64"}:
+            efi_target = "riscv64-efi"
+            efi_bin_name = "BOOTRISCV64.EFI"
+            suse_efi_bin = "grubriscv64.efi"
+            mod_subdirs = ["riscv64-efi"]
+            default_consoles = "console=tty0 console=ttySIF0,115200 console=ttyS0,115200"
+        else:
+            efi_target = "x86_64-efi"
+            efi_bin_name = "BOOTX64.EFI"
+            suse_efi_bin = "grubx64.efi"
+            mod_subdirs = ["x86_64-efi"]
+            default_consoles = "console=tty1 console=ttyS0,115200"
+
         # Write universal UEFI Shell startup script (checks FS0:, FS1:, FS2:, etc.)
         startup_nsh = (
             "@echo -off\n"
             "for %i in 0 1 2 3 4 5 6 7 8 9\n"
+            f"  if exist FS%i:\\EFI\\BOOT\\{efi_bin_name} then\n"
+            "    FS%i:\n"
+            "    cd \\EFI\\BOOT\n"
+            f"    {efi_bin_name}\n"
+            "  endif\n"
             "  if exist FS%i:\\EFI\\BOOT\\BOOTX64.EFI then\n"
             "    FS%i:\n"
             "    cd \\EFI\\BOOT\n"
             "    BOOTX64.EFI\n"
             "  endif\n"
             "endfor\n"
-            "\\EFI\\BOOT\\BOOTX64.EFI\n"
+            f"\\EFI\\BOOT\\{efi_bin_name}\n"
         )
         (esp_dir / "startup.nsh").write_text(startup_nsh)
 
-        # Copy GRUB x86_64-efi modules directory so GRUB has all drivers available at runtime
+        # Copy GRUB EFI modules directory so GRUB has all drivers available at runtime
         mod_src = None
-        for cand_dir in [
-            mount_root / "usr" / "share" / "grub2" / "x86_64-efi",
-            mount_root / "usr" / "lib" / "grub2" / "x86_64-efi",
-            Path("/usr/lib/grub/x86_64-efi"),
-            Path("/usr/share/grub2/x86_64-efi")
-        ]:
-            if cand_dir.is_dir() and any(cand_dir.glob("*.mod")):
-                mod_src = cand_dir
+        for mdir in mod_subdirs:
+            for cand_dir in [
+                mount_root / "usr" / "share" / "grub2" / mdir,
+                mount_root / "usr" / "lib" / "grub2" / mdir,
+                Path(f"/usr/lib/grub/{mdir}"),
+                Path(f"/usr/share/grub2/{mdir}")
+            ]:
+                if cand_dir.is_dir() and any(cand_dir.glob("*.mod")):
+                    mod_src = cand_dir
+                    break
+            if mod_src:
                 break
 
         if mod_src:
             for dst_dir in [
-                mount_root / "boot" / "grub2" / "x86_64-efi",
-                mount_root / "boot" / "grub" / "x86_64-efi",
-                boot_efi_dir / "x86_64-efi"
+                mount_root / "boot" / "grub2" / efi_target,
+                mount_root / "boot" / "grub" / efi_target,
+                boot_efi_dir / efi_target
             ]:
                 dst_dir.mkdir(parents=True, exist_ok=True)
                 for mod_file in mod_src.glob("*"):
                     if mod_file.is_file():
                         shutil.copy2(mod_file, dst_dir / mod_file.name)
-            logger.info(f"Copied GRUB EFI modules from {mod_src} to /boot/grub2/x86_64-efi.")
+            logger.info(f"Copied GRUB EFI modules from {mod_src} to /boot/grub2/{efi_target}.")
 
-        # Create early bootstrap grub.cfg to embed inside standalone BOOTX64.EFI
+        # Create early bootstrap grub.cfg to embed inside standalone EFI binary
         early_cfg = (
             'insmod part_gpt\n'
             'insmod part_msdos\n'
@@ -173,24 +207,24 @@ class DiskEngine:
         if grub_mkstandalone:
             subprocess.run([
                 grub_mkstandalone,
-                "-O", "x86_64-efi",
-                "-o", str(boot_efi_dir / "BOOTX64.EFI"),
+                "-O", efi_target,
+                "-o", str(boot_efi_dir / efi_bin_name),
                 f"boot/grub/grub.cfg={early_cfg_path}"
             ], capture_output=True, check=False)
-            shutil.copy2(boot_efi_dir / "BOOTX64.EFI", suse_efi_dir / "grubx64.efi")
-            shutil.copy2(boot_efi_dir / "BOOTX64.EFI", esp_dir / "bootx64.efi")
+            shutil.copy2(boot_efi_dir / efi_bin_name, suse_efi_dir / suse_efi_bin)
+            shutil.copy2(boot_efi_dir / efi_bin_name, esp_dir / efi_bin_name.lower())
         else:
             candidates = [
-                mount_root / "usr" / "lib" / "grub2" / "x86_64-efi" / "grub.efi",
-                mount_root / "usr" / "share" / "efi" / "x86_64" / "grub.efi",
-                mount_root / "boot" / "efi" / "EFI" / "opensuse" / "grubx64.efi",
-                mount_root / "usr" / "share" / "grub2" / "x86_64-efi" / "core.efi"
+                mount_root / "usr" / "lib" / "grub2" / efi_target / "grub.efi",
+                mount_root / "usr" / "share" / "efi" / arch / "grub.efi",
+                mount_root / "boot" / "efi" / "EFI" / "opensuse" / suse_efi_bin,
+                mount_root / "usr" / "share" / "grub2" / efi_target / "core.efi"
             ]
             for cand in candidates:
                 if cand.exists():
-                    shutil.copy2(cand, boot_efi_dir / "BOOTX64.EFI")
-                    shutil.copy2(cand, suse_efi_dir / "grubx64.efi")
-                    shutil.copy2(cand, esp_dir / "bootx64.efi")
+                    shutil.copy2(cand, boot_efi_dir / efi_bin_name)
+                    shutil.copy2(cand, suse_efi_dir / suse_efi_bin)
+                    shutil.copy2(cand, esp_dir / efi_bin_name.lower())
                     break
 
         # Detect exact kernel and initrd filenames under /boot
@@ -202,7 +236,15 @@ class DiskEngine:
                     if f.is_file() and not f.is_symlink():
                         k_name = f.name
                         break
+                for f in sorted(bdir.glob("Image-*")):
+                    if f.is_file() and not f.is_symlink():
+                        k_name = f.name
+                        break
                 for f in sorted(bdir.glob("initrd-*")):
+                    if f.is_file() and not f.is_symlink():
+                        i_name = f.name
+                        break
+                for f in sorted(bdir.glob("initramfs-*")):
                     if f.is_file() and not f.is_symlink():
                         i_name = f.name
                         break
@@ -213,19 +255,19 @@ class DiskEngine:
         boot_dir.mkdir(parents=True, exist_ok=True)
 
         if not k_name:
-            for f in sorted(boot_dir.glob("vmlinuz*")):
+            for f in sorted(boot_dir.glob("vmlinuz*")) + sorted(boot_dir.glob("Image*")):
                 k_name = f.name
                 break
             k_name = k_name or "vmlinuz"
 
         if not i_name:
-            for f in sorted(boot_dir.glob("initrd*")):
+            for f in sorted(boot_dir.glob("initrd*")) + sorted(boot_dir.glob("initramfs*")):
                 i_name = f.name
                 break
             i_name = i_name or "initrd"
 
         # Create both hardlink and symlink for /boot/vmlinuz and /boot/initrd to guarantee GRUB finds them
-        if k_name != "vmlinuz" and (boot_dir / k_name).exists():
+        if k_name not in {"vmlinuz", "Image"} and (boot_dir / k_name).exists():
             (boot_dir / "vmlinuz").unlink(missing_ok=True)
             try:
                 os.link(str(boot_dir / k_name), str(boot_dir / "vmlinuz"))
@@ -235,7 +277,7 @@ class DiskEngine:
                 except Exception:
                     pass
 
-        if i_name != "initrd" and (boot_dir / i_name).exists():
+        if i_name not in {"initrd", "initramfs"} and (boot_dir / i_name).exists():
             (boot_dir / "initrd").unlink(missing_ok=True)
             try:
                 os.link(str(boot_dir / i_name), str(boot_dir / "initrd"))
@@ -246,6 +288,12 @@ class DiskEngine:
                     pass
 
         fs_type = str(self.config.get("filesystem") or "ext4").lower()
+        dev_cmdline = self.config.get("kernel_cmdline", "").strip()
+        cmdline_params = f"{dev_cmdline} {default_consoles}".strip() if dev_cmdline else default_consoles
+
+        distro_title = self.config.get("distro", "openSUSE Linux")
+        device_title = f" ({self.config['device']})" if "device" in self.config else ""
+
         grub_cfg = (
             'insmod part_gpt\n'
             'insmod part_msdos\n'
@@ -256,12 +304,12 @@ class DiskEngine:
             'set default="0"\n'
             'set timeout=5\n\n'
             f'search --no-floppy --fs-uuid --set=root {root_uuid}\n\n'
-            'menuentry "openSUSE Linux (Leap 15.6)" {\n'
-            f'    linux /boot/{k_name} root=UUID={root_uuid} rootfstype={fs_type} rw quiet splash console=tty1 console=ttyS0,115200\n'
+            f'menuentry "openSUSE Linux{device_title}" {{\n'
+            f'    linux /boot/{k_name} root=UUID={root_uuid} rootfstype={fs_type} rw quiet splash {cmdline_params}\n'
             f'    initrd /boot/{i_name}\n'
             '}\n'
-            'menuentry "openSUSE Linux (Recovery Mode)" {\n'
-            f'    linux /boot/{k_name} root=UUID={root_uuid} rootfstype={fs_type} single console=tty1 console=ttyS0,115200\n'
+            f'menuentry "openSUSE Linux{device_title} (Recovery Mode)" {{\n'
+            f'    linux /boot/{k_name} root=UUID={root_uuid} rootfstype={fs_type} single {cmdline_params}\n'
             f'    initrd /boot/{i_name}\n'
             '}\n'
         )

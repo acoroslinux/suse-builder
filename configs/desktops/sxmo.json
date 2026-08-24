@@ -1,0 +1,23 @@
+{
+  "desktop": "sxmo",
+  "desktop_session": "sxmo",
+  "display_manager": "lightdm",
+  "packages": [
+    "sway",
+    "foot",
+    "bemenu",
+    "wob",
+    "wlr-randr",
+    "lisgd",
+    "mako",
+    "lightdm",
+    "brightnessctl"
+  ],
+  "services": {
+    "enable": [
+      "lightdm",
+      "NetworkManager",
+      "ModemManager"
+    ]
+  }
+}

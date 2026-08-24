@@ -1,0 +1,16 @@
+{
+  "device": "rpi4",
+  "name": "Raspberry Pi 4 / 400 / CM4",
+  "arch": "aarch64",
+  "soc": "Broadcom BCM2711",
+  "packages": [
+    "kernel-default",
+    "raspberrypi-firmware",
+    "raspberrypi-firmware-dt",
+    "raspberrypi-firmware-extra",
+    "u-boot-rpiarm64",
+    "bcm43xx-firmware",
+    "wireless-regdb"
+  ],
+  "kernel_cmdline": "console=tty0 console=ttyAMA0,115200 console=ttyS0,115200 plymouth.enable=0"
+}

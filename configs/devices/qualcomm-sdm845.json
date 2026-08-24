@@ -1,0 +1,14 @@
+{
+  "device": "qualcomm-sdm845",
+  "name": "Qualcomm Snapdragon 845 (OnePlus 6/6T, Poco F1)",
+  "arch": "aarch64",
+  "soc": "Qualcomm Snapdragon 845",
+  "packages": [
+    "kernel-default",
+    "kernel-firmware-all",
+    "dtb-qualcomm",
+    "qbootctl",
+    "mesa-dri-gallium"
+  ],
+  "kernel_cmdline": "console=tty0 console=ttyMSM0,115200 earlycon=msm_geni_serial,0xa84000 plymouth.enable=0"
+}

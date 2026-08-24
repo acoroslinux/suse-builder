@@ -62,6 +62,7 @@ class BuildOrchestrator:
         benchmark: bool = False,
         disk_size: Optional[str] = None,
         filesystem: Optional[str] = None,
+        device: Optional[str] = None,
     ):
         self.arch = arch
         self.config_path = config_path
@@ -70,6 +71,7 @@ class BuildOrchestrator:
         self.kernel = kernel
         self.bootloader = bootloader
         self.variant = variant
+        self.device = device
         self.package_profiles = package_profiles or []
         self.service_profiles = service_profiles or []
         self.repo_profiles = repo_profiles or []
@@ -127,6 +129,7 @@ class BuildOrchestrator:
             service_profiles=self.service_profiles,
             repo_profiles=self.repo_profiles,
             live_profile=self.live_profile,
+            device=self.device,
         )
         self.config["with_calamares"] = self.with_calamares
         self.config["with_flathub"] = self.with_flathub
@@ -146,9 +149,19 @@ class BuildOrchestrator:
             self.config["live_user"] = live_config
 
         essential_boot_pkgs = [
-            "grub2", "grub2-x86_64-efi", "grub2-i386-pc", "shim",
-            "dosfstools", "mtools", "efibootmgr", "syslinux"
+            "grub2", "shim",
+            "dosfstools", "mtools", "efibootmgr"
         ]
+        if self.arch in {"aarch64", "arm64"}:
+            essential_boot_pkgs.extend(["grub2-arm64-efi", "u-boot-tools"])
+        elif self.arch in {"x86_64", "amd64"}:
+            essential_boot_pkgs.extend(["grub2-x86_64-efi", "grub2-i386-pc", "syslinux"])
+        elif self.arch in {"i586", "i686"}:
+            essential_boot_pkgs.extend(["grub2-i386-efi", "grub2-i386-pc", "syslinux"])
+        elif self.arch == "riscv64":
+            essential_boot_pkgs.extend(["grub2-riscv64-efi", "u-boot-tools"])
+        else:
+            essential_boot_pkgs.extend(["grub2-x86_64-efi"])
         
         if self.with_calamares:
             essential_boot_pkgs.extend(["calamares"])

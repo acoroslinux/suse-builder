@@ -52,6 +52,7 @@ class ConfigLoader:
         service_profiles: Optional[List[str]] = None,
         repo_profiles: Optional[List[str]] = None,
         live_profile: Optional[str] = None,
+        device: Optional[str] = None,
     ) -> Dict[str, Any]:
 
         config = {
@@ -66,7 +67,8 @@ class ConfigLoader:
             "arch_info": {},
             "system": {},
             "boot": {},
-            "variant_info": {}
+            "variant_info": {},
+            "device_info": {}
         }
 
         # 1. Global config
@@ -86,25 +88,32 @@ class ConfigLoader:
         if variant:
             config = self._merge_dicts(config, self.load_profile("variants", variant))
 
-        # 5. Desktop
+        # 5. Device / Board Profile
+        if device:
+            config = self._merge_dicts(config, self.load_profile("devices", device))
+
+        # 6. Desktop
         if desktop:
             config = self._merge_dicts(config, self.load_profile("desktops", desktop))
             # Automatically include xorg package profile for graphical display server support
             if desktop not in {"minimal", "server", "cloud"}:
                 config = self._merge_dicts(config, self.load_profile("packages", "xorg"))
+            # Automatically include mobile-base for mobile desktop environments
+            if desktop in {"plasma-mobile", "phosh", "sxmo"}:
+                config = self._merge_dicts(config, self.load_profile("packages", "mobile-base"))
 
-        # 6. Kernel
+        # 7. Kernel
         if kernel:
             config = self._merge_dicts(config, self.load_profile("kernels", kernel))
 
-        # 7. Bootloader
+        # 8. Bootloader
         if bootloader:
             config = self._merge_dicts(config, self.load_profile("bootloaders", bootloader))
 
-        # 8. Base packages
+        # 9. Base packages
         config = self._merge_dicts(config, self.load_profile("packages", "base"))
 
-        # 9. Package profiles
+        # 10. Package profiles
         if package_profiles:
             for profile in package_profiles:
                 config = self._merge_dicts(config, self.load_profile("packages", profile))

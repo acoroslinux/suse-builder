@@ -1,0 +1,29 @@
+{
+  "desktop": "phosh",
+  "desktop_session": "phosh",
+  "display_manager": "gdm",
+  "packages": [
+    "phosh",
+    "phoc",
+    "squeekboard",
+    "feedbackd",
+    "gnome-calls",
+    "gnome-contacts",
+    "chatty",
+    "gnome-software",
+    "nautilus",
+    "epiphany",
+    "gdm",
+    "gnome-session",
+    "gnome-settings-daemon",
+    "gnome-control-center"
+  ],
+  "services": {
+    "enable": [
+      "gdm",
+      "NetworkManager",
+      "ModemManager",
+      "feedbackd"
+    ]
+  }
+}

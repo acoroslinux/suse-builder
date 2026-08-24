@@ -130,7 +130,14 @@ def main():
         "--desktop",
         type=str,
         default=None,
-        help="Desktop environment profile (kde, gnome, xfce, mate, lxqt, sway, hyprland).",
+        help="Desktop environment profile (kde, gnome, xfce, mate, lxqt, sway, hyprland, plasma-mobile, phosh, sxmo, cloud, server, minimal).",
+    )
+
+    parser.add_argument(
+        "--device",
+        type=str,
+        default=None,
+        help="Target ARM/SBC device profile (pinephone, pinephone-pro, pinetab2, rpi4, rpi5, rockchip-generic, qualcomm-sdm845, apple-silicon).",
     )
 
     parser.add_argument(
@@ -316,6 +323,7 @@ def main():
         categories = [
             ("architectures", "architectures"),
             ("distros",       "distros      "),
+            ("devices",       "devices      "),
             ("desktops",      "desktops     "),
             ("kernels",       "kernels      "),
             ("bootloaders",   "bootloaders  "),
@@ -347,6 +355,7 @@ def main():
             kernel=args.kernel,
             bootloader=args.bootloader,
             variant=args.variant,
+            device=args.device,
             package_profiles=parsed_package_profiles,
             output_format=args.format,
             compression=args.compression,

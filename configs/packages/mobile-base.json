@@ -1,0 +1,32 @@
+{
+  "packages": [
+    "ModemManager",
+    "NetworkManager",
+    "NetworkManager-wifi",
+    "bluez",
+    "bluez-tools",
+    "pulseaudio",
+    "pulseaudio-utils",
+    "pipewire",
+    "wireplumber",
+    "pipewire-pulseaudio",
+    "iio-sensor-proxy",
+    "geoclue2",
+    "upower",
+    "wpa_supplicant",
+    "wireless-tools",
+    "brightnessctl",
+    "alsa-utils",
+    "mesa-dri-nouveau",
+    "mesa-dri-gallium"
+  ],
+  "services": {
+    "enable": [
+      "NetworkManager",
+      "ModemManager",
+      "bluetooth",
+      "iio-sensor-proxy",
+      "upower"
+    ]
+  }
+}
