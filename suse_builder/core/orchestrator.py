@@ -220,12 +220,37 @@ class BuildOrchestrator:
             and previous_fingerprint is not None
             and previous_fingerprint == current_fingerprint
         )
-
         if self.mode != "mock" and not self.clean and previous_fingerprint and previous_fingerprint != current_fingerprint:
             logger.info("Build choices changed since previous run; forcing rootfs rebuild despite --no-clean.")
 
         import time
         t_total_start = time.perf_counter()
+
+        # Automatic architecture change detection and workdir cleanup
+        workdir_parent = resolve_from_project("workdir")
+        last_arch_file = workdir_parent / ".last_arch"
+        last_arch = None
+        if last_arch_file.exists():
+            try:
+                last_arch = last_arch_file.read_text().strip()
+            except Exception:
+                pass
+
+        if last_arch and last_arch != self.arch and self.mode != "mock":
+            logger.info(f"🔄 Architecture change detected (previous: {last_arch}, current: {self.arch}). Auto-cleaning workdir...")
+            if os.geteuid() == 0:
+                unmount_all_under(workdir_parent)
+            prev_workdir = workdir_parent / last_arch
+            if prev_workdir.exists():
+                subprocess.run(["rm", "-rf", str(prev_workdir)], check=False)
+            if self.workdir.exists():
+                subprocess.run(["rm", "-rf", str(self.workdir)], check=False)
+
+        try:
+            workdir_parent.mkdir(parents=True, exist_ok=True)
+            last_arch_file.write_text(self.arch)
+        except Exception:
+            pass
 
         if self.use_tmpfs:
             if self.mode == "real" and os.geteuid() == 0:
