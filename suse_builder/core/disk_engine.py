@@ -107,12 +107,17 @@ class DiskEngine:
         suse_efi_dir = esp_dir / "EFI" / "opensuse"
         suse_efi_dir.mkdir(parents=True, exist_ok=True)
 
-        # Write standard UEFI Shell startup script with FS0: drive context
+        # Write universal UEFI Shell startup script (checks FS0:, FS1:, FS2:, etc.)
         startup_nsh = (
             "@echo -off\n"
-            "FS0:\n"
-            "cd \\EFI\\BOOT\n"
-            "BOOTX64.EFI\n"
+            "for %i in 0 1 2 3 4 5 6 7 8 9\n"
+            "  if exist FS%i:\\EFI\\BOOT\\BOOTX64.EFI then\n"
+            "    FS%i:\n"
+            "    cd \\EFI\\BOOT\n"
+            "    BOOTX64.EFI\n"
+            "  endif\n"
+            "endfor\n"
+            "\\EFI\\BOOT\\BOOTX64.EFI\n"
         )
         (esp_dir / "startup.nsh").write_text(startup_nsh)
 
