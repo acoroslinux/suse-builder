@@ -4,23 +4,13 @@
   "display_manager": "sddm",
   "packages": [
     "plasma-mobile",
-    "plasma5-workspace",
-    "plasma5-workspace-libs",
     "sddm",
     "maliit-keyboard",
     "maliit-framework",
-    "plasma-nm",
-    "plasma-pa",
-    "plasma-phone-components",
     "kalk",
     "kclock",
-    "alligator",
     "angelfish",
-    "spacebar",
-    "vvave",
-    "krecorder",
-    "xorg-x11-server",
-    "wayland-protocols-devel"
+    "xorg-x11-server"
   ],
   "services": {
     "enable": [

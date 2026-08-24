@@ -2,11 +2,7 @@
   "packages": [
     "ModemManager",
     "NetworkManager",
-    "NetworkManager-wifi",
     "bluez",
-    "bluez-tools",
-    "pulseaudio",
-    "pulseaudio-utils",
     "pipewire",
     "wireplumber",
     "pipewire-pulseaudio",
@@ -17,8 +13,7 @@
     "wireless-tools",
     "brightnessctl",
     "alsa-utils",
-    "mesa-dri-nouveau",
-    "mesa-dri-gallium"
+    "Mesa-dri"
   ],
   "services": {
     "enable": [

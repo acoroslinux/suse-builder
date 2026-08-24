@@ -6,9 +6,8 @@
   "packages": [
     "kernel-default",
     "kernel-firmware-all",
-    "dtb-rockchip",
     "u-boot-tools",
-    "mesa-dri-panfrost"
+    "Mesa-dri"
   ],
   "kernel_cmdline": "console=tty0 console=ttyFIQ0,1500000 console=ttyS2,1500000 plymouth.enable=0"
 }

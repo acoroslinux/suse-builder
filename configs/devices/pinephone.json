@@ -6,11 +6,8 @@
   "packages": [
     "kernel-default",
     "kernel-firmware-all",
-    "dtb-allwinner",
     "u-boot-tools",
-    "rtl8723bt-firmware",
-    "anx7688-firmware",
-    "eg25-manager",
+    "ModemManager",
     "alsa-utils"
   ],
   "kernel_cmdline": "console=tty0 console=ttyS0,115200 earlycon=uart8250,mmio32,0x01c28000 plymouth.enable=0"

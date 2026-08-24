@@ -6,10 +6,9 @@
   "packages": [
     "kernel-default",
     "kernel-firmware-all",
-    "dtb-rockchip",
     "u-boot-tools",
-    "mesa-dri-panfrost",
-    "eg25-manager",
+    "Mesa-dri",
+    "ModemManager",
     "alsa-utils"
   ],
   "kernel_cmdline": "console=tty0 console=ttyS2,1500000 earlycon=uart8250,mmio32,0xff1a0000 plymouth.enable=0"

@@ -310,6 +310,23 @@ class ZypperManager:
         cmd_signed = ["--non-interactive", "--gpg-auto-import-keys", "--root", str(self.target_root), "install", "--force-resolution", "-y"] + real_pkgs
         cmd_fallback = ["--non-interactive", "--root", str(self.target_root), "--no-gpg-checks", "install", "--force-resolution", "-y"] + real_pkgs
         res = self._run_prefer_signed(cmd_signed, cmd_fallback)
+        
+        if res.returncode != 0:
+            logger.warning(f"Batch package installation failed (code {res.returncode}); dynamically checking package availability...")
+            valid_pkgs = []
+            for pkg in real_pkgs:
+                check_res = self._run_zypper(["--root", str(self.target_root), "info", pkg])
+                if check_res.returncode == 0:
+                    valid_pkgs.append(pkg)
+                else:
+                    logger.warning(f"⚠️ Omitting package '{pkg}' (not found in active repositories for this architecture/distro).")
+            
+            if valid_pkgs:
+                logger.info(f"Retrying installation with {len(valid_pkgs)} confirmed packages...")
+                cmd_retry_signed = ["--non-interactive", "--gpg-auto-import-keys", "--root", str(self.target_root), "install", "--force-resolution", "-y"] + valid_pkgs
+                cmd_retry_fallback = ["--non-interactive", "--root", str(self.target_root), "--no-gpg-checks", "install", "--force-resolution", "-y"] + valid_pkgs
+                res = self._run_prefer_signed(cmd_retry_signed, cmd_retry_fallback)
+
         self.sync_cache_from_target()
         if res.returncode != 0:
             raise ZypperManagerError(f"Zypper package installation failed with exit code {res.returncode}")

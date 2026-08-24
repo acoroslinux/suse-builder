@@ -148,11 +148,86 @@ class ConfigLoader:
                         unique_repos.append(r)
                 elif r not in unique_repos:
                     unique_repos.append(r)
-            config["repos"] = unique_repos
+        # 14. Architecture-aware Repository URL transformation
+        arch_lower = architecture.lower()
+        if arch_lower in {"aarch64", "arm64", "armv7l", "armv7hl", "riscv64"}:
+            port_name = "aarch64" if arch_lower in {"aarch64", "arm64"} else ("riscv" if arch_lower == "riscv64" else "armv7hl")
+            adapted_repos = []
+            for r in config.get("repos", []):
+                if isinstance(r, dict):
+                    r_copy = dict(r)
+                    url = r_copy.get("url", "")
+                    if "download.opensuse.org/tumbleweed/" in url:
+                        r_copy["url"] = url.replace("download.opensuse.org/tumbleweed/", f"download.opensuse.org/ports/{port_name}/tumbleweed/")
+                    elif "download.opensuse.org/distribution/" in url:
+                        r_copy["url"] = url.replace("download.opensuse.org/distribution/", f"download.opensuse.org/ports/{port_name}/distribution/")
+                    elif "download.opensuse.org/update/" in url:
+                        r_copy["url"] = url.replace("download.opensuse.org/update/", f"download.opensuse.org/ports/{port_name}/update/")
+                    elif "download.opensuse.org/slowroll/" in url:
+                        r_copy["url"] = url.replace("download.opensuse.org/slowroll/", f"download.opensuse.org/ports/{port_name}/slowroll/")
+                    adapted_repos.append(r_copy)
+                else:
+                    adapted_repos.append(r)
+            config["repos"] = adapted_repos
 
-        if "services" in config:
-            for state in ["enable", "disable"]:
-                if state in config["services"] and isinstance(config["services"][state], list):
-                    config["services"][state] = list(dict.fromkeys(config["services"][state]))
+        # 15. Intelligent Distro-Aware & Arch-Aware Package Normalization
+        distro_str = str(config.get("distro", "")).lower()
+        is_tumbleweed_or_rolling = any(k in distro_str for k in ["tumbleweed", "slowroll", "leap-16", "factory"])
+
+        package_mappings_tumbleweed = {
+            "plasma5-workspace": "plasma6-workspace",
+            "plasma5-desktop": "plasma6-desktop",
+            "plasma5-workspace-libs": "plasma6-workspace-libs",
+            "plasma-mobile": "plasma6-mobile",
+            "plasma-nm": "plasma6-nm",
+            "plasma-pa": "plasma6-pa",
+            "plasma-phone-components": "plasma6-mobile",
+            "mesa-dri-nouveau": "Mesa-dri-nouveau",
+            "mesa-dri-gallium": "Mesa-dri",
+            "mesa-dri-panfrost": "Mesa-dri",
+            "bluez-tools": "bluez",
+            "NetworkManager-wifi": "NetworkManager",
+            "dtb-allwinner": "kernel-default",
+            "dtb-rockchip": "kernel-default",
+            "dtb-qualcomm": "kernel-default",
+            "anx7688-firmware": "kernel-firmware-all",
+            "rtl8723bt-firmware": "kernel-firmware-all",
+            "bes2600-firmware": "kernel-firmware-all",
+            "eg25-manager": "ModemManager",
+            "spacebar": "plasma-phonebook",
+            "vvave": "plasma-camera",
+        }
+
+        package_mappings_leap = {
+            "plasma6-workspace": "plasma5-workspace",
+            "plasma6-desktop": "plasma5-desktop",
+            "plasma6-mobile": "plasma5-workspace",
+            "plasma6-nm": "plasma-nm",
+            "plasma6-pa": "plasma-pa",
+            "mesa-dri-nouveau": "Mesa-dri-nouveau",
+            "mesa-dri-gallium": "Mesa-dri",
+            "mesa-dri-panfrost": "Mesa-dri",
+            "bluez-tools": "bluez",
+            "NetworkManager-wifi": "NetworkManager",
+            "dtb-allwinner": "kernel-default",
+            "dtb-rockchip": "kernel-default",
+            "dtb-qualcomm": "kernel-default",
+            "anx7688-firmware": "kernel-firmware-all",
+            "rtl8723bt-firmware": "kernel-firmware-all",
+            "bes2600-firmware": "kernel-firmware-all",
+            "eg25-manager": "ModemManager",
+            "plasma-mobile": "plasma5-workspace",
+            "plasma-phone-components": "plasma5-workspace",
+        }
+
+        current_map = package_mappings_tumbleweed if is_tumbleweed_or_rolling else package_mappings_leap
+
+        translated_packages = []
+        for pkg in config.get("packages", []):
+            mapped = current_map.get(pkg, pkg)
+            if mapped and mapped not in translated_packages:
+                translated_packages.append(mapped)
+
+        config["packages"] = translated_packages
 
         return config
