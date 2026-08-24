@@ -92,18 +92,25 @@ def main():
         help="Execution mode: 'mock' (simulation, no root required) or 'real' (actual build, requires root). Default: mock",
     )
 
-    parser.add_argument(
+    clean_group = parser.add_mutually_exclusive_group()
+    clean_group.add_argument(
         "--clean",
         dest="clean",
         action="store_true",
-        default=True,
-        help="Remove the target architecture work directory before a real build (default).",
+        help="Clean previous build artifacts and perform post-build workspace cleanup (default).",
     )
-    parser.add_argument(
+    clean_group.add_argument(
         "--no-clean",
         dest="clean",
         action="store_false",
-        help="Reuse the existing real-build work directory.",
+        help="Reuse previous build tree without pre-build and post-build cleanup.",
+    )
+    parser.set_defaults(clean=True)
+
+    parser.add_argument(
+        "--clean-cache",
+        action="store_true",
+        help="Clean downloaded Zypper packages and stage seed caches, then exit.",
     )
     parser.add_argument(
         "--force-isolated-toolchain",
@@ -307,6 +314,20 @@ def main():
     )
 
     args = parser.parse_args()
+
+    if args.clean_cache:
+        import shutil
+        cache_dirs = [
+            resolve_from_project("cache"),
+            resolve_from_project("workdir/cache"),
+        ]
+        print("🧹 Cleaning local package and stage seed caches...")
+        for cd in cache_dirs:
+            if cd.exists():
+                shutil.rmtree(cd, ignore_errors=True)
+                print(f"  - Cleaned: {cd}")
+        print("✅ Cache cleaning complete.")
+        sys.exit(0)
 
     if args.verify and args.verify != "auto":
         verify_path = Path(args.verify)

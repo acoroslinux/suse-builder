@@ -92,3 +92,46 @@ def test_orchestrator_tmpfs_fast_benchmark(tmp_path):
     result = orch.build(output_name="test-tmpfs")
     assert result.exists()
     assert "total" in orch.timings
+
+
+def test_post_build_cleanup_with_clean_true(tmp_path):
+    orch = make_orchestrator(tmp_path=tmp_path, clean=True)
+    orch.workdir.mkdir(parents=True, exist_ok=True)
+    dummy_file = orch.workdir / "some_file.txt"
+    dummy_file.write_text("temporary build file")
+
+    result = orch.build(output_name="test-clean-true")
+    assert result.exists()
+    # workdir should be cleaned up at the end of the build
+    assert not orch.workdir.exists()
+
+
+def test_post_build_cleanup_with_clean_false(tmp_path):
+    orch = make_orchestrator(tmp_path=tmp_path, clean=False)
+    orch.workdir.mkdir(parents=True, exist_ok=True)
+    dummy_file = orch.workdir / "some_file.txt"
+    dummy_file.write_text("reusable build file")
+
+    result = orch.build(output_name="test-clean-false")
+    assert result.exists()
+    # workdir should NOT be removed when clean=False
+    assert orch.workdir.exists()
+    assert dummy_file.exists()
+
+
+def test_post_build_cleanup_on_build_failure(tmp_path, monkeypatch):
+    orch = make_orchestrator(tmp_path=tmp_path, clean=True)
+    orch.workdir.mkdir(parents=True, exist_ok=True)
+    (orch.workdir / "marker.tmp").write_text("build failed midway")
+
+    def broken_stage_mgr(*args, **kwargs):
+        raise RuntimeError("Simulated failure in stage manager")
+
+    monkeypatch.setattr("suse_builder.core.orchestrator.StageManager", broken_stage_mgr)
+
+    with pytest.raises(RuntimeError, match="Simulated failure"):
+        orch.build(output_name="test-failure")
+
+    # workdir must still be cleaned up on failure when clean=True
+    assert not orch.workdir.exists()
+

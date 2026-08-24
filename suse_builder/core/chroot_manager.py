@@ -130,16 +130,28 @@ class ChrootManager:
 
         policy_rc_d = self.target_root / "usr" / "sbin" / "policy-rc.d"
         if policy_rc_d.exists():
-            policy_rc_d.unlink()
+            try:
+                policy_rc_d.unlink()
+            except Exception:
+                pass
+
+        # Cleanup foreign qemu user binaries from rootfs before unmounting
+        for qemu_bin in self.target_root.glob("usr/bin/qemu-*-static"):
+            try:
+                qemu_bin.unlink(missing_ok=True)
+            except Exception:
+                pass
 
         for path in [
             self.target_root / "dev" / "pts",
+            self.target_root / "dev" / "shm",
             self.target_root / "dev",
             self.target_root / "sys",
             self.target_root / "proc",
+            self.target_root / "run",
         ]:
             if path.exists():
-                subprocess.run(["umount", "-l", str(path)], check=False, stderr=subprocess.DEVNULL)
+                subprocess.run(["umount", "-l", "-f", str(path)], check=False, stderr=subprocess.DEVNULL)
 
     def run_in_chroot(
         self,

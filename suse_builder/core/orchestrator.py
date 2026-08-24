@@ -277,20 +277,20 @@ class BuildOrchestrator:
             else:
                 logger.info(f"🚀 [MOCK/SIM] Fast RAM staging enabled for {self.workdir}")
 
-        if self.clean and self.mode != "mock":
-            if os.geteuid() == 0:
+        if self.clean:
+            if self.mode != "mock" and os.geteuid() == 0:
                 unmount_all_under(self.workdir)
             if self.workdir.exists():
-                import subprocess
                 stale_paths = [
                     self.workdir / "chroot",
                     self.workdir / "iso-staging",
+                    self.workdir / "iso_root",
                     self.workdir / "build_host",
                     self.workdir / "mnt_root",
                 ]
                 for p in stale_paths:
                     if p.exists():
-                        subprocess.run(["rm", "-rf", str(p)], check=False)
+                        shutil.rmtree(p, ignore_errors=True)
                 for f in self.workdir.glob("*.raw"):
                     f.unlink(missing_ok=True)
                 for f in self.workdir.glob("*.img"):
@@ -429,6 +429,37 @@ class BuildOrchestrator:
                     logger.info("Successfully unmounted tmpfs RAM disk.")
                 except Exception as e:
                     logger.warning(f"Could not unmount tmpfs: {e}")
+
+            if self.clean and self.workdir and self.workdir.exists():
+                # Safety check: verify no active mount points remain under self.workdir before running rmtree
+                active_mount = False
+                try:
+                    resolved_workdir = self.workdir.resolve()
+                    with open("/proc/mounts", "r") as f:
+                        for line in f:
+                            parts = line.split()
+                            if len(parts) >= 2:
+                                mp = Path(parts[1]).resolve()
+                                if mp == resolved_workdir or resolved_workdir in mp.parents:
+                                    active_mount = True
+                                    break
+                except Exception:
+                    pass
+
+                if active_mount:
+                    print(f"\n[ORCHESTRATOR] ⚠️ Safety Warning: Active mounts detected under {self.workdir}. Skipping rmtree to protect host system.")
+                    logger.warning(f"Active mounts detected under {self.workdir}. Skipping rmtree to protect host system.")
+                else:
+                    print(f"\n[ORCHESTRATOR] Performing post-build cleanup: Removing {self.workdir}...")
+                    logger.info(f"Performing post-build cleanup: Removing {self.workdir}...")
+                    import shutil
+                    try:
+                        shutil.rmtree(self.workdir, ignore_errors=True)
+                        print("[ORCHESTRATOR] Cleanup complete. Workspace is pristine.")
+                        logger.info("Cleanup complete. Workspace is pristine.")
+                    except Exception as e:
+                        print(f"[ORCHESTRATOR] Warning: Could not fully remove workdir: {e}")
+                        logger.warning(f"Could not fully remove workdir: {e}")
 
             output_dir = resolve_from_project("output")
             self._fix_output_permissions(output_dir)
