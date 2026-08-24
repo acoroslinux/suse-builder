@@ -228,6 +228,22 @@ class ConfigLoader:
             if mapped and mapped not in translated_packages:
                 translated_packages.append(mapped)
 
+        x86_only_packages = {
+            "ucode-intel",
+            "ucode-amd",
+            "xf86-video-intel",
+            "xf86-video-vmware",
+            "xf86-video-vesa",
+            "xf86-video-qxl",
+            "virtualbox-guest-tools",
+            "grub2-i386-efi",
+            "grub2-x86_64-efi",
+            "syslinux",
+            "libvulkan_intel",
+        }
+        if arch_lower in {"aarch64", "arm64", "armv7l", "armv7hl", "riscv64"}:
+            translated_packages = [p for p in translated_packages if p not in x86_only_packages]
+
         config["packages"] = translated_packages
 
         return config
