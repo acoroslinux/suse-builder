@@ -207,29 +207,77 @@ class DiskEngine:
         early_cfg_path = self.workdir / "early_grub.cfg"
         early_cfg_path.write_text(early_cfg)
 
+        # Try generating standalone GRUB EFI binary on host
+        built_efi = False
+        target_efi_file = boot_efi_dir / efi_bin_name
         grub_mkstandalone = shutil.which("grub2-mkstandalone") or shutil.which("grub-mkstandalone")
         if grub_mkstandalone:
-            subprocess.run([
+            res = subprocess.run([
                 grub_mkstandalone,
                 "-O", efi_target,
-                "-o", str(boot_efi_dir / efi_bin_name),
+                "-o", str(target_efi_file),
                 f"boot/grub/grub.cfg={early_cfg_path}"
             ], capture_output=True, check=False)
-            shutil.copy2(boot_efi_dir / efi_bin_name, suse_efi_dir / suse_efi_bin)
-            shutil.copy2(boot_efi_dir / efi_bin_name, esp_dir / efi_bin_name.lower())
-        else:
+            if res.returncode == 0 and target_efi_file.exists():
+                built_efi = True
+
+        # If host grub-mkstandalone didn't produce the EFI binary, try building inside target chroot via emulation
+        if not built_efi:
+            in_chroot_early_cfg = mount_root / "tmp" / "early_grub.cfg"
+            in_chroot_early_cfg.parent.mkdir(parents=True, exist_ok=True)
+            in_chroot_early_cfg.write_text(early_cfg)
+            in_chroot_out = mount_root / "tmp" / efi_bin_name
+            chroot_bin = shutil.which("chroot")
+            if chroot_bin and (mount_root / "usr" / "bin" / "grub2-mkstandalone").exists():
+                subprocess.run([
+                    chroot_bin, str(mount_root),
+                    "grub2-mkstandalone", "-O", efi_target, "-o", f"/tmp/{efi_bin_name}", "boot/grub/grub.cfg=/tmp/early_grub.cfg"
+                ], capture_output=True, check=False)
+                if in_chroot_out.exists():
+                    shutil.copy2(in_chroot_out, target_efi_file)
+                    in_chroot_out.unlink(missing_ok=True)
+                    built_efi = True
+            in_chroot_early_cfg.unlink(missing_ok=True)
+
+        # Fallback to pre-built distribution GRUB EFI binaries
+        if not built_efi:
             candidates = [
                 mount_root / "usr" / "lib" / "grub2" / efi_target / "grub.efi",
                 mount_root / "usr" / "share" / "efi" / arch / "grub.efi",
+                mount_root / "usr" / "share" / "efi" / arch / suse_efi_bin,
+                mount_root / "usr" / "share" / "efi" / arch / efi_bin_name,
                 mount_root / "boot" / "efi" / "EFI" / "opensuse" / suse_efi_bin,
-                mount_root / "usr" / "share" / "grub2" / efi_target / "core.efi"
+                mount_root / "usr" / "lib" / "grub2" / efi_target / "core.efi",
+                mount_root / "usr" / "lib" / "grub" / efi_target / "monolithic" / suse_efi_bin,
+                self.target_root / "usr" / "lib" / "grub2" / efi_target / "grub.efi",
+                self.target_root / "usr" / "share" / "efi" / arch / "grub.efi",
+                self.target_root / "usr" / "share" / "efi" / arch / suse_efi_bin,
             ]
+            for search_dir in [mount_root / "usr/lib/grub2", mount_root / "usr/share/efi", mount_root / "usr/share/grub2", self.target_root / "usr/share/efi"]:
+                if search_dir.exists():
+                    for found_efi in search_dir.glob("**/*.efi"):
+                        if found_efi.is_file():
+                            candidates.append(found_efi)
+
             for cand in candidates:
                 if cand.exists():
-                    shutil.copy2(cand, boot_efi_dir / efi_bin_name)
-                    shutil.copy2(cand, suse_efi_dir / suse_efi_bin)
-                    shutil.copy2(cand, esp_dir / efi_bin_name.lower())
-                    break
+                    try:
+                        shutil.copy2(cand, target_efi_file)
+                        built_efi = True
+                        logger.info(f"Copied fallback EFI binary from {cand} to {target_efi_file}")
+                        break
+                    except Exception:
+                        pass
+
+        # Replicate to opensuse and lowercase fallback paths if generated
+        if target_efi_file.exists():
+            try:
+                shutil.copy2(target_efi_file, suse_efi_dir / suse_efi_bin)
+                shutil.copy2(target_efi_file, esp_dir / efi_bin_name.lower())
+            except Exception:
+                pass
+        else:
+            logger.warning(f"Could not generate or locate {efi_bin_name} for {efi_target}; system may require external bootloader or direct kernel boot.")
 
         # Detect exact kernel and initrd filenames under /boot
         k_name = None
