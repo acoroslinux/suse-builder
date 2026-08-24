@@ -95,6 +95,29 @@ class ChrootManager:
             cmd.extend([src, str(target)])
             subprocess.run(cmd, check=False, stderr=subprocess.DEVNULL)
 
+        # Ensure functional DNS resolution inside chroot
+        resolv_conf = self.target_root / "etc" / "resolv.conf"
+        resolv_conf.parent.mkdir(parents=True, exist_ok=True)
+        if resolv_conf.is_symlink() or resolv_conf.exists():
+            try:
+                resolv_conf.unlink()
+            except Exception:
+                pass
+
+        dns_content = "nameserver 1.1.1.1\nnameserver 8.8.8.8\nnameserver 9.9.9.9\n"
+        if Path("/etc/resolv.conf").exists():
+            try:
+                host_resolv = Path("/etc/resolv.conf").read_text()
+                valid_ns = [line for line in host_resolv.splitlines() if line.startswith("nameserver") and not line.startswith("nameserver 127.")]
+                if valid_ns:
+                    dns_content = "\n".join(valid_ns) + "\nnameserver 1.1.1.1\nnameserver 8.8.8.8\n"
+            except Exception:
+                pass
+        try:
+            resolv_conf.write_text(dns_content)
+        except Exception:
+            pass
+
         policy_rc_d = self.target_root / "usr" / "sbin" / "policy-rc.d"
         policy_rc_d.parent.mkdir(parents=True, exist_ok=True)
         policy_rc_d.write_text("#!/bin/sh\nexit 101\n")
