@@ -44,9 +44,9 @@ class ZypperManager:
         host_arch = platform.machine().lower()
         is_foreign = (target_arch not in {"x86_64", "amd64"} if host_arch in {"x86_64", "amd64"} else target_arch != host_arch)
 
-        # If foreign rootfs is bootstrapped and contains zypper, run via chroot emulation
+        # If foreign rootfs is bootstrapped and contains zypper, run via chroot emulation under QEMU
         target_zypper = self.target_root / "usr" / "bin" / "zypper"
-        if is_foreign and target_zypper.exists() and not self.toolchain:
+        if is_foreign and target_zypper.exists():
             chroot_args = []
             skip_next = False
             for arg in cleaned_args:
@@ -281,10 +281,15 @@ class ZypperManager:
                     if res.returncode == 0:
                         seed_used = True
                         self.chroot.prepare_emulation()
+                        self.chroot.mount_virtual_fs()
             except Exception as e:
                 logger.warning(f"Could not download official appliance: {e}")
                 if tmp_download.exists():
                     tmp_download.unlink()
+
+        if seed_used:
+            self.chroot.prepare_emulation()
+            self.chroot.mount_virtual_fs()
 
         # Always ensure repository configurations are created and up to date
         self.add_repositories()
