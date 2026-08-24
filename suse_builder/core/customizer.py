@@ -38,16 +38,16 @@ class SystemCustomizer:
         try:
             # 1. Create all missing groups
             for group in groups:
-                lookup = self.chroot.run_in_chroot(["getent", "group", str(group)], check=False)
+                lookup = self.chroot.run_in_chroot(["getent", "group", str(group)], check=False, capture_output=True)
                 if lookup.returncode != 0:
-                    self.chroot.run_in_chroot(["groupadd", "-f", str(group)], check=False)
+                    self.chroot.run_in_chroot(["groupadd", "-f", str(group)], check=False, capture_output=True)
 
             # 2. Check if user already exists
-            user_check = self.chroot.run_in_chroot(["id", "-u", str(live_user)], check=False)
+            user_check = self.chroot.run_in_chroot(["id", "-u", str(live_user)], check=False, capture_output=True)
             if user_check.returncode != 0:
-                res = self.chroot.run_in_chroot(["useradd", "-m", "-s", "/bin/bash", "-U", str(live_user)], check=False)
+                res = self.chroot.run_in_chroot(["useradd", "-m", "-s", "/bin/bash", "-U", str(live_user)], check=False, capture_output=True)
                 if res.returncode != 0:
-                    self.chroot.run_in_chroot(["useradd", "-m", "-s", "/bin/bash", str(live_user)], check=False)
+                    self.chroot.run_in_chroot(["useradd", "-m", "-s", "/bin/bash", str(live_user)], check=False, capture_output=True)
 
             # 3. Add to groups individually so a missing group never aborts everything
             for group in groups:

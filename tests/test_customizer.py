@@ -11,7 +11,7 @@ class DummyChroot:
         self.groups_present = {"audio", "video", "users"}
         self.users_present = set()
 
-    def run_in_chroot(self, command, check=True):
+    def run_in_chroot(self, command, check=True, *args, **kwargs):
         self.calls.append(command)
 
         if isinstance(command, list) and command[:2] == ["getent", "group"]:

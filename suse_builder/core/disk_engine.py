@@ -57,10 +57,14 @@ class DiskEngine:
                 logger.warning(f"Partitioned disk image creation failed ({e}); falling back to single-partition ext4 image.")
 
         if not built_partitioned:
-            subprocess.run(
-                ["mkfs.ext4", "-F", "-L", hostname, "-d", str(self.target_root), str(raw_path)],
-                check=True,
-            )
+            subprocess.run(["mkfs.ext4", "-F", "-L", hostname, str(raw_path)], check=True)
+            mount_root = self.workdir / "mnt_root"
+            mount_root.mkdir(parents=True, exist_ok=True)
+            subprocess.run(["mount", "-o", "loop", str(raw_path), str(mount_root)], check=True)
+            try:
+                self._copy_rootfs_to_mount(mount_root)
+            finally:
+                subprocess.run(["umount", str(mount_root)], check=False)
 
         if out_ext in {"img", "raw"}:
             shutil.move(str(raw_path), str(out_path))
@@ -321,6 +325,36 @@ class DiskEngine:
             gdir.mkdir(parents=True, exist_ok=True)
             (gdir / "grub.cfg").write_text(grub_cfg)
 
+    def _copy_rootfs_to_mount(self, mount_root: Path) -> None:
+        """Safely copies target_root into destination mount, excluding runtime pseudofs."""
+        logger.info(f"Populating root filesystem on {mount_root}...")
+        rsync = shutil.which("rsync")
+        if rsync:
+            cmd = [
+                rsync, "-aHAX",
+                "--exclude=/proc/*",
+                "--exclude=/sys/*",
+                "--exclude=/dev/*",
+                "--exclude=/run/*",
+                "--exclude=/tmp/*",
+                "--exclude=/var/tmp/*",
+                "--exclude=/var/cache/zypp/*",
+                f"{self.target_root}/",
+                f"{mount_root}/"
+            ]
+            subprocess.run(cmd, check=True)
+        else:
+            subprocess.run(["cp", "-a", f"{self.target_root}/.", str(mount_root)], check=True)
+
+        for d in ["proc", "sys", "dev", "run", "tmp", "var/tmp", "boot/efi"]:
+            (mount_root / d).mkdir(parents=True, exist_ok=True)
+
+        try:
+            (mount_root / "tmp").chmod(0o1777)
+            (mount_root / "var" / "tmp").chmod(0o1777)
+        except Exception:
+            pass
+
     def _build_partitioned_disk(self, out_path: Path, label: str) -> None:
         """Create a GPT partitioned image with EFI System Partition (ESP) as partition 1 and rootfs as partition 2."""
         sfdisk_script = (
@@ -345,22 +379,17 @@ class DiskEngine:
 
             if fs_type == "btrfs" and shutil.which("mkfs.btrfs"):
                 subprocess.run(["mkfs.btrfs", "-f", "-L", label, p2_root], check=True, stdout=subprocess.DEVNULL)
-                mount_root = self.workdir / "mnt_root"
-                mount_root.mkdir(parents=True, exist_ok=True)
-                subprocess.run(["mount", p2_root, str(mount_root)], check=True)
-                try:
-                    subprocess.run(["cp", "-a", f"{self.target_root}/.", str(mount_root)], check=True)
-                finally:
-                    subprocess.run(["umount", str(mount_root)], check=False)
             else:
                 fs_type = "ext4"
-                subprocess.run(["mkfs.ext4", "-F", "-L", label, "-d", str(self.target_root), p2_root], check=True, stdout=subprocess.DEVNULL)
+                subprocess.run(["mkfs.ext4", "-F", "-L", label, p2_root], check=True, stdout=subprocess.DEVNULL)
 
-            # Mount to configure fstab, EFI binaries, and GRUB
+            # Mount root partition to copy rootfs and configure fstab, EFI binaries, and GRUB
             mount_root = self.workdir / "mnt_root"
             mount_root.mkdir(parents=True, exist_ok=True)
             subprocess.run(["mount", p2_root, str(mount_root)], check=True)
             try:
+                self._copy_rootfs_to_mount(mount_root)
+
                 esp_uuid = self._get_device_uuid(p1_esp)
                 root_uuid = self._get_device_uuid(p2_root)
 

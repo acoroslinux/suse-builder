@@ -372,6 +372,9 @@ class BuildOrchestrator:
             self.timings["initramfs"] = time.perf_counter() - t0
 
             chroot.umount_virtual_fs()
+            toolchain.umount_virtual_fs()
+            if self.mode != "mock" and os.geteuid() == 0:
+                unmount_all_under(self.target_root, include_self=False)
 
             # Run post-chroot hooks before ISO/Image generation
             hook_manager.run_stage("post-chroot")
@@ -541,7 +544,7 @@ for kimg in /boot/vmlinuz-* /boot/Image-* /boot/vmlinux-*; do
       --compress "zstd -15 -T0" \
       --add "$add_mods" \
       --omit "$omit_mods" \
-      --drivers "$avail_drivers" \
+      --add-drivers "$avail_drivers" \
       "$out_initrd" "$kver"
     ln -sf "$kname" "/boot/vmlinuz"
     if [ "$kname" != "Image" ]; then

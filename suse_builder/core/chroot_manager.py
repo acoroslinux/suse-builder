@@ -153,6 +153,9 @@ class ChrootManager:
             if path.exists():
                 subprocess.run(["umount", "-l", "-f", str(path)], check=False, stderr=subprocess.DEVNULL)
 
+        from suse_builder.core.path_utils import unmount_all_under
+        unmount_all_under(self.target_root, include_self=False)
+
     def run_in_chroot(
         self,
         command: Union[str, List[str]],
