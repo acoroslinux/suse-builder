@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import platform
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 import logging
@@ -39,10 +40,32 @@ class ZypperManager:
             *cleaned_args,
         ]
 
+        target_arch = str(getattr(self.chroot, "arch", "") or self.config.get("arch", "x86_64")).lower()
+        host_arch = platform.machine().lower()
+        is_foreign = (target_arch not in {"x86_64", "amd64"} if host_arch in {"x86_64", "amd64"} else target_arch != host_arch)
+
+        # If foreign rootfs is bootstrapped and contains zypper, run via chroot emulation
+        target_zypper = self.target_root / "usr" / "bin" / "zypper"
+        if is_foreign and target_zypper.exists() and not self.toolchain:
+            chroot_args = []
+            skip_next = False
+            for arg in cleaned_args:
+                if skip_next:
+                    skip_next = False
+                    continue
+                if arg == "--root":
+                    skip_next = True
+                    continue
+                if arg.startswith("--root="):
+                    continue
+                chroot_args.append(arg)
+
+            in_chroot_cmd = ["zypper", "--non-interactive", "--gpg-auto-import-keys", *chroot_args]
+            return self.chroot.run_in_chroot(in_chroot_cmd, check=check)
+
         env = os.environ.copy()
         env["ZYPP_CONF"] = str(zypp_conf_path)
 
-        target_arch = str(getattr(self.chroot, "arch", "") or self.config.get("arch", "x86_64")).lower()
         if target_arch in {"amd64"}:
             target_arch = "x86_64"
         elif target_arch in {"arm64"}:
@@ -211,26 +234,57 @@ class ZypperManager:
             logger.info("♻️ Reusing existing rootfs because --no-clean was requested.")
             return
 
-        seed_cache = self.resolve_cache_dir().parent / f"seed-{distro}-{arch}.tar.gz"
+        target_arch = str(getattr(self.chroot, "arch", "") or self.config.get("arch", "x86_64")).lower()
+        if target_arch in {"amd64"}:
+            target_arch = "x86_64"
+        elif target_arch in {"arm64"}:
+            target_arch = "aarch64"
+        elif target_arch in {"i686", "i386"}:
+            target_arch = "i586"
+
+        host_arch = platform.machine().lower()
+        is_foreign = (target_arch not in {"x86_64", "amd64"} if host_arch in {"x86_64", "amd64"} else target_arch != host_arch)
+
+        seed_cache = self.resolve_cache_dir().parent / f"seed-{distro}-{arch}.tar.xz"
+        seed_cache_gz = self.resolve_cache_dir().parent / f"seed-{distro}-{arch}.tar.gz"
         seed_used = False
 
-        if use_seed and seed_cache.exists():
-            # Validate seed cache: must be at least one 512-byte tar block
-            if seed_cache.stat().st_size < 512:
-                logger.warning(f"Seed cache {seed_cache} is too small ({seed_cache.stat().st_size} bytes) or corrupt; discarding.")
-                try:
-                    seed_cache.unlink()
-                except Exception:
-                    pass
-            else:
+        if seed_cache_gz.exists() and not seed_cache.exists():
+            seed_cache = seed_cache_gz
+
+        if (use_seed or is_foreign) and seed_cache.exists():
+            if seed_cache.stat().st_size >= 512:
                 logger.info(f"⚡ Fast-bootstrapping rootfs from local seed tarball: {seed_cache} ({seed_cache.stat().st_size // (1024*1024)} MB)...")
                 self.target_root.mkdir(parents=True, exist_ok=True)
-                res = subprocess.run(["tar", "xzpf", str(seed_cache), "-C", str(self.target_root), "--numeric-owner"])
+                tar_cmd = ["tar", "xzpf" if str(seed_cache).endswith(".gz") else "xpf", str(seed_cache), "-C", str(self.target_root), "--numeric-owner"]
+                res = subprocess.run(tar_cmd)
                 if res.returncode == 0:
-                    logger.info("Successfully bootstrapped rootfs from local seed tarball in seconds!")
+                    logger.info("Successfully bootstrapped rootfs from local seed tarball!")
                     seed_used = True
-                else:
-                    logger.warning("Local seed tarball extraction failed. Falling back to Zypper bootstrap.")
+                    self.chroot.prepare_emulation()
+
+        if is_foreign and not seed_used:
+            appliance_urls = {
+                "tumbleweed": f"https://download.opensuse.org/ports/{target_arch}/tumbleweed/appliances/opensuse-tumbleweed-image.{target_arch}-networkd.tar.xz",
+                "leap-15.6": f"https://download.opensuse.org/ports/{target_arch}/distribution/leap/15.6/appliances/opensuse-leap-image.{target_arch}.tar.xz",
+            }
+            appliance_url = appliance_urls.get(distro) or appliance_urls.get("tumbleweed")
+            logger.info(f"📥 Fetching official openSUSE minimal rootfs appliance for {target_arch} ({distro})...")
+            tmp_download = seed_cache.with_suffix(".download")
+            try:
+                subprocess.run(["curl", "-fSL", "--retry", "3", appliance_url, "-o", str(tmp_download)], check=True)
+                if tmp_download.exists() and tmp_download.stat().st_size >= 1024 * 1024:
+                    tmp_download.replace(seed_cache)
+                    logger.info(f"Cached bootstrap appliance to {seed_cache} ({seed_cache.stat().st_size // (1024*1024)} MB).")
+                    self.target_root.mkdir(parents=True, exist_ok=True)
+                    res = subprocess.run(["tar", "xpf", str(seed_cache), "-C", str(self.target_root), "--numeric-owner"])
+                    if res.returncode == 0:
+                        seed_used = True
+                        self.chroot.prepare_emulation()
+            except Exception as e:
+                logger.warning(f"Could not download official appliance: {e}")
+                if tmp_download.exists():
+                    tmp_download.unlink()
 
         # Always ensure repository configurations are created and up to date
         self.add_repositories()
