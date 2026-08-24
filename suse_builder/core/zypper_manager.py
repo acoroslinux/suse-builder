@@ -221,7 +221,23 @@ class ZypperManager:
             ]
             res = self._run_prefer_signed(cmd_signed, cmd_fallback[1:])
             if res.returncode != 0:
-                raise ZypperManagerError(f"Zypper base pattern installation failed with exit code {res.returncode}")
+                cmd_pkg_signed = [
+                    "--non-interactive", "--gpg-auto-import-keys", "--root", str(self.target_root),
+                    "install", "--force-resolution", "-y", "patterns-base-base"
+                ]
+                cmd_pkg_fallback = [
+                    "zypper", "--non-interactive", "--root", str(self.target_root),
+                    "--no-gpg-checks", "install", "--force-resolution", "-y", "patterns-base-base"
+                ]
+                res = self._run_prefer_signed(cmd_pkg_signed, cmd_pkg_fallback[1:])
+                if res.returncode != 0:
+                    cmd_min = [
+                        "--non-interactive", "--gpg-auto-import-keys", "--root", str(self.target_root),
+                        "install", "--force-resolution", "-y", "patterns-base-minimal_base"
+                    ]
+                    res = self._run_prefer_signed(cmd_min)
+                    if res.returncode != 0:
+                        raise ZypperManagerError(f"Zypper base pattern installation failed with exit code {res.returncode}")
 
         # The appliance/base pattern is intentionally tiny.  RPM scriptlets
         # from desktop and hardware packages require these POSIX utilities,
