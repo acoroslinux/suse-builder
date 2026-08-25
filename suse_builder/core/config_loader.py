@@ -248,6 +248,15 @@ class ConfigLoader:
         }
         if arch_lower in {"aarch64", "arm64", "armv7l", "armv7hl", "riscv64"}:
             translated_packages = [p for p in translated_packages if p not in x86_only_packages]
+            if arch_lower == "riscv64":
+                riscv_omits = {
+                    "shim",
+                    "xf86-video-nouveau",
+                    "xf86-video-ati",
+                    "xf86-video-amdgpu",
+                    "xf86-video-fbdev",
+                }
+                translated_packages = [p for p in translated_packages if p not in riscv_omits]
 
         config["packages"] = translated_packages
 
