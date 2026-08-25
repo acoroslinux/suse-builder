@@ -1,0 +1,13 @@
+{
+  "device": "licheepi4a",
+  "name": "Sipeed Lichee Pi 4A",
+  "arch": "riscv64",
+  "soc": "T-Head TH1520",
+  "packages": [
+    "kernel-default",
+    "kernel-firmware-all",
+    "u-boot-tools",
+    "alsa-utils"
+  ],
+  "kernel_cmdline": "console=tty0 console=tty1 console=ttyS0,115200 earlycon"
+}

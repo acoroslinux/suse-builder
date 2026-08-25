@@ -1,0 +1,13 @@
+{
+  "device": "visionfive2",
+  "name": "StarFive VisionFive 2",
+  "arch": "riscv64",
+  "soc": "StarFive JH7110",
+  "packages": [
+    "kernel-default",
+    "kernel-firmware-all",
+    "u-boot-tools",
+    "alsa-utils"
+  ],
+  "kernel_cmdline": "console=tty0 console=tty1 console=ttyS0,115200 earlycon=sbi"
+}

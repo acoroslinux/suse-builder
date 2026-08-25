@@ -1,0 +1,12 @@
+{
+  "device": "qemu-riscv64",
+  "name": "QEMU Virt RISC-V 64-bit",
+  "arch": "riscv64",
+  "soc": "QEMU Virt RISC-V",
+  "packages": [
+    "kernel-default",
+    "kernel-firmware-all",
+    "grub2-riscv64-efi"
+  ],
+  "kernel_cmdline": "console=tty0 console=tty1 console=ttyS0,115200"
+}

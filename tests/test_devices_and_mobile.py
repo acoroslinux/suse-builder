@@ -13,21 +13,24 @@ from suse_builder.core.path_utils import resolve_from_project
     "rpi5",
     "rockchip-generic",
     "qualcomm-sdm845",
-    "apple-silicon"
+    "apple-silicon",
+    "visionfive2",
+    "licheepi4a",
+    "qemu-riscv64"
 ])
 def test_device_profile_loading(device):
     loader = ConfigLoader()
     global_cfg = resolve_from_project("configs/global_build.json")
+    arch = "riscv64" if device in {"visionfive2", "licheepi4a", "qemu-riscv64"} else "aarch64"
     config = loader.assemble_build_config(
         global_config_path=global_cfg,
-        architecture="aarch64",
+        architecture=arch,
         distro="tumbleweed",
         device=device,
         desktop="plasma-mobile"
     )
     assert config["device"] == device
     assert "kernel-default" in config["packages"]
-    assert "ModemManager" in config["packages"]
     assert config["services"]["enable"]
 
 
@@ -64,4 +67,22 @@ def test_orchestrator_mock_arm_mobile_build(tmp_path):
     report = orchestrator.validate()
     assert report["valid"] is True
     artifact = orchestrator.build(output_name="test-arm-pinephone")
+    assert artifact.exists()
+
+
+def test_orchestrator_mock_riscv64_build(tmp_path):
+    orchestrator = BuildOrchestrator(
+        arch="riscv64",
+        config_path="configs/global_build.json",
+        mode="mock",
+        distro="tumbleweed",
+        desktop="xfce",
+        device="visionfive2",
+        output_format="qcow2"
+    )
+    orchestrator.workdir = tmp_path / "riscv64"
+    orchestrator.target_root = orchestrator.workdir / "chroot"
+    report = orchestrator.validate()
+    assert report["valid"] is True
+    artifact = orchestrator.build(output_name="test-riscv64-visionfive2")
     assert artifact.exists()

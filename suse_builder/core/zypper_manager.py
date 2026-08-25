@@ -264,28 +264,45 @@ class ZypperManager:
                     self.chroot.prepare_emulation()
 
         if is_foreign and not seed_used:
-            appliance_urls = {
-                "tumbleweed": f"https://download.opensuse.org/ports/{target_arch}/tumbleweed/appliances/opensuse-tumbleweed-image.{target_arch}-networkd.tar.xz",
-                "leap-15.6": f"https://download.opensuse.org/ports/{target_arch}/distribution/leap/15.6/appliances/opensuse-leap-image.{target_arch}.tar.xz",
-            }
-            appliance_url = appliance_urls.get(distro) or appliance_urls.get("tumbleweed")
-            logger.info(f"📥 Fetching official openSUSE minimal rootfs appliance for {target_arch} ({distro})...")
-            tmp_download = seed_cache.with_suffix(".download")
-            try:
-                subprocess.run(["curl", "-fSL", "--retry", "3", appliance_url, "-o", str(tmp_download)], check=True)
-                if tmp_download.exists() and tmp_download.stat().st_size >= 1024 * 1024:
-                    tmp_download.replace(seed_cache)
-                    logger.info(f"Cached bootstrap appliance to {seed_cache} ({seed_cache.stat().st_size // (1024*1024)} MB).")
-                    self.target_root.mkdir(parents=True, exist_ok=True)
-                    res = subprocess.run(["tar", "xpf", str(seed_cache), "-C", str(self.target_root), "--numeric-owner"])
-                    if res.returncode == 0:
-                        seed_used = True
-                        self.chroot.prepare_emulation()
-                        self.chroot.mount_virtual_fs()
-            except Exception as e:
-                logger.warning(f"Could not download official appliance: {e}")
-                if tmp_download.exists():
-                    tmp_download.unlink()
+            port_name = "riscv" if target_arch == "riscv64" else target_arch
+            candidate_urls = []
+            if "tumbleweed" in distro.lower() or "factory" in distro.lower():
+                if target_arch == "riscv64":
+                    candidate_urls = [
+                        "https://download.opensuse.org/ports/riscv/tumbleweed/appliances/openSUSE-Tumbleweed-RISC-V-JeOS.riscv64-rootfs.riscv64.tar.xz",
+                        "https://download.opensuse.org/ports/riscv/tumbleweed/appliances/opensuse-tumbleweed-image.riscv64-networkd.tar.xz",
+                        "https://download.opensuse.org/ports/riscv/tumbleweed/appliances/openSUSE-Tumbleweed-RISC-V-X11.riscv64-rootfs.riscv64.tar.xz",
+                    ]
+                else:
+                    candidate_urls = [
+                        f"https://download.opensuse.org/ports/{port_name}/tumbleweed/appliances/opensuse-tumbleweed-image.{target_arch}-networkd.tar.xz",
+                        f"https://download.opensuse.org/ports/{port_name}/tumbleweed/appliances/opensuse-tumbleweed-image.{target_arch}.tar.xz",
+                    ]
+            else:
+                candidate_urls = [
+                    f"https://download.opensuse.org/ports/{port_name}/distribution/leap/15.6/appliances/opensuse-leap-image.{target_arch}.tar.xz",
+                ]
+
+            for appliance_url in candidate_urls:
+                logger.info(f"📥 Fetching official openSUSE minimal rootfs appliance for {target_arch} ({distro}) from {appliance_url}...")
+                tmp_download = seed_cache.with_suffix(".download")
+                try:
+                    res = subprocess.run(["curl", "-fSL", "--retry", "2", appliance_url, "-o", str(tmp_download)], check=False)
+                    if res.returncode == 0 and tmp_download.exists() and tmp_download.stat().st_size >= 1024 * 1024:
+                        tmp_download.replace(seed_cache)
+                        logger.info(f"Cached bootstrap appliance to {seed_cache} ({seed_cache.stat().st_size // (1024*1024)} MB).")
+                        self.target_root.mkdir(parents=True, exist_ok=True)
+                        res_tar = subprocess.run(["tar", "xpf", str(seed_cache), "-C", str(self.target_root), "--numeric-owner"])
+                        if res_tar.returncode == 0:
+                            seed_used = True
+                            self.chroot.prepare_emulation()
+                            self.chroot.mount_virtual_fs()
+                            break
+                except Exception as e:
+                    logger.warning(f"Could not download official appliance from {appliance_url}: {e}")
+                finally:
+                    if tmp_download.exists():
+                        tmp_download.unlink()
 
         if seed_used:
             self.chroot.prepare_emulation()
