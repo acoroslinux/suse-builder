@@ -149,13 +149,13 @@ class BuildOrchestrator:
             self.config["live_user"] = live_config
 
         essential_boot_pkgs = [
-            "grub2", "shim",
+            "grub2",
             "dosfstools", "mtools", "efibootmgr"
         ]
         if self.arch in {"aarch64", "arm64"}:
-            essential_boot_pkgs.extend(["grub2-arm64-efi", "u-boot-tools"])
+            essential_boot_pkgs.extend(["grub2-arm64-efi", "shim", "u-boot-tools"])
         elif self.arch in {"x86_64", "amd64"}:
-            essential_boot_pkgs.extend(["grub2-x86_64-efi", "grub2-i386-pc", "syslinux"])
+            essential_boot_pkgs.extend(["grub2-x86_64-efi", "grub2-i386-pc", "shim", "syslinux"])
         elif self.arch in {"i586", "i686"}:
             essential_boot_pkgs.extend(["grub2-i386-efi", "grub2-i386-pc", "syslinux"])
         elif self.arch == "riscv64":
