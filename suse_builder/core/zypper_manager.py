@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import subprocess
 import platform
@@ -446,15 +447,27 @@ class ZypperManager:
         res = self._run_prefer_signed(cmd_signed, cmd_fallback)
         
         if res.returncode != 0:
-            logger.warning(f"Batch package installation failed (code {res.returncode}); dynamically checking package availability...")
+            logger.warning(f"Batch package installation failed (code {res.returncode}); dynamically checking package availability in batch...")
+            # Query all packages in a single batch to avoid multiple slow QEMU invocations
+            info_res = self._run_zypper(["--root", str(self.target_root), "info"] + real_pkgs)
             valid_pkgs = []
-            for pkg in real_pkgs:
-                check_res = self._run_zypper(["--root", str(self.target_root), "info", pkg])
-                if check_res.returncode == 0:
-                    valid_pkgs.append(pkg)
-                else:
-                    logger.warning(f"⚠️ Omitting package '{pkg}' (not found in active repositories for this architecture/distro).")
+            if hasattr(info_res, "stdout") and info_res.stdout:
+                found_names = set(re.findall(r"Information for package\s+([\w\-\+\.]+):", info_res.stdout, re.IGNORECASE))
+                for pkg in real_pkgs:
+                    if pkg in found_names:
+                        valid_pkgs.append(pkg)
+                    else:
+                        logger.warning(f"⚠️ Omitting package '{pkg}' (not found in active repositories for this architecture/distro).")
             
+            if not valid_pkgs:
+                # Fallback to individual checks if batch stdout parsing was empty
+                for pkg in real_pkgs:
+                    check_res = self._run_zypper(["--root", str(self.target_root), "info", pkg])
+                    if check_res.returncode == 0:
+                        valid_pkgs.append(pkg)
+                    else:
+                        logger.warning(f"⚠️ Omitting package '{pkg}' (not found in active repositories for this architecture/distro).")
+
             if valid_pkgs:
                 logger.info(f"Retrying installation with {len(valid_pkgs)} confirmed packages...")
                 cmd_retry_signed = ["--non-interactive", "--gpg-auto-import-keys", "--root", str(self.target_root), "install", "--force-resolution", "-y"] + valid_pkgs
