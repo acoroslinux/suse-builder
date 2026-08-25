@@ -269,7 +269,6 @@ class BuildOrchestrator:
                     except Exception:
                         pass
                     logger.info(f"🚀 Mounting tmpfs ({tmpfs_size} RAM disk) on {self.workdir}...")
-                    import subprocess
                     subprocess.run(["mount", "-t", "tmpfs", "-o", f"size={tmpfs_size},mode=0755", "tmpfs", str(self.workdir)], check=True)
                     self._tmpfs_mounted = True
                 else:
@@ -426,7 +425,6 @@ class BuildOrchestrator:
 
             if self._tmpfs_mounted and self.workdir:
                 try:
-                    import subprocess
                     subprocess.run(["umount", "-f", str(self.workdir)], check=False, capture_output=True)
                     self._tmpfs_mounted = False
                     logger.info("Successfully unmounted tmpfs RAM disk.")
