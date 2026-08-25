@@ -155,16 +155,21 @@ class ConfigLoader:
             adapted_repos = []
             for r in config.get("repos", []):
                 if isinstance(r, dict):
+                    name = str(r.get("name", "")).lower()
+                    url = str(r.get("url", "")).lower()
+                    # openSUSE ports do not maintain non-oss repositories
+                    if "non-oss" in name or "/non-oss" in url:
+                        continue
                     r_copy = dict(r)
-                    url = r_copy.get("url", "")
-                    if "download.opensuse.org/tumbleweed/" in url:
-                        r_copy["url"] = url.replace("download.opensuse.org/tumbleweed/", f"download.opensuse.org/ports/{port_name}/tumbleweed/")
-                    elif "download.opensuse.org/distribution/" in url:
-                        r_copy["url"] = url.replace("download.opensuse.org/distribution/", f"download.opensuse.org/ports/{port_name}/distribution/")
-                    elif "download.opensuse.org/update/" in url:
-                        r_copy["url"] = url.replace("download.opensuse.org/update/", f"download.opensuse.org/ports/{port_name}/update/")
-                    elif "download.opensuse.org/slowroll/" in url:
-                        r_copy["url"] = url.replace("download.opensuse.org/slowroll/", f"download.opensuse.org/ports/{port_name}/slowroll/")
+                    url_orig = r_copy.get("url", "")
+                    if "download.opensuse.org/tumbleweed/" in url_orig:
+                        r_copy["url"] = url_orig.replace("download.opensuse.org/tumbleweed/", f"download.opensuse.org/ports/{port_name}/tumbleweed/")
+                    elif "download.opensuse.org/distribution/" in url_orig:
+                        r_copy["url"] = url_orig.replace("download.opensuse.org/distribution/", f"download.opensuse.org/ports/{port_name}/distribution/")
+                    elif "download.opensuse.org/update/" in url_orig:
+                        r_copy["url"] = url_orig.replace("download.opensuse.org/update/", f"download.opensuse.org/ports/{port_name}/update/")
+                    elif "download.opensuse.org/slowroll/" in url_orig:
+                        r_copy["url"] = url_orig.replace("download.opensuse.org/slowroll/", f"download.opensuse.org/ports/{port_name}/slowroll/")
                     adapted_repos.append(r_copy)
                 else:
                     adapted_repos.append(r)

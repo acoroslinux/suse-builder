@@ -186,6 +186,18 @@ class ZypperManager:
                 except Exception:
                     pass
 
+        # Clean up any leftover invalid non-oss repo files from stock appliances for ports architectures
+        target_arch = str(getattr(self.chroot, "arch", "") or self.config.get("arch", "x86_64")).lower()
+        if target_arch in {"riscv64", "aarch64", "arm64", "armv7l", "armv7hl"}:
+            if repos_d.exists():
+                for r_file in repos_d.glob("*.repo"):
+                    try:
+                        content = r_file.read_text().lower()
+                        if "/non-oss" in content or "repo-non-oss" in r_file.name.lower():
+                            r_file.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+
         for r in repos:
             name = r.get("name", "repo")
             url = r.get("url")
@@ -340,21 +352,26 @@ class ZypperManager:
                     if res.returncode != 0:
                         raise ZypperManagerError(f"Zypper base pattern installation failed with exit code {res.returncode}")
 
-        # The appliance/base pattern is intentionally tiny.  RPM scriptlets
+        # The appliance/base pattern is intentionally tiny. RPM scriptlets
         # from desktop and hardware packages require these POSIX utilities,
         # so install them before resolving user-selected profiles.
         bootstrap_tools = ["bash", "coreutils", "findutils", "grep", "sed", "shadow"]
-        tool_cmd_signed = [
-            "--non-interactive", "--gpg-auto-import-keys", "--root", str(self.target_root),
-            "install", "--force-resolution", "-y", *bootstrap_tools,
-        ]
-        tool_cmd_fallback = [
-            "zypper", "--non-interactive", "--root", str(self.target_root),
-            "--no-gpg-checks", "install", "--force-resolution", "-y", *bootstrap_tools,
-        ]
-        res = self._run_prefer_signed(tool_cmd_signed, tool_cmd_fallback[1:])
-        if res.returncode != 0:
-            raise ZypperManagerError(f"Could not install rootfs bootstrap utilities (exit code {res.returncode})")
+        all_tools_present = all(
+            (self.target_root / "usr" / "bin" / t).exists() or (self.target_root / "bin" / t).exists() or (self.target_root / "usr" / "sbin" / t).exists()
+            for t in ["bash", "coreutils", "grep", "sed"]
+        )
+        if not all_tools_present:
+            tool_cmd_signed = [
+                "--non-interactive", "--gpg-auto-import-keys", "--root", str(self.target_root),
+                "install", "--force-resolution", "-y", *bootstrap_tools,
+            ]
+            tool_cmd_fallback = [
+                "zypper", "--non-interactive", "--root", str(self.target_root),
+                "--no-gpg-checks", "install", "--force-resolution", "-y", *bootstrap_tools,
+            ]
+            res = self._run_prefer_signed(tool_cmd_signed, tool_cmd_fallback[1:])
+            if res.returncode != 0:
+                raise ZypperManagerError(f"Could not install rootfs bootstrap utilities (exit code {res.returncode})")
 
         # Import GPG keys into RPM database to eliminate NOKEY signature warnings
         for key_dir in [
