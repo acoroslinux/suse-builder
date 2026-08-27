@@ -286,20 +286,8 @@ class BuildOrchestrator:
             if self.mode != "mock" and os.geteuid() == 0:
                 unmount_all_under(self.workdir)
             if self.workdir.exists():
-                stale_paths = [
-                    self.workdir / "chroot",
-                    self.workdir / "iso-staging",
-                    self.workdir / "iso_root",
-                    self.workdir / "build_host",
-                    self.workdir / "mnt_root",
-                ]
-                for p in stale_paths:
-                    if p.exists():
-                        shutil.rmtree(p, ignore_errors=True)
-                for f in self.workdir.glob("*.raw"):
-                    f.unlink(missing_ok=True)
-                for f in self.workdir.glob("*.img"):
-                    f.unlink(missing_ok=True)
+                import shutil
+                shutil.rmtree(self.workdir, ignore_errors=True)
                 logger.info(f"Cleaned workdir: {self.workdir}")
 
         t0 = time.perf_counter()

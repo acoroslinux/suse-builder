@@ -36,8 +36,8 @@ class ToolchainManager:
         self.force_isolated = force_isolated
         self.target_arch = target_arch.lower()
         self.distro = distro
-        self.build_host_dir = self.workdir_base.parent / "build_host"
-        self.cache_dir = self.workdir_base.parent / "cache"
+        self.build_host_dir = _resolve_from_project("build_host")
+        self.cache_dir = _resolve_from_project("cache")
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.is_mounted = False
         self.use_isolated = False
