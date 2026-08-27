@@ -173,6 +173,18 @@ menuentry "openSUSE" {{
             self._convert_disk_format(out_path, final_path, out_ext)
             out_path.unlink(missing_ok=True)
             
+        final_out = out_path
+        if target_format != "img":
+            vm_out = out_path.with_name(f"{self.output_name}.{target_format}")
+            logger.info(f"Converting raw disk image to VM format: {target_format}...")
+            if self.toolchain:
+                self.toolchain.run_in_build_host(["qemu-img", "convert", "-f", "raw", "-O", target_format, str(out_path), str(vm_out)], check=True)
+            else:
+                subprocess.run(["qemu-img", "convert", "-f", "raw", "-O", target_format, str(out_path), str(vm_out)], check=True)
+            out_path.unlink()
+            final_out = vm_out
+            out_path = final_out
+
         compression = self.config.get("compression", "zstd")
         if compression != "none" and out_ext == "img":
             logger.info(f"Compressing disk image with {compression}...")

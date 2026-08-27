@@ -417,6 +417,10 @@ class BuildOrchestrator:
             if self.mode != "mock" and os.geteuid() == 0:
                 unmount_all_under(resolve_from_project("workdir"))
 
+            if self.clean:
+                logger.info("Performing post-build cleanup: Removing workdir...")
+                self._safe_clean_build_tree()
+
             if self._tmpfs_mounted and self.workdir:
                 try:
                     subprocess.run(["umount", "-f", str(self.workdir)], check=False, capture_output=True)
