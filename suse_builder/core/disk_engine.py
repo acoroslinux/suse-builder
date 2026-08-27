@@ -44,7 +44,7 @@ class DiskEngine:
             return out_path
             
         rootfs_size = self._calculate_image_size(self.target_root)
-        efi_size = 200
+        efi_size = 300
         total_size = rootfs_size + efi_size + 4
 
         efi_img = self.workdir / "efi.img"
