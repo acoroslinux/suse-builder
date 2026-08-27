@@ -863,6 +863,34 @@ class SystemCustomizer:
 
         logger.info("Dracut live configuration written to /etc/dracut.conf.d/02-live.conf.")
 
+    def configure_gaming_tweaks(self):
+        """Apply aggressive sysctl, CPU governor, and IO performance tweaks."""
+        if self.chroot.mode == "mock":
+            return
+        if not self.config.get("gaming_tweaks", False):
+            return
+            
+        sysctl_dir = self.target_root / "etc" / "sysctl.d"
+        sysctl_dir.mkdir(parents=True, exist_ok=True)
+        sysctl_conf = sysctl_dir / "99-gaming.conf"
+        sysctl_content = (
+            "vm.max_map_count=2147483642\n"
+            "vm.swappiness=10\n"
+            "vm.vfs_cache_pressure=50\n"
+            "vm.compaction_proactiveness=0\n"
+            "vm.page_lock_unfairness=1\n"
+            "kernel.split_lock_mitigate=0\n"
+        )
+        sysctl_conf.write_text(sysctl_content)
+        
+        # Modify kernel params in config for orchestrator/grub
+        boot_config = self.config.get("boot", {})
+        kparams = boot_config.get("kernel_params", "")
+        if "mitigations=off" not in kparams:
+            kparams += " mitigations=off nowatchdog nmi_watchdog=0 split_lock_detect=off"
+        boot_config["kernel_params"] = kparams.strip()
+        self.config["boot"] = boot_config
+
     def configure_live_environment(self):
         self.configure_locales()
         self.setup_live_users()

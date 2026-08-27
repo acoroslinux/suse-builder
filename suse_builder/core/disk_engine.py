@@ -1,24 +1,29 @@
-import os
-import shutil
 import subprocess
+import shutil
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import logging
 from suse_builder.core.path_utils import resolve_from_project
 
 logger = logging.getLogger("disk_engine")
 
 class DiskEngineError(Exception):
-    """Raised when a raw disk image cannot be created."""
     pass
 
 class DiskEngine:
-    def __init__(self, workdir: Path, target_root: Path, output_name: str, config: Dict[str, Any], mode: str):
-        self.workdir = Path(workdir)
-        self.target_root = Path(target_root)
+    def __init__(self, workdir: Path, target_root: Path, output_name: str, config: Dict[str, Any], mode: str, toolchain: Optional[Any] = None):
+        self.workdir = Path(workdir).resolve()
+        self.target_root = Path(target_root).resolve()
         self.output_name = output_name
         self.config = config
         self.mode = mode.lower()
+        self.toolchain = toolchain
+
+    def _calculate_image_size(self, rootfs: Path) -> int:
+        if self.mode == "mock":
+            return 1024
+        out = subprocess.check_output(["du", "-sm", str(rootfs)])
+        return int(out.split()[0]) + 600
 
     def build_disk_image(self, target_format: str = "img") -> Path:
         fmt_clean = target_format.lower().lstrip(".")
@@ -27,53 +32,169 @@ class DiskEngine:
         else:
             out_ext = fmt_clean
 
-        out_path = resolve_from_project(f"output/{self.output_name}.{out_ext}")
+        out_path = resolve_from_project(f"output/{self.output_name}.img")
         out_path.parent.mkdir(parents=True, exist_ok=True)
-
+        
         if self.mode == "mock":
             out_path.touch()
+            if out_ext != "img":
+                final_out = resolve_from_project(f"output/{self.output_name}.{out_ext}")
+                final_out.touch()
+                return final_out
             return out_path
+            
+        rootfs_size = self._calculate_image_size(self.target_root)
+        efi_size = 200
+        total_size = rootfs_size + efi_size + 4
 
-        if not self.target_root.is_dir():
-            raise DiskEngineError(f"Root filesystem directory does not exist: {self.target_root}")
+        efi_img = self.workdir / "efi.img"
+        root_img = self.workdir / "root.img"
+        fs_type = self.config.get("fs_type", "btrfs")
+        
+        logger.info(f"Generating {fs_type.upper()} root filesystem ({rootfs_size} MB)...")
+        # Build root image directly from directory
+        if self.toolchain:
+            self.toolchain.run_in_build_host(["truncate", "-s", f"{rootfs_size}M", str(root_img)])
+            if fs_type == "btrfs":
+                self.toolchain.run_in_build_host(["mkfs.btrfs", "-r", str(self.target_root), str(root_img)])
+            else:
+                self.toolchain.run_in_build_host(["mke2fs", "-t", "ext4", "-L", "ROOTFS", "-d", str(self.target_root), str(root_img)])
+        else:
+            subprocess.run(["truncate", "-s", f"{rootfs_size}M", str(root_img)], check=True)
+            if fs_type == "btrfs":
+                subprocess.run(["mkfs.btrfs", "-r", str(self.target_root), str(root_img)], check=True)
+            else:
+                subprocess.run(["mke2fs", "-t", "ext4", "-L", "ROOTFS", "-d", str(self.target_root), str(root_img)], check=True)
 
-        if shutil.which("mkfs.ext4") is None:
-            raise DiskEngineError("mkfs.ext4 is required to build a disk image.")
+        logger.info(f"Generating FAT32 EFI filesystem ({efi_size} MB)...")
+        if self.toolchain:
+            self.toolchain.run_in_build_host(["truncate", "-s", f"{efi_size}M", str(efi_img)])
+            self.toolchain.run_in_build_host(["mkfs.fat", "-F", "32", str(efi_img)])
+        else:
+            subprocess.run(["truncate", "-s", f"{efi_size}M", str(efi_img)], check=True)
+            subprocess.run(["mkfs.fat", "-F", "32", str(efi_img)], check=True)
 
-        raw_path = self.workdir / f"{self.output_name}.raw"
-        size = self.config.get("disk_image_size", "4G")
-        hostname = self.config.get("hostname", "suse-rootfs")
+        # Handle EFI files
+        efi_boot_dir = self.workdir / "efi_tmp" / "EFI" / "BOOT"
+        efi_boot_dir.mkdir(parents=True, exist_ok=True)
+        
+        bootloader_type = self.config.get("bootloader", {}).get("type", "grub2-hybrid")
+        boot_dir = self.target_root / "boot"
+        vmlinuz = next((f.name for f in boot_dir.glob("vmlinuz-*") if not f.name.endswith(".old")), "vmlinuz")
+        initrd = next((f.name for f in boot_dir.glob("initramfs-*.img") if not f.name.endswith(".old") and not "kdump" in f.name), "initrd")
+        
+        kernel_params = self.config.get("boot", {}).get("kernel_params", "quiet splash")
+        
+        if bootloader_type == "systemd-boot":
+            # Install systemd-boot
+            sd_boot_src = self.target_root / "usr" / "lib" / "systemd" / "boot" / "efi" / "systemd-bootx64.efi"
+            if sd_boot_src.exists():
+                shutil.copy2(sd_boot_src, efi_boot_dir / "BOOTX64.EFI")
+            
+            # Copy kernel and initrd to ESP
+            if (boot_dir / vmlinuz).exists():
+                shutil.copy2(boot_dir / vmlinuz, self.workdir / "efi_tmp" / vmlinuz)
+            if (boot_dir / initrd).exists():
+                shutil.copy2(boot_dir / initrd, self.workdir / "efi_tmp" / initrd)
+            
+            # Create loader/loader.conf
+            loader_dir = self.workdir / "efi_tmp" / "loader"
+            loader_dir.mkdir(parents=True, exist_ok=True)
+            (loader_dir / "loader.conf").write_text("default suse\ntimeout 3\n")
+            
+            # Create loader/entries/suse.conf
+            entries_dir = loader_dir / "entries"
+            entries_dir.mkdir(parents=True, exist_ok=True)
+            (entries_dir / "suse.conf").write_text(f"""title openSUSE
+linux /{vmlinuz}
+initrd /{initrd}
+options root=LABEL=ROOTFS rw {kernel_params}
+""")
+        else:
+            # SUSE GRUB
+            efi_suse_src = self.target_root / "boot" / "efi" / "EFI" / "opensuse"
+            if not efi_suse_src.exists():
+                efi_suse_src = self.target_root / "usr" / "lib" / "grub2" / "x86_64-efi"
+                
+            if efi_suse_src.exists():
+                shutil.copytree(efi_suse_src, self.workdir / "efi_tmp" / "EFI" / "opensuse", dirs_exist_ok=True)
+                
+            bootx64 = efi_boot_dir / "BOOTX64.EFI"
+            if not bootx64.exists():
+                shim = self.workdir / "efi_tmp" / "EFI" / "opensuse" / "shim.efi"
+                grub = self.workdir / "efi_tmp" / "EFI" / "opensuse" / "grub.efi"
+                if shim.exists():
+                    shutil.copy2(shim, bootx64)
+                elif grub.exists():
+                    shutil.copy2(grub, bootx64)
+            
+            grub_cfg = self.workdir / "efi_tmp" / "EFI" / "opensuse" / "grub.cfg"
+            grub_cfg.parent.mkdir(parents=True, exist_ok=True)
+            grub_cfg.write_text(f"""
+search --no-floppy --set=root --label ROOTFS
+set prefix=($root)/boot/grub2
+menuentry "openSUSE" {{
+    linux /boot/{vmlinuz} root=LABEL=ROOTFS rw {kernel_params}
+    initrd /boot/{initrd}
+}}
+""")
 
-        logger.info(f"Creating raw disk image ({size}) at: {raw_path}")
-        subprocess.run(["truncate", "-s", str(size), str(raw_path)], check=True)
+        if self.toolchain:
+            self.toolchain.run_in_build_host(["mcopy", "-s", "-i", str(efi_img), f"{self.workdir}/efi_tmp/EFI", "::/"])
+            if (self.workdir / "efi_tmp" / "loader").exists():
+                self.toolchain.run_in_build_host(["mcopy", "-s", "-i", str(efi_img), f"{self.workdir}/efi_tmp/loader", "::/"])
+            if (self.workdir / "efi_tmp" / vmlinuz).exists():
+                self.toolchain.run_in_build_host(["mcopy", "-i", str(efi_img), f"{self.workdir}/efi_tmp/{vmlinuz}", "::/"])
+                self.toolchain.run_in_build_host(["mcopy", "-i", str(efi_img), f"{self.workdir}/efi_tmp/{initrd}", "::/"])
+        else:
+            subprocess.run(["mcopy", "-s", "-i", str(efi_img), f"{self.workdir}/efi_tmp/EFI", "::/"], check=True)
 
-        built_partitioned = False
-        # Attempt GPT partitioning + loop mount + bootloader installation if running as root
-        if os.geteuid() == 0 and shutil.which("sfdisk") and shutil.which("losetup"):
-            try:
-                self._build_partitioned_disk(raw_path, hostname)
-                built_partitioned = True
-            except Exception as e:
-                logger.warning(f"Partitioned disk image creation failed ({e}); falling back to single-partition ext4 image.")
+        logger.info(f"Building partitioned disk image ({total_size} MB)...")
+        if self.toolchain:
+            self.toolchain.run_in_build_host(["dd", "if=/dev/zero", f"of={out_path}", "bs=1M", f"count={total_size}", "status=none"])
+            self.toolchain.run_in_build_host(["parted", "-s", str(out_path), "mktable", "gpt"])
+            self.toolchain.run_in_build_host(["parted", "-s", str(out_path), "mkpart", "ESP", "fat32", "1MiB", f"{efi_size+1}MiB"])
+            self.toolchain.run_in_build_host(["parted", "-s", str(out_path), "set", "1", "esp", "on"])
+            self.toolchain.run_in_build_host(["parted", "-s", str(out_path), "mkpart", "primary", fs_type, f"{efi_size+1}MiB", "100%"])
+            self.toolchain.run_in_build_host(["dd", f"if={efi_img}", f"of={out_path}", "bs=1M", "seek=1", "conv=notrunc", "status=none"])
+            self.toolchain.run_in_build_host(["dd", f"if={root_img}", f"of={out_path}", "bs=1M", f"seek={efi_size+1}", "conv=notrunc", "status=none"])
+        else:
+            subprocess.run(["dd", "if=/dev/zero", f"of={out_path}", "bs=1M", f"count={total_size}", "status=none"], check=True)
+            subprocess.run(["parted", "-s", str(out_path), "mktable", "gpt"], check=True)
+            subprocess.run(["parted", "-s", str(out_path), "mkpart", "ESP", "fat32", "1MiB", f"{efi_size+1}MiB"], check=True)
+            subprocess.run(["parted", "-s", str(out_path), "set", "1", "esp", "on"], check=True)
+            subprocess.run(["parted", "-s", str(out_path), "mkpart", "primary", fs_type, f"{efi_size+1}MiB", "100%"], check=True)
+            subprocess.run(["dd", f"if={efi_img}", f"of={out_path}", "bs=1M", "seek=1", "conv=notrunc", "status=none"], check=True)
+            subprocess.run(["dd", f"if={root_img}", f"of={out_path}", "bs=1M", f"seek={efi_size+1}", "conv=notrunc", "status=none"], check=True)
 
-        if not built_partitioned:
-            subprocess.run(["mkfs.ext4", "-F", "-L", hostname, str(raw_path)], check=True)
-            mount_root = self.workdir / "mnt_root"
-            mount_root.mkdir(parents=True, exist_ok=True)
-            subprocess.run(["mount", "-o", "loop", str(raw_path), str(mount_root)], check=True)
-            try:
-                self._copy_rootfs_to_mount(mount_root)
-            finally:
-                subprocess.run(["umount", str(mount_root)], check=False)
+        final_path = out_path
+        if out_ext != "img":
+            final_path = resolve_from_project(f"output/{self.output_name}.{out_ext}")
+            self._convert_disk_format(out_path, final_path, out_ext)
+            out_path.unlink(missing_ok=True)
+            
+        compression = self.config.get("compression", "zstd")
+        if compression != "none" and out_ext == "img":
+            logger.info(f"Compressing disk image with {compression}...")
+            if compression == "xz":
+                cmd = ["xz", "-z9", "-T0", str(final_path)]
+                final_path = Path(f"{final_path}.xz")
+            elif compression == "gz" or compression == "gzip":
+                cmd = ["gzip", "-9", str(final_path)]
+                final_path = Path(f"{final_path}.gz")
+            else: # zstd
+                cmd = ["zstd", "-19", "-T0", "--rm", str(final_path)]
+                final_path = Path(f"{final_path}.zst")
+                
+            if self.toolchain:
+                self.toolchain.run_in_build_host(cmd)
+            else:
+                subprocess.run(cmd, check=True)
 
-        if out_ext in {"img", "raw"}:
-            shutil.move(str(raw_path), str(out_path))
-            return out_path
+        logger.info(f"Disk image generated successfully at {final_path}")
+        return final_path
 
-        # Convert raw disk to requested virtual machine image format (qcow2, vmdk, vhd, vdi)
-        return self._convert_disk_format(raw_path, out_path, out_ext)
-
-    def _convert_disk_format(self, raw_path: Path, out_path: Path, target_fmt: str) -> Path:
+    def _convert_disk_format(self, raw_path: Path, out_path: Path, target_fmt: str):
         qemu_img = shutil.which("qemu-img")
         if not qemu_img:
             raise DiskEngineError(f"qemu-img is required to convert raw disk to format '{target_fmt}'.")
@@ -89,379 +210,4 @@ class DiskEngine:
 
         logger.info(f"Converting raw disk image to {target_fmt.upper()} format using qemu-img...")
         cmd = [qemu_img, "convert", "-f", "raw", "-O", qemu_target_fmt, str(raw_path), str(out_path)]
-        res = subprocess.run(cmd, capture_output=True, text=True)
-        raw_path.unlink(missing_ok=True)
-
-        if res.returncode != 0:
-            raise DiskEngineError(f"qemu-img conversion failed: {res.stderr}")
-
-        return out_path
-
-    def _get_device_uuid(self, dev: str) -> str:
-        try:
-            res = subprocess.run(["blkid", "-s", "UUID", "-o", "value", dev], capture_output=True, text=True, check=True)
-            return res.stdout.strip()
-        except Exception:
-            return ""
-
-    def _install_uefi_bootloader(self, mount_root: Path, esp_dir: Path, root_uuid: str, esp_uuid: str) -> None:
-        """Populate the ESP with EFI binaries and standalone grub.cfg for UEFI booting."""
-        boot_efi_dir = esp_dir / "EFI" / "BOOT"
-        boot_efi_dir.mkdir(parents=True, exist_ok=True)
-        suse_efi_dir = esp_dir / "EFI" / "opensuse"
-        suse_efi_dir.mkdir(parents=True, exist_ok=True)
-
-        arch = str(self.config.get("arch") or "x86_64").lower()
-        if arch in {"aarch64", "arm64"}:
-            efi_target = "arm64-efi"
-            efi_bin_name = "BOOTAA64.EFI"
-            suse_efi_bin = "grubaa64.efi"
-            mod_subdirs = ["arm64-efi", "aarch64-efi"]
-            default_consoles = "console=tty0 console=ttyAMA0,115200 console=ttyS0,115200"
-        elif arch in {"i586", "i686", "i386"}:
-            efi_target = "i386-efi"
-            efi_bin_name = "BOOTIA32.EFI"
-            suse_efi_bin = "grubia32.efi"
-            mod_subdirs = ["i386-efi"]
-            default_consoles = "console=tty1 console=ttyS0,115200"
-        elif arch in {"riscv64"}:
-            efi_target = "riscv64-efi"
-            efi_bin_name = "BOOTRISCV64.EFI"
-            suse_efi_bin = "grubriscv64.efi"
-            mod_subdirs = ["riscv64-efi"]
-            default_consoles = "console=tty0 console=ttySIF0,115200 console=ttyS0,115200"
-        else:
-            efi_target = "x86_64-efi"
-            efi_bin_name = "BOOTX64.EFI"
-            suse_efi_bin = "grubx64.efi"
-            mod_subdirs = ["x86_64-efi"]
-            default_consoles = "console=tty1 console=ttyS0,115200"
-
-        # Write universal UEFI Shell startup script (checks FS0:, FS1:, FS2:, etc.)
-        startup_nsh = (
-            "@echo -off\n"
-            "for %i in 0 1 2 3 4 5 6 7 8 9\n"
-            f"  if exist FS%i:\\EFI\\BOOT\\{efi_bin_name} then\n"
-            "    FS%i:\n"
-            "    cd \\EFI\\BOOT\n"
-            f"    {efi_bin_name}\n"
-            "  endif\n"
-            "  if exist FS%i:\\EFI\\BOOT\\BOOTX64.EFI then\n"
-            "    FS%i:\n"
-            "    cd \\EFI\\BOOT\n"
-            "    BOOTX64.EFI\n"
-            "  endif\n"
-            "endfor\n"
-            f"\\EFI\\BOOT\\{efi_bin_name}\n"
-        )
-        (esp_dir / "startup.nsh").write_text(startup_nsh)
-
-        # Copy GRUB EFI modules directory so GRUB has all drivers available at runtime
-        mod_src = None
-        for mdir in mod_subdirs:
-            for cand_dir in [
-                mount_root / "usr" / "share" / "grub2" / mdir,
-                mount_root / "usr" / "lib" / "grub2" / mdir,
-                Path(f"/usr/lib/grub/{mdir}"),
-                Path(f"/usr/share/grub2/{mdir}")
-            ]:
-                if cand_dir.is_dir() and any(cand_dir.glob("*.mod")):
-                    mod_src = cand_dir
-                    break
-            if mod_src:
-                break
-
-        if mod_src:
-            for dst_dir in [
-                mount_root / "boot" / "grub2" / efi_target,
-                mount_root / "boot" / "grub" / efi_target,
-                boot_efi_dir / efi_target
-            ]:
-                dst_dir.mkdir(parents=True, exist_ok=True)
-                for mod_file in mod_src.glob("*"):
-                    if mod_file.is_file():
-                        shutil.copy2(mod_file, dst_dir / mod_file.name)
-            logger.info(f"Copied GRUB EFI modules from {mod_src} to /boot/grub2/{efi_target}.")
-
-        # Create early bootstrap grub.cfg to embed inside standalone EFI binary
-        early_cfg = (
-            'insmod part_gpt\n'
-            'insmod part_msdos\n'
-            'insmod fat\n'
-            'insmod ext2\n'
-            'insmod btrfs\n'
-            'insmod normal\n'
-            'insmod search\n'
-            'insmod search_fs_uuid\n'
-            f'search --no-floppy --fs-uuid --set=root {root_uuid}\n'
-            'set prefix=($root)/boot/grub2\n'
-            'if [ -f $prefix/grub.cfg ]; then\n'
-            '    configfile $prefix/grub.cfg\n'
-            'fi\n'
-            f'search --no-floppy --fs-uuid --set=root {esp_uuid}\n'
-            'set prefix=($root)/EFI/BOOT\n'
-            'if [ -f $prefix/grub.cfg ]; then\n'
-            '    configfile $prefix/grub.cfg\n'
-            'fi\n'
-        )
-        early_cfg_path = self.workdir / "early_grub.cfg"
-        early_cfg_path.write_text(early_cfg)
-
-        # Try generating standalone GRUB EFI binary on host
-        built_efi = False
-        target_efi_file = boot_efi_dir / efi_bin_name
-        grub_mkstandalone = shutil.which("grub2-mkstandalone") or shutil.which("grub-mkstandalone")
-        if grub_mkstandalone:
-            res = subprocess.run([
-                grub_mkstandalone,
-                "-O", efi_target,
-                "-o", str(target_efi_file),
-                f"boot/grub/grub.cfg={early_cfg_path}"
-            ], capture_output=True, check=False)
-            if res.returncode == 0 and target_efi_file.exists():
-                built_efi = True
-
-        # If host grub-mkstandalone didn't produce the EFI binary, try building inside target chroot via emulation
-        if not built_efi:
-            in_chroot_early_cfg = mount_root / "tmp" / "early_grub.cfg"
-            in_chroot_early_cfg.parent.mkdir(parents=True, exist_ok=True)
-            in_chroot_early_cfg.write_text(early_cfg)
-            in_chroot_out = mount_root / "tmp" / efi_bin_name
-            chroot_bin = shutil.which("chroot")
-            if chroot_bin and (mount_root / "usr" / "bin" / "grub2-mkstandalone").exists():
-                subprocess.run([
-                    chroot_bin, str(mount_root),
-                    "grub2-mkstandalone", "-O", efi_target, "-o", f"/tmp/{efi_bin_name}", "boot/grub/grub.cfg=/tmp/early_grub.cfg"
-                ], capture_output=True, check=False)
-                if in_chroot_out.exists():
-                    shutil.copy2(in_chroot_out, target_efi_file)
-                    in_chroot_out.unlink(missing_ok=True)
-                    built_efi = True
-            in_chroot_early_cfg.unlink(missing_ok=True)
-
-        # Fallback to pre-built distribution GRUB EFI binaries
-        if not built_efi:
-            candidates = [
-                mount_root / "usr" / "lib" / "grub2" / efi_target / "grub.efi",
-                mount_root / "usr" / "share" / "efi" / arch / "grub.efi",
-                mount_root / "usr" / "share" / "efi" / arch / suse_efi_bin,
-                mount_root / "usr" / "share" / "efi" / arch / efi_bin_name,
-                mount_root / "boot" / "efi" / "EFI" / "opensuse" / suse_efi_bin,
-                mount_root / "usr" / "lib" / "grub2" / efi_target / "core.efi",
-                mount_root / "usr" / "lib" / "grub" / efi_target / "monolithic" / suse_efi_bin,
-                self.target_root / "usr" / "lib" / "grub2" / efi_target / "grub.efi",
-                self.target_root / "usr" / "share" / "efi" / arch / "grub.efi",
-                self.target_root / "usr" / "share" / "efi" / arch / suse_efi_bin,
-            ]
-            for search_dir in [mount_root / "usr/lib/grub2", mount_root / "usr/share/efi", mount_root / "usr/share/grub2", self.target_root / "usr/share/efi"]:
-                if search_dir.exists():
-                    for found_efi in search_dir.glob("**/*.efi"):
-                        if found_efi.is_file():
-                            candidates.append(found_efi)
-
-            for cand in candidates:
-                if cand.exists():
-                    try:
-                        shutil.copy2(cand, target_efi_file)
-                        built_efi = True
-                        logger.info(f"Copied fallback EFI binary from {cand} to {target_efi_file}")
-                        break
-                    except Exception:
-                        pass
-
-        # Replicate to opensuse and lowercase fallback paths if generated
-        if target_efi_file.exists():
-            try:
-                shutil.copy2(target_efi_file, suse_efi_dir / suse_efi_bin)
-                shutil.copy2(target_efi_file, esp_dir / efi_bin_name.lower())
-            except Exception:
-                pass
-        else:
-            logger.warning(f"Could not generate or locate {efi_bin_name} for {efi_target}; system may require external bootloader or direct kernel boot.")
-
-        # Detect exact kernel and initrd filenames under /boot
-        k_name = None
-        i_name = None
-        for bdir in [mount_root / "boot", self.target_root / "boot"]:
-            if bdir.exists():
-                for f in sorted(bdir.glob("vmlinuz-*")):
-                    if f.is_file() and not f.is_symlink():
-                        k_name = f.name
-                        break
-                for f in sorted(bdir.glob("Image-*")):
-                    if f.is_file() and not f.is_symlink():
-                        k_name = f.name
-                        break
-                for f in sorted(bdir.glob("initrd-*")):
-                    if f.is_file() and not f.is_symlink():
-                        i_name = f.name
-                        break
-                for f in sorted(bdir.glob("initramfs-*")):
-                    if f.is_file() and not f.is_symlink():
-                        i_name = f.name
-                        break
-                if k_name and i_name:
-                    break
-
-        boot_dir = mount_root / "boot"
-        boot_dir.mkdir(parents=True, exist_ok=True)
-
-        if not k_name:
-            for f in sorted(boot_dir.glob("vmlinuz*")) + sorted(boot_dir.glob("Image*")):
-                k_name = f.name
-                break
-            k_name = k_name or "vmlinuz"
-
-        if not i_name:
-            for f in sorted(boot_dir.glob("initrd*")) + sorted(boot_dir.glob("initramfs*")):
-                i_name = f.name
-                break
-            i_name = i_name or "initrd"
-
-        # Create both hardlink and symlink for /boot/vmlinuz and /boot/initrd to guarantee GRUB finds them
-        if k_name not in {"vmlinuz", "Image"} and (boot_dir / k_name).exists():
-            (boot_dir / "vmlinuz").unlink(missing_ok=True)
-            try:
-                os.link(str(boot_dir / k_name), str(boot_dir / "vmlinuz"))
-            except Exception:
-                try:
-                    (boot_dir / "vmlinuz").symlink_to(k_name)
-                except Exception:
-                    pass
-
-        if i_name not in {"initrd", "initramfs"} and (boot_dir / i_name).exists():
-            (boot_dir / "initrd").unlink(missing_ok=True)
-            try:
-                os.link(str(boot_dir / i_name), str(boot_dir / "initrd"))
-            except Exception:
-                try:
-                    (boot_dir / "initrd").symlink_to(i_name)
-                except Exception:
-                    pass
-
-        fs_type = str(self.config.get("filesystem") or "ext4").lower()
-        dev_cmdline = self.config.get("kernel_cmdline", "").strip()
-        cmdline_params = f"{dev_cmdline} {default_consoles}".strip() if dev_cmdline else default_consoles
-
-        distro_title = self.config.get("distro", "openSUSE Linux")
-        device_title = f" ({self.config['device']})" if "device" in self.config else ""
-
-        grub_cfg = (
-            'insmod part_gpt\n'
-            'insmod part_msdos\n'
-            'insmod ext2\n'
-            'insmod btrfs\n'
-            'insmod fat\n'
-            'insmod all_video\n'
-            'set default="0"\n'
-            'set timeout=5\n\n'
-            f'search --no-floppy --fs-uuid --set=root {root_uuid}\n\n'
-            f'menuentry "openSUSE Linux{device_title}" {{\n'
-            f'    linux /boot/{k_name} root=UUID={root_uuid} rootfstype={fs_type} rw quiet splash {cmdline_params}\n'
-            f'    initrd /boot/{i_name}\n'
-            '}\n'
-            f'menuentry "openSUSE Linux{device_title} (Recovery Mode)" {{\n'
-            f'    linux /boot/{k_name} root=UUID={root_uuid} rootfstype={fs_type} single {cmdline_params}\n'
-            f'    initrd /boot/{i_name}\n'
-            '}\n'
-        )
-        (boot_efi_dir / "grub.cfg").write_text(grub_cfg)
-        (suse_efi_dir / "grub.cfg").write_text(grub_cfg)
-
-        # Also write grub.cfg to rootfs /boot/grub2/ and /boot/grub/ for Legacy BIOS booting
-        for gdir in [mount_root / "boot" / "grub2", mount_root / "boot" / "grub"]:
-            gdir.mkdir(parents=True, exist_ok=True)
-            (gdir / "grub.cfg").write_text(grub_cfg)
-
-    def _copy_rootfs_to_mount(self, mount_root: Path) -> None:
-        """Safely copies target_root into destination mount, excluding runtime pseudofs."""
-        logger.info(f"Populating root filesystem on {mount_root}...")
-        rsync = shutil.which("rsync")
-        if rsync:
-            cmd = [
-                rsync, "-aHAX",
-                "--exclude=/proc/*",
-                "--exclude=/sys/*",
-                "--exclude=/dev/*",
-                "--exclude=/run/*",
-                "--exclude=/tmp/*",
-                "--exclude=/var/tmp/*",
-                "--exclude=/var/cache/zypp/*",
-                f"{self.target_root}/",
-                f"{mount_root}/"
-            ]
-            subprocess.run(cmd, check=True)
-        else:
-            subprocess.run(["cp", "-a", f"{self.target_root}/.", str(mount_root)], check=True)
-
-        for d in ["proc", "sys", "dev", "run", "tmp", "var/tmp", "boot/efi"]:
-            (mount_root / d).mkdir(parents=True, exist_ok=True)
-
-        try:
-            (mount_root / "tmp").chmod(0o1777)
-            (mount_root / "var" / "tmp").chmod(0o1777)
-        except Exception:
-            pass
-
-    def _build_partitioned_disk(self, out_path: Path, label: str) -> None:
-        """Create a GPT partitioned image with EFI System Partition (ESP) as partition 1 and rootfs as partition 2."""
-        sfdisk_script = (
-            "label: gpt\n"
-            "type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, size=256M, name=\"EFI System Partition\"\n"
-            "type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, name=\"Linux rootfs\"\n"
-        )
-        proc = subprocess.run(["sfdisk", str(out_path)], input=sfdisk_script, text=True, capture_output=True)
-        if proc.returncode != 0:
-            raise DiskEngineError(f"sfdisk partitioning failed: {proc.stderr}")
-
-        loop_res = subprocess.run(["losetup", "--show", "-f", "-P", str(out_path)], capture_output=True, text=True, check=True)
-        loop_dev = loop_res.stdout.strip()
-
-        try:
-            p1_esp = f"{loop_dev}p1"
-            p2_root = f"{loop_dev}p2"
-            fs_type = str(self.config.get("filesystem") or "ext4").lower()
-
-            if shutil.which("mkfs.vfat"):
-                subprocess.run(["mkfs.vfat", "-F", "32", "-n", "EFI", p1_esp], check=True, stdout=subprocess.DEVNULL)
-
-            if fs_type == "btrfs" and shutil.which("mkfs.btrfs"):
-                subprocess.run(["mkfs.btrfs", "-f", "-L", label, p2_root], check=True, stdout=subprocess.DEVNULL)
-            else:
-                fs_type = "ext4"
-                subprocess.run(["mkfs.ext4", "-F", "-L", label, p2_root], check=True, stdout=subprocess.DEVNULL)
-
-            # Mount root partition to copy rootfs and configure fstab, EFI binaries, and GRUB
-            mount_root = self.workdir / "mnt_root"
-            mount_root.mkdir(parents=True, exist_ok=True)
-            subprocess.run(["mount", p2_root, str(mount_root)], check=True)
-            try:
-                self._copy_rootfs_to_mount(mount_root)
-
-                esp_uuid = self._get_device_uuid(p1_esp)
-                root_uuid = self._get_device_uuid(p2_root)
-
-                fstab_path = mount_root / "etc" / "fstab"
-                fstab_path.parent.mkdir(parents=True, exist_ok=True)
-                fstab_lines = [
-                    "# /etc/fstab: generated by suse-builder for partitioned disk",
-                    f"UUID={root_uuid}  /          {fs_type}  defaults,noatime  0  1",
-                ]
-                if esp_uuid:
-                    fstab_lines.append(f"UUID={esp_uuid}  /boot/efi  vfat      umask=0077        0  2")
-                fstab_path.write_text("\n".join(fstab_lines) + "\n")
-
-                esp_dir = mount_root / "boot" / "efi"
-                esp_dir.mkdir(parents=True, exist_ok=True)
-                subprocess.run(["mount", p1_esp, str(esp_dir)], check=True)
-                try:
-                    self._install_uefi_bootloader(mount_root, esp_dir, root_uuid, esp_uuid)
-                finally:
-                    subprocess.run(["umount", str(esp_dir)], check=False)
-            finally:
-                subprocess.run(["umount", str(mount_root)], check=False)
-
-            logger.info("Successfully formatted Hybrid GPT partitions (bios_grub + ESP + rootfs) and configured dual BIOS+UEFI bootloaders.")
-        finally:
-            subprocess.run(["losetup", "-d", loop_dev], check=False)
-
+        subprocess.run(cmd, capture_output=True, text=True, check=True)

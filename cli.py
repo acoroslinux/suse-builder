@@ -227,6 +227,25 @@ def main():
     )
 
     parser.add_argument(
+        "--cloud-init",
+        action="store_true",
+        help="Include and enable cloud-init for cloud/server provisioning.",
+    )
+
+    parser.add_argument(
+        "--gaming-tweaks",
+        action="store_true",
+        help="Apply aggressive sysctl, CPU governor, and IO performance tweaks.",
+    )
+
+    parser.add_argument(
+        "--fs-type",
+        choices=["ext4", "btrfs"],
+        default="btrfs",  # SUSE defaults to btrfs
+        help="Root filesystem type for disk images. Default: btrfs",
+    )
+
+    parser.add_argument(
         "--with-zram",
         action="store_true",
         help="Configure systemd-zram-generator for RAM compressed swap.",
@@ -385,6 +404,9 @@ def main():
             with_calamares=args.with_calamares,
             multimedia_codecs=args.multimedia_codecs,
             with_flathub=args.with_flathub,
+            cloud_init=args.cloud_init,
+            gaming_tweaks=args.gaming_tweaks,
+            fs_type=args.fs_type,
             with_zram=args.with_zram,
             with_offline_repo=args.with_offline_repo,
             offline_repo_packages=parsed_offline_packages,

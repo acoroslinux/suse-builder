@@ -51,6 +51,9 @@ class BuildOrchestrator:
         multimedia_codecs: bool = False,
         with_flathub: bool = False,
         with_zram: bool = False,
+        cloud_init: bool = False,
+        gaming_tweaks: bool = False,
+        fs_type: str = "btrfs",
         with_offline_repo: bool = False,
         offline_repo_packages: Optional[List[str]] = None,
         force_isolated_toolchain: bool = False,
@@ -88,6 +91,9 @@ class BuildOrchestrator:
         self.multimedia_codecs = multimedia_codecs
         self.with_flathub = with_flathub
         self.with_zram = with_zram
+        self.cloud_init = cloud_init
+        self.gaming_tweaks = gaming_tweaks
+        self.fs_type = fs_type
         self.with_offline_repo = with_offline_repo
         self.offline_repo_packages = offline_repo_packages or []
         self.force_isolated_toolchain = force_isolated_toolchain
@@ -381,7 +387,7 @@ class BuildOrchestrator:
             t0 = time.perf_counter()
             iso_engine = ISOEngine(self.workdir, self.target_root, name, self.config, self.mode, toolchain)
             if self.output_format in {"img", "raw", "qcow2", "vmdk", "vhd", "vhdx", "vdi"}:
-                disk_engine = DiskEngine(self.workdir, self.target_root, name, self.config, self.mode)
+                disk_engine = DiskEngine(self.workdir, self.target_root, name, self.config, self.mode, toolchain)
                 artifact = disk_engine.build_disk_image(target_format=self.output_format)
             elif self.output_format == "tarball":
                 artifact = iso_engine.build_tarball()
