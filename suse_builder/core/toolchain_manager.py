@@ -1,3 +1,4 @@
+from suse_builder.core.path_utils import resolve_from_project as _resolve_from_project
 import os
 import platform
 import shutil
