@@ -80,8 +80,8 @@ class DiskEngine:
         
         bootloader_type = self.config.get("bootloader", {}).get("type", "grub2-hybrid")
         boot_dir = self.target_root / "boot"
-        vmlinuz = next((f.name for f in boot_dir.glob("vmlinuz-*") if not f.name.endswith(".old")), "vmlinuz")
-        initrd = next((f.name for f in boot_dir.glob("initramfs-*.img") if not f.name.endswith(".old") and not "kdump" in f.name), "initrd")
+        vmlinuz = next((f.name for f in boot_dir.glob("vmlinuz-*") if not f.name.endswith(".old") and "rescue" not in f.name), "vmlinuz")
+        initrd = next((f.name for f in boot_dir.glob("initramfs-*.img") if not f.name.endswith(".old") and not "kdump" in f.name and "rescue" not in f.name), "initrd")
         
         kernel_params = self.config.get("boot", {}).get("kernel_params", "quiet splash")
         
