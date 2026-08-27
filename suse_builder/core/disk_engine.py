@@ -54,11 +54,11 @@ class DiskEngine:
         logger.info(f"Generating {fs_type.upper()} root filesystem ({rootfs_size} MB)...")
         # Build root image directly from directory
         if self.toolchain:
-            self.toolchain.run_in_build_host(["truncate", "-s", f"{rootfs_size}M", str(root_img)])
+            self.toolchain.run_in_build_host(["truncate", "-s", f"{rootfs_size}M", str(root_img)], check=True)
             if fs_type == "btrfs":
-                self.toolchain.run_in_build_host(["mkfs.btrfs", "-r", str(self.target_root), str(root_img)])
+                self.toolchain.run_in_build_host(["mkfs.btrfs", "-r", str(self.target_root), str(root_img)], check=True)
             else:
-                self.toolchain.run_in_build_host(["mke2fs", "-t", "ext4", "-L", "ROOTFS", "-d", str(self.target_root), str(root_img)])
+                self.toolchain.run_in_build_host(["mke2fs", "-t", "ext4", "-L", "ROOTFS", "-d", str(self.target_root), str(root_img)], check=True)
         else:
             subprocess.run(["truncate", "-s", f"{rootfs_size}M", str(root_img)], check=True)
             if fs_type == "btrfs":
@@ -68,8 +68,8 @@ class DiskEngine:
 
         logger.info(f"Generating FAT32 EFI filesystem ({efi_size} MB)...")
         if self.toolchain:
-            self.toolchain.run_in_build_host(["truncate", "-s", f"{efi_size}M", str(efi_img)])
-            self.toolchain.run_in_build_host(["mkfs.fat", "-F", "32", str(efi_img)])
+            self.toolchain.run_in_build_host(["truncate", "-s", f"{efi_size}M", str(efi_img)], check=True)
+            self.toolchain.run_in_build_host(["mkfs.fat", "-F", "32", str(efi_img)], check=True)
         else:
             subprocess.run(["truncate", "-s", f"{efi_size}M", str(efi_img)], check=True)
             subprocess.run(["mkfs.fat", "-F", "32", str(efi_img)], check=True)
@@ -140,24 +140,24 @@ menuentry "openSUSE" {{
 """)
 
         if self.toolchain:
-            self.toolchain.run_in_build_host(["mcopy", "-s", "-i", str(efi_img), f"{self.workdir}/efi_tmp/EFI", "::/"])
+            self.toolchain.run_in_build_host(["mcopy", "-s", "-i", str(efi_img), f"{self.workdir}/efi_tmp/EFI", "::/"], check=True)
             if (self.workdir / "efi_tmp" / "loader").exists():
-                self.toolchain.run_in_build_host(["mcopy", "-s", "-i", str(efi_img), f"{self.workdir}/efi_tmp/loader", "::/"])
+                self.toolchain.run_in_build_host(["mcopy", "-s", "-i", str(efi_img), f"{self.workdir}/efi_tmp/loader", "::/"], check=True)
             if (self.workdir / "efi_tmp" / vmlinuz).exists():
-                self.toolchain.run_in_build_host(["mcopy", "-i", str(efi_img), f"{self.workdir}/efi_tmp/{vmlinuz}", "::/"])
-                self.toolchain.run_in_build_host(["mcopy", "-i", str(efi_img), f"{self.workdir}/efi_tmp/{initrd}", "::/"])
+                self.toolchain.run_in_build_host(["mcopy", "-i", str(efi_img), f"{self.workdir}/efi_tmp/{vmlinuz}", "::/"], check=True)
+                self.toolchain.run_in_build_host(["mcopy", "-i", str(efi_img), f"{self.workdir}/efi_tmp/{initrd}", "::/"], check=True)
         else:
             subprocess.run(["mcopy", "-s", "-i", str(efi_img), f"{self.workdir}/efi_tmp/EFI", "::/"], check=True)
 
         logger.info(f"Building partitioned disk image ({total_size} MB)...")
         if self.toolchain:
-            self.toolchain.run_in_build_host(["dd", "if=/dev/zero", f"of={out_path}", "bs=1M", f"count={total_size}", "status=none"])
-            self.toolchain.run_in_build_host(["parted", "-s", str(out_path), "mktable", "gpt"])
-            self.toolchain.run_in_build_host(["parted", "-s", str(out_path), "mkpart", "ESP", "fat32", "1MiB", f"{efi_size+1}MiB"])
-            self.toolchain.run_in_build_host(["parted", "-s", str(out_path), "set", "1", "esp", "on"])
-            self.toolchain.run_in_build_host(["parted", "-s", str(out_path), "mkpart", "primary", fs_type, f"{efi_size+1}MiB", "100%"])
-            self.toolchain.run_in_build_host(["dd", f"if={efi_img}", f"of={out_path}", "bs=1M", "seek=1", "conv=notrunc", "status=none"])
-            self.toolchain.run_in_build_host(["dd", f"if={root_img}", f"of={out_path}", "bs=1M", f"seek={efi_size+1}", "conv=notrunc", "status=none"])
+            self.toolchain.run_in_build_host(["dd", "if=/dev/zero", f"of={out_path}", "bs=1M", f"count={total_size}", "status=none"], check=True)
+            self.toolchain.run_in_build_host(["parted", "-s", str(out_path), "mktable", "gpt"], check=True)
+            self.toolchain.run_in_build_host(["parted", "-s", str(out_path), "mkpart", "ESP", "fat32", "1MiB", f"{efi_size+1}MiB"], check=True)
+            self.toolchain.run_in_build_host(["parted", "-s", str(out_path), "set", "1", "esp", "on"], check=True)
+            self.toolchain.run_in_build_host(["parted", "-s", str(out_path), "mkpart", "primary", fs_type, f"{efi_size+1}MiB", "100%"], check=True)
+            self.toolchain.run_in_build_host(["dd", f"if={efi_img}", f"of={out_path}", "bs=1M", "seek=1", "conv=notrunc", "status=none"], check=True)
+            self.toolchain.run_in_build_host(["dd", f"if={root_img}", f"of={out_path}", "bs=1M", f"seek={efi_size+1}", "conv=notrunc", "status=none"], check=True)
         else:
             subprocess.run(["dd", "if=/dev/zero", f"of={out_path}", "bs=1M", f"count={total_size}", "status=none"], check=True)
             subprocess.run(["parted", "-s", str(out_path), "mktable", "gpt"], check=True)
@@ -187,7 +187,7 @@ menuentry "openSUSE" {{
                 final_path = Path(f"{final_path}.zst")
                 
             if self.toolchain:
-                self.toolchain.run_in_build_host(cmd)
+                self.toolchain.run_in_build_host(cmd, check=True)
             else:
                 subprocess.run(cmd, check=True)
 
