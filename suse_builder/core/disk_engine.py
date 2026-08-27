@@ -148,6 +148,11 @@ menuentry "openSUSE" {{
                 self.toolchain.run_in_build_host(["mcopy", "-i", str(efi_img), f"{self.workdir}/efi_tmp/{initrd}", "::/"], check=True)
         else:
             subprocess.run(["mcopy", "-s", "-i", str(efi_img), f"{self.workdir}/efi_tmp/EFI", "::/"], check=True)
+            if (self.workdir / "efi_tmp" / "loader").exists():
+                subprocess.run(["mcopy", "-s", "-i", str(efi_img), f"{self.workdir}/efi_tmp/loader", "::/"], check=True)
+            if (self.workdir / "efi_tmp" / vmlinuz).exists():
+                subprocess.run(["mcopy", "-i", str(efi_img), f"{self.workdir}/efi_tmp/{vmlinuz}", "::/"], check=True)
+                subprocess.run(["mcopy", "-i", str(efi_img), f"{self.workdir}/efi_tmp/{initrd}", "::/"], check=True)
 
         logger.info(f"Building partitioned disk image ({total_size} MB)...")
         if self.toolchain:
