@@ -282,9 +282,10 @@ class BuildOrchestrator:
             else:
                 logger.info(f"🚀 [MOCK/SIM] Fast RAM staging enabled for {self.workdir}")
 
-        if self.clean:
-            if self.mode != "mock" and os.geteuid() == 0:
-                unmount_all_under(self.workdir)
+
+        if self.clean and self.mode != "mock":
+            if os.geteuid() == 0:
+                unmount_all_under(resolve_from_project("workdir"))
             if self.workdir.exists():
                 import shutil
                 shutil.rmtree(self.workdir, ignore_errors=True)
@@ -405,6 +406,13 @@ class BuildOrchestrator:
 
             return artifact
         finally:
+            if self.clean and self.mode != "mock":
+                if os.geteuid() == 0:
+                    unmount_all_under(resolve_from_project("workdir"))
+                if hasattr(self, 'workdir') and self.workdir and self.workdir.exists():
+                    import shutil
+                    shutil.rmtree(self.workdir, ignore_errors=True)
+
             try:
                 chroot.umount_virtual_fs()
             except Exception:
