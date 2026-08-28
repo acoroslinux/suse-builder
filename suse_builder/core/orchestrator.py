@@ -258,6 +258,15 @@ class BuildOrchestrator:
         except Exception:
             pass
 
+
+        if self.clean and self.mode != "mock":
+            if os.geteuid() == 0:
+                unmount_all_under(resolve_from_project("workdir"))
+            if self.workdir.exists():
+                import shutil
+                shutil.rmtree(self.workdir, ignore_errors=True)
+                logger.info(f"Cleaned workdir: {self.workdir}")
+
         if self.use_tmpfs:
             if self.mode == "real" and os.geteuid() == 0:
                 self.workdir.mkdir(parents=True, exist_ok=True)
@@ -281,15 +290,6 @@ class BuildOrchestrator:
                     logger.info(f"🚀 Using existing active tmpfs mount on {self.workdir}")
             else:
                 logger.info(f"🚀 [MOCK/SIM] Fast RAM staging enabled for {self.workdir}")
-
-
-        if self.clean and self.mode != "mock":
-            if os.geteuid() == 0:
-                unmount_all_under(resolve_from_project("workdir"))
-            if self.workdir.exists():
-                import shutil
-                shutil.rmtree(self.workdir, ignore_errors=True)
-                logger.info(f"Cleaned workdir: {self.workdir}")
 
         t0 = time.perf_counter()
         toolchain = ToolchainManager(
