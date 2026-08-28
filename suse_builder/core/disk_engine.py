@@ -57,13 +57,19 @@ class DiskEngine:
             self.toolchain.run_in_build_host(["truncate", "-s", f"{rootfs_size}M", str(root_img)], check=True)
             if fs_type == "btrfs":
                 self.toolchain.run_in_build_host(["mkfs.btrfs", "-L", "ROOTFS", "-r", str(self.target_root), str(root_img)], check=True)
-            else:
+                elif fs_type == "f2fs":
+                self.toolchain.run_in_build_host(["mkfs.f2fs", "-l", "ROOTFS", str(root_img)], check=True)
+                self.toolchain.run_in_build_host(["sload.f2fs", "-f", str(self.target_root), str(root_img)], check=False)
+                else:
                 self.toolchain.run_in_build_host(["mke2fs", "-t", "ext4", "-L", "ROOTFS", "-d", str(self.target_root), str(root_img)], check=True)
         else:
             subprocess.run(["truncate", "-s", f"{rootfs_size}M", str(root_img)], check=True)
             if fs_type == "btrfs":
                 subprocess.run(["mkfs.btrfs", "-L", "ROOTFS", "-r", str(self.target_root), str(root_img)], check=True)
-            else:
+                elif fs_type == "f2fs":
+                subprocess.run(["mkfs.f2fs", "-l", "ROOTFS", str(root_img)], check=True)
+                subprocess.run(["sload.f2fs", "-f", str(self.target_root), str(root_img)], check=False)
+                else:
                 subprocess.run(["mke2fs", "-t", "ext4", "-L", "ROOTFS", "-d", str(self.target_root), str(root_img)], check=True)
 
         # Update rootfs_size because mkfs.btrfs -r dynamically expands the file size!
@@ -183,6 +189,33 @@ menuentry "openSUSE" {{
             self._convert_disk_format(out_path, final_path, out_ext)
             out_path.unlink(missing_ok=True)
             
+        bootloader_type = self.config.get("bootloader", "")
+
+        if bootloader_type.startswith("u-boot"):
+
+            if bootloader_type == "u-boot-pinebookpro":
+
+                logger.info("Injecting U-Boot for Pinebook Pro...")
+
+                try:
+
+                    if hasattr(self, "toolchain") and self.toolchain:
+
+                        self.toolchain.run_in_build_host(["dd", f"if={self.target_root}/boot/u-boot/idbloader.img", f"of={out_path}", "bs=512", "seek=64", "conv=notrunc"], check=False)
+
+                        self.toolchain.run_in_build_host(["dd", f"if={self.target_root}/boot/u-boot/u-boot.itb", f"of={out_path}", "bs=512", "seek=16384", "conv=notrunc"], check=False)
+
+                    else:
+
+                        import subprocess
+
+                        subprocess.run(["dd", f"if={self.target_root}/boot/u-boot/idbloader.img", f"of={out_path}", "bs=512", "seek=64", "conv=notrunc"], check=False)
+
+                        subprocess.run(["dd", f"if={self.target_root}/boot/u-boot/u-boot.itb", f"of={out_path}", "bs=512", "seek=16384", "conv=notrunc"], check=False)
+
+                except Exception as e:
+
+                    logger.warning(f"U-boot inject error (mock?): {e}")
         final_out = out_path
         if target_format != "img":
             vm_out = out_path.with_name(f"{self.output_name}.{target_format}")

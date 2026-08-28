@@ -240,7 +240,7 @@ def main():
 
     parser.add_argument(
         "--fs-type",
-        choices=["ext4", "btrfs"],
+        choices=["ext4", "btrfs", 'f2fs'],
         default="btrfs",  # SUSE defaults to btrfs
         help="Root filesystem type for disk images. Default: btrfs",
     )
@@ -314,7 +314,7 @@ def main():
     parser.add_argument(
         "--filesystem",
         type=str,
-        choices=["ext4", "btrfs"],
+        choices=["ext4", "btrfs", 'f2fs'],
         default="ext4",
         help="Root filesystem type for disk/VM images (ext4, btrfs). Default: ext4",
     )
