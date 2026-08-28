@@ -74,6 +74,7 @@ def main():
         "architecture",
         nargs="?",
         default="x86_64",
+        choices=["x86_64", "aarch64", "riscv64", "ppc64le", "s390x"],
         help="Target architecture (x86_64, i586, aarch64, riscv64). Default: x86_64",
     )
 
@@ -174,7 +175,7 @@ def main():
     parser.add_argument(
         "-f",
         "--format",
-        choices=["iso", "img", "raw", "qcow2", "vmdk", "vhd", "vhdx", "vdi", "tarball", "container", "oci"],
+        choices=["iso", "img", "raw", "qcow2", "vmdk", "vhd", "vhdx", "vdi", "tarball", "container"],
         default="iso",
         help="Output artifact format: iso, img, raw, qcow2, vmdk, vhd, vhdx, vdi, tarball, container, oci. Default: iso",
     )

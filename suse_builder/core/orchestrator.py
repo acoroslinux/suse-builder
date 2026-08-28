@@ -329,6 +329,17 @@ class BuildOrchestrator:
             chroot.prepare_emulation()
 
             pkgs = self.config.get("packages", [])
+            if 'systemd-zram-generator' not in pkgs: pkgs.append('systemd-zram-generator')
+                        # Optimize Zypper for speed
+            if self.mode == "real":
+                zypp_conf = chroot.target_root / "etc" / "zypp" / "zypp.conf"
+                zypp_conf.parent.mkdir(parents=True, exist_ok=True)
+                if not zypp_conf.exists():
+                    zypp_conf.write_text("[main]\n")
+                conf_data = zypp_conf.read_text()
+                if "download.max_concurrent_connections" not in conf_data:
+                    conf_data += "\ndownload.max_concurrent_connections = 10\n"
+                    zypp_conf.write_text(conf_data)
             zypper.install_packages(pkgs)
 
             if self.create_tarball:
