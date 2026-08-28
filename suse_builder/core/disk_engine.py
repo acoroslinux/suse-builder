@@ -200,7 +200,7 @@ menuentry "openSUSE" {{
                 cmd = ["gzip", "-9", str(final_path)]
                 final_path = Path(f"{final_path}.gz")
             else: # zstd
-                cmd = ["zstd", "-19", "-T0", "-q", "--rm", str(final_path)]
+                cmd = ["zstd", "-19", "-f", "-T0", "-q", "--rm", str(final_path)]
                 final_path = Path(f"{final_path}.zst")
                 
             if self.toolchain:
