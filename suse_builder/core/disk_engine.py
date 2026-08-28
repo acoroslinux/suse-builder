@@ -66,6 +66,11 @@ class DiskEngine:
             else:
                 subprocess.run(["mke2fs", "-t", "ext4", "-L", "ROOTFS", "-d", str(self.target_root), str(root_img)], check=True)
 
+        # Update rootfs_size because mkfs.btrfs -r dynamically expands the file size!
+        rootfs_size = (root_img.stat().st_size // (1024 * 1024)) + 10
+        efi_size = self.config.get("bootloader", {}).get("efi_size", 300)
+        total_size = rootfs_size + efi_size + 4
+        
         logger.info(f"Generating FAT32 EFI filesystem ({efi_size} MB)...")
         if self.toolchain:
             self.toolchain.run_in_build_host(["truncate", "-s", f"{efi_size}M", str(efi_img)], check=True)
