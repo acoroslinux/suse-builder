@@ -57,19 +57,19 @@ class DiskEngine:
             self.toolchain.run_in_build_host(["truncate", "-s", f"{rootfs_size}M", str(root_img)], check=True)
             if fs_type == "btrfs":
                 self.toolchain.run_in_build_host(["mkfs.btrfs", "-L", "ROOTFS", "-r", str(self.target_root), str(root_img)], check=True)
-                elif fs_type == "f2fs":
+            elif fs_type == "f2fs":
                 self.toolchain.run_in_build_host(["mkfs.f2fs", "-l", "ROOTFS", str(root_img)], check=True)
                 self.toolchain.run_in_build_host(["sload.f2fs", "-f", str(self.target_root), str(root_img)], check=False)
-                else:
+            else:
                 self.toolchain.run_in_build_host(["mke2fs", "-t", "ext4", "-L", "ROOTFS", "-d", str(self.target_root), str(root_img)], check=True)
         else:
             subprocess.run(["truncate", "-s", f"{rootfs_size}M", str(root_img)], check=True)
             if fs_type == "btrfs":
                 subprocess.run(["mkfs.btrfs", "-L", "ROOTFS", "-r", str(self.target_root), str(root_img)], check=True)
-                elif fs_type == "f2fs":
+            elif fs_type == "f2fs":
                 subprocess.run(["mkfs.f2fs", "-l", "ROOTFS", str(root_img)], check=True)
                 subprocess.run(["sload.f2fs", "-f", str(self.target_root), str(root_img)], check=False)
-                else:
+            else:
                 subprocess.run(["mke2fs", "-t", "ext4", "-L", "ROOTFS", "-d", str(self.target_root), str(root_img)], check=True)
 
         # Update rootfs_size because mkfs.btrfs -r dynamically expands the file size!
