@@ -1,8 +1,8 @@
 {
-    "name": "Raspberry Pi 4",
+    "name": "Pinebook Pro",
     "architecture": "aarch64",
     "bootloader": {
-        "type": "u-boot-rpi4"
+        "type": "u-boot-pinebookpro"
     },
     "output_format": "img"
 }

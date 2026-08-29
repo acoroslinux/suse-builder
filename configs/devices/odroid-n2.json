@@ -1,8 +1,8 @@
 {
-    "name": "Raspberry Pi 4",
+    "name": "Odroid N2",
     "architecture": "aarch64",
     "bootloader": {
-        "type": "u-boot-rpi4"
+        "type": "u-boot-odroid-n2"
     },
     "output_format": "img"
 }

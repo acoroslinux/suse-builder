@@ -1,8 +1,8 @@
 {
-    "name": "Raspberry Pi 4",
+    "name": "Apple Silicon (Asahi)",
     "architecture": "aarch64",
     "bootloader": {
-        "type": "u-boot-rpi4"
+        "type": "asahi"
     },
     "output_format": "img"
 }
