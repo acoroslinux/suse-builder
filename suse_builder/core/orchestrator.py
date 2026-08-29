@@ -41,6 +41,8 @@ class BuildOrchestrator:
         live_profile: Optional[str] = None,
         live_user: Optional[str] = None,
         live_groups: Optional[List[str]] = None,
+        with_offline_repo: bool = False,
+        offline_repo_packages: Optional[list] = None,
         hostname: Optional[str] = None,
         output_format: str = "iso",
         compression: str = "zstd",
@@ -67,6 +69,8 @@ class BuildOrchestrator:
         filesystem: Optional[str] = None,
         device: Optional[str] = None,
     ):
+        self.with_offline_repo = with_offline_repo
+        self.offline_repo_packages = offline_repo_packages or []
         self.arch = arch
         self.config_path = config_path
         self.distro = distro
@@ -205,6 +209,34 @@ class BuildOrchestrator:
                 "format": self.output_format,
             },
         }
+
+
+    def run_hooks(self, phase: str, chroot=None):
+        import os, shutil
+        from pathlib import Path
+        hooks_dir = Path("configs/hooks") / phase
+        if not hooks_dir.exists(): return
+        scripts = sorted([p for p in hooks_dir.iterdir() if p.is_file() and p.suffix == ".sh"])
+        if not scripts: return
+        print(f"Running {phase} hooks...")
+        env = os.environ.copy()
+        env["CHROOT_PATH"] = str(self.workdir / "chroot" if not chroot else chroot.target_root)
+        env["WORK_DIR"] = str(self.workdir)
+        env["ARCH"] = getattr(self, "arch", "")
+        env["DISTRO"] = getattr(self, "distro", "")
+        env["FORMAT"] = getattr(self, "output_format", "")
+        if phase == "post_chroot" and chroot:
+            chroot_tmp = Path(chroot.target_root) / "tmp"
+            chroot_tmp.mkdir(parents=True, exist_ok=True)
+            for script in scripts:
+                tgt = chroot_tmp / script.name
+                shutil.copy2(script, tgt)
+                tgt.chmod(0o755)
+                chroot.run_in_chroot(["/tmp/" + script.name])
+        else:
+            import subprocess
+            for script in scripts:
+                subprocess.run([str(script)], env=env, check=True)
 
     def build(self, output_name: Optional[str] = None) -> Path:
         report = self.validate()
