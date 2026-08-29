@@ -30,7 +30,7 @@ def test_device_profile_loading(device):
         desktop="plasma-mobile"
     )
     assert config["device"] == device
-    assert "kernel-default" in config["packages"]
+    assert "kernel-default" in config["software"]
     assert config["services"]["enable"]
 
 
@@ -49,7 +49,7 @@ def test_mobile_desktop_profiles(mobile_desktop):
         desktop=mobile_desktop
     )
     assert config["desktop"] == mobile_desktop
-    assert "NetworkManager" in config["packages"]
+    assert "NetworkManager" in config["software"]
 
 
 def test_orchestrator_mock_arm_mobile_build(tmp_path):

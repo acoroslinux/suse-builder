@@ -176,8 +176,8 @@ class BuildOrchestrator:
             essential_boot_pkgs.extend(["systemd-zram-service"])
             
         for pkg in essential_boot_pkgs:
-            if pkg not in self.config.get("packages", []):
-                self.config.setdefault("packages", []).append(pkg)
+            if pkg not in self.config.get("software", []):
+                self.config.setdefault("software", []).append(pkg)
 
     def validate(self) -> Dict[str, Any]:
         errors = []
@@ -328,7 +328,7 @@ class BuildOrchestrator:
             t0 = time.perf_counter()
             chroot.prepare_emulation()
 
-            pkgs = self.config.get("packages", [])
+            pkgs = self.config.get("software", [])
             if 'systemd-zram-generator' not in pkgs: pkgs.append('systemd-zram-generator')
                         # Optimize Zypper for speed
             if self.mode == "real":
@@ -358,7 +358,7 @@ class BuildOrchestrator:
                 zypper.download_offline_packages(offline_pkgs, offline_repo_dir)
                 self.config["offline_repo_dir"] = str(offline_repo_dir)
                 self.config["with_offline_repo"] = True
-            self.timings["packages"] = time.perf_counter() - t0
+            self.timings["software"] = time.perf_counter() - t0
 
             t0 = time.perf_counter()
             customizer = SystemCustomizer(chroot, self.config)
@@ -489,7 +489,7 @@ class BuildOrchestrator:
         print("=" * 58)
         print(f"  ├── [1/6] Setup & Toolchain:       {t.get('setup', 0):6.2f}s")
         print(f"  ├── [2/6] Base Bootstrap:          {t.get('bootstrap', 0):6.2f}s")
-        print(f"  ├── [3/6] Package Installation:    {t.get('packages', 0):6.2f}s")
+        print(f"  ├── [3/6] Package Installation:    {t.get('software', 0):6.2f}s")
         print(f"  ├── [4/6] Live Customization:      {t.get('customization', 0):6.2f}s")
         print(f"  ├── [5/6] Initramfs (Dracut):      {t.get('initramfs', 0):6.2f}s")
         print(f"  ├── [6/6] Finalize & Compression:  {t.get('finalize', 0):6.2f}s")
@@ -651,13 +651,13 @@ fi
             "sha512": sha512_val,
             "md5": md5_val,
             "build_timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            "packages_count": len(self.config.get("packages", [])),
+            "packages_count": len(self.config.get("software", [])),
         }
         manifest_json_path.write_text(json.dumps(manifest_data, indent=2))
 
         # Generate package manifest file
         manifest_path = artifact_path.with_name(f"{artifact_path.name}.manifest")
-        pkgs = sorted(self.config.get("packages", []))
+        pkgs = sorted(self.config.get("software", []))
         manifest_lines = [f"# SUSE-Builder Package Manifest for {artifact_path.name}\n"]
         manifest_lines.extend(f"{pkg}\n" for pkg in pkgs)
         manifest_path.write_text("".join(manifest_lines))

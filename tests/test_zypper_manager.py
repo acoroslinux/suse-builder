@@ -175,7 +175,7 @@ class TestZypperManager:
         assert "--cache-dir" in cmd
         assert "--pkg-cache-dir" in cmd
         assert str(cache_root / "metadata") in cmd
-        assert str(cache_root / "packages") in cmd
+        assert str(cache_root / "software") in cmd
 
     def test_install_packages_falls_back_to_no_gpg_checks(self, tmp_path, monkeypatch):
         target_root = tmp_path / "chroot"

@@ -169,7 +169,7 @@ def main():
         "--package-profile",
         action="append",
         default=[],
-        help="Add package profile from configs/packages/.",
+        help="Add package profile from configs/software/.",
     )
 
     parser.add_argument(
@@ -363,12 +363,12 @@ def main():
         print("Available SUSE-Builder profiles:")
         categories = [
             ("architectures", "architectures"),
-            ("distros",       "distros      "),
-            ("devices",       "devices      "),
+            ("system",       "distros      "),
+            ("hardware",       "devices      "),
             ("desktops",      "desktops     "),
-            ("kernels",       "kernels      "),
-            ("bootloaders",   "bootloaders  "),
-            ("packages",      "packages     "),
+            ("system",       "kernels      "),
+            ("boot",   "bootloaders  "),
+            ("software",      "packages     "),
             ("services",      "services     "),
             ("repos",         "repos        "),
         ]

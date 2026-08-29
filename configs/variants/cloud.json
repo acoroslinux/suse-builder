@@ -1,4 +1,0 @@
-{
-  "variant": "cloud",
-  "packages": ["cloud-init", "openssh"]
-}

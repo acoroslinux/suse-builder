@@ -23,7 +23,7 @@ class ZypperManager:
     def _run_zypper(self, args: List[str], check: bool = False):
         cache_root = self.resolve_cache_dir()
         metadata_cache = cache_root / "metadata"
-        package_cache = cache_root / "packages"
+        package_cache = cache_root / "software"
         metadata_cache.mkdir(parents=True, exist_ok=True)
         package_cache.mkdir(parents=True, exist_ok=True)
 
@@ -378,7 +378,7 @@ class ZypperManager:
         for key_dir in [
             self.target_root / "usr" / "lib" / "sysimage" / "rpm",
             self.target_root / "etc" / "pki" / "rpm-gpg",
-            self.target_root / "usr" / "share" / "doc" / "packages" / "openSUSE-release"
+            self.target_root / "usr" / "share" / "doc" / "software" / "openSUSE-release"
         ]:
             if key_dir.exists():
                 for key_file in key_dir.glob("*.gpg"):
@@ -418,8 +418,8 @@ class ZypperManager:
     def sync_cache_to_target(self):
         if self.chroot.mode == "mock":
             return
-        host_cache = self.resolve_cache_dir() / "packages"
-        target_cache = self.target_root / "var" / "cache" / "zypp" / "packages"
+        host_cache = self.resolve_cache_dir() / "software"
+        target_cache = self.target_root / "var" / "cache" / "zypp" / "software"
         if not host_cache.exists():
             return
         target_cache.mkdir(parents=True, exist_ok=True)
@@ -428,8 +428,8 @@ class ZypperManager:
     def sync_cache_from_target(self):
         if self.chroot.mode == "mock":
             return
-        host_cache = self.resolve_cache_dir() / "packages"
-        target_cache = self.target_root / "var" / "cache" / "zypp" / "packages"
+        host_cache = self.resolve_cache_dir() / "software"
+        target_cache = self.target_root / "var" / "cache" / "zypp" / "software"
         if not target_cache.exists():
             return
         host_cache.mkdir(parents=True, exist_ok=True)
@@ -482,7 +482,7 @@ class ZypperManager:
         for key_dir in [
             self.target_root / "usr" / "lib" / "sysimage" / "rpm",
             self.target_root / "etc" / "pki" / "rpm-gpg",
-            self.target_root / "usr" / "share" / "doc" / "packages" / "openSUSE-release"
+            self.target_root / "usr" / "share" / "doc" / "software" / "openSUSE-release"
         ]:
             if key_dir.exists():
                 for key_file in key_dir.glob("*.gpg"):
@@ -522,8 +522,8 @@ class ZypperManager:
 
             # Also copy downloaded .rpm files from zypper cache into dest_dir
             for src_dir in [
-                self.target_root / "var" / "cache" / "zypp" / "packages",
-                self.resolve_cache_dir() / "packages",
+                self.target_root / "var" / "cache" / "zypp" / "software",
+                self.resolve_cache_dir() / "software",
             ]:
                 if src_dir.exists():
                     for rpm_file in src_dir.rglob("*.rpm"):

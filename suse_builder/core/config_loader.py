@@ -56,7 +56,7 @@ class ConfigLoader:
     ) -> Dict[str, Any]:
 
         config = {
-            "packages": [],
+            "software": [],
             "groups": [],
             "services": {"enable": [], "disable": []},
             "repos": [],
@@ -77,49 +77,49 @@ class ConfigLoader:
         # 2. Distro
         if distro:
             distro_name = distro
-            if distro_name == "leap" and not (self.config_root / "distros" / "leap.json").exists():
-                distro_name = "leap-16.0" if (self.config_root / "distros" / "leap-16.0.json").exists() else "leap-15.6"
-            config = self._merge_dicts(config, self.load_profile("distros", distro_name))
+            if distro_name == "leap" and not (self.config_root / "system" / "leap.json").exists():
+                distro_name = "leap-16.0" if (self.config_root / "system" / "leap-16.0.json").exists() else "leap-15.6"
+            config = self._merge_dicts(config, self.load_profile("system", distro_name))
 
         # 3. Architecture
         config = self._merge_dicts(config, self.load_profile("architectures", architecture))
 
         # 4. Variant
         if variant:
-            config = self._merge_dicts(config, self.load_profile("variants", variant))
+            config = self._merge_dicts(config, self.load_profile("system", variant))
 
         # 5. Device / Board Profile
         if device:
-            config = self._merge_dicts(config, self.load_profile("devices", device))
+            config = self._merge_dicts(config, self.load_profile("hardware", device))
 
         # 6. Desktop
         if desktop:
             config = self._merge_dicts(config, self.load_profile("desktops", desktop))
             # Automatically include xorg package profile for graphical display server support
             if desktop not in {"minimal", "server", "cloud"}:
-                config = self._merge_dicts(config, self.load_profile("packages", "xorg"))
+                config = self._merge_dicts(config, self.load_profile("software", "xorg"))
             # Automatically include mobile-base for mobile desktop environments
             if desktop in {"plasma-mobile", "phosh", "sxmo"}:
-                config = self._merge_dicts(config, self.load_profile("packages", "mobile-base"))
+                config = self._merge_dicts(config, self.load_profile("software", "mobile-base"))
 
         # 7. Kernel
         if kernel:
-            config = self._merge_dicts(config, self.load_profile("kernels", kernel))
+            config = self._merge_dicts(config, self.load_profile("system", kernel))
 
         # 8. Bootloader
         if bootloader:
             if isinstance(bootloader, dict):
                 config = self._merge_dicts(config, {"bootloader": bootloader})
             else:
-                config = self._merge_dicts(config, self.load_profile("bootloaders", bootloader))
+                config = self._merge_dicts(config, self.load_profile("boot", bootloader))
 
         # 9. Base packages
-        config = self._merge_dicts(config, self.load_profile("packages", "base"))
+        config = self._merge_dicts(config, self.load_profile("software", "base"))
 
         # 10. Package profiles
         if package_profiles:
             for profile in package_profiles:
-                config = self._merge_dicts(config, self.load_profile("packages", profile))
+                config = self._merge_dicts(config, self.load_profile("software", profile))
 
         # 10. Service profiles
         if service_profiles:
@@ -136,7 +136,7 @@ class ConfigLoader:
             config["live_user"] = self._merge_dicts(config.get("live_user", {}), self.load_profile("live-users", live_profile))
 
         # 13. Deduplicate lists
-        for key in ["packages", "groups", "kernel_packages"]:
+        for key in ["software", "groups", "kernel_packages"]:
             if key in config and isinstance(config[key], list):
                 config[key] = list(dict.fromkeys(config[key]))
 
@@ -231,7 +231,7 @@ class ConfigLoader:
         current_map = package_mappings_tumbleweed if is_tumbleweed_or_rolling else package_mappings_leap
 
         translated_packages = []
-        for pkg in config.get("packages", []):
+        for pkg in config.get("software", []):
             mapped = current_map.get(pkg, pkg)
             if mapped and mapped not in translated_packages:
                 translated_packages.append(mapped)
@@ -261,6 +261,6 @@ class ConfigLoader:
                 }
                 translated_packages = [p for p in translated_packages if p not in riscv_omits]
 
-        config["packages"] = translated_packages
+        config["software"] = translated_packages
 
         return config
