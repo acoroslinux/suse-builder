@@ -232,12 +232,6 @@ def main():
         action="store_true",
         help="Include and enable cloud-init for cloud/server provisioning.",
     )
-    parser.add_argument(
-        "--sbom",
-        action="store_true",
-        help="Generate a Software Bill of Materials (SBOM) JSON manifest",
-    )
-
 
     parser.add_argument(
         "--gaming-tweaks",
@@ -420,9 +414,7 @@ def main():
             force_isolated_toolchain=args.force_isolated_toolchain,
             use_tarball=args.use_tarball,
             create_tarball=args.create_tarball,
-            verify=bool(args.verify,
-        sbom=getattr(args, "sbom", False,
-        sbom=getattr(args, "sbom", False),,,
+            verify=bool(args.verify),
             use_tmpfs=args.tmpfs,
             fast=args.fast,
             benchmark=args.benchmark,
