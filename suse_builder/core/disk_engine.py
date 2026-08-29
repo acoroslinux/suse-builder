@@ -189,7 +189,8 @@ menuentry "openSUSE" {{
             self._convert_disk_format(out_path, final_path, out_ext)
             out_path.unlink(missing_ok=True)
             
-        bootloader_type = self.config.get("bootloader", "")
+        bootloader_cfg = self.config.get("bootloader", "")
+        bootloader_type = bootloader_cfg.get("type", "") if isinstance(bootloader_cfg, dict) else (bootloader_cfg or "")
 
         if bootloader_type.startswith("u-boot"):
 
