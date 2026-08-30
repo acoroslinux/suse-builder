@@ -32,6 +32,13 @@ class ISOEngine:
         self.iso_staging = self.workdir / "iso_root"
         self.arch = config.get("architecture", "x86_64")
 
+    def _resolve_output_path(self, extension: str) -> Path:
+        requested = Path(self.output_name)
+        candidate = requested if requested.suffix == f".{extension}" else requested.with_suffix(f".{extension}")
+        if candidate.is_absolute() or candidate.parent != Path("."):
+            return candidate
+        return resolve_from_project("output") / candidate
+
     def get_bootloader_type(self) -> str:
         bootloader = self.config.get("bootloader", {})
         if isinstance(bootloader, str):
@@ -597,7 +604,7 @@ class ISOEngine:
             target_repo.mkdir(parents=True, exist_ok=True)
             subprocess.run(["rsync", "-a", "--no-o", "--no-g", "--force", f"{offline_repo_dir}/", f"{target_repo}/"], check=False)
 
-        iso_path = resolve_from_project(f"output/{self.output_name}.iso")
+        iso_path = self._resolve_output_path("iso")
         iso_path.parent.mkdir(parents=True, exist_ok=True)
 
         if self.mode == "mock":
