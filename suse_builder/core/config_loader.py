@@ -11,12 +11,23 @@ class ConfigLoader:
     def __init__(self, config_root: Optional[Path] = None):
         self.config_root = config_root or resolve_from_project("configs")
 
+    @staticmethod
+    def _normalize_package_keys(config: Dict[str, Any]) -> Dict[str, Any]:
+        if "packages" in config:
+            software = list(config.get("software", []))
+            for pkg in config.get("packages", []):
+                if pkg not in software:
+                    software.append(pkg)
+            config = dict(config)
+            config["software"] = software
+        return config
+
     def load_json(self, path: Path) -> Dict[str, Any]:
         if not path.exists():
             raise ConfigLoaderError(f"Configuration file not found: {path}")
         try:
             with open(path, 'r') as f:
-                return json.load(f)
+                return self._normalize_package_keys(json.load(f))
         except json.JSONDecodeError as e:
             raise ConfigLoaderError(f"Invalid JSON in {path}: {e}")
         except Exception as e:
@@ -91,10 +102,12 @@ class ConfigLoader:
         # 5. Device / Board Profile
         if device:
             config = self._merge_dicts(config, self.load_profile("hardware", device))
+            config["device"] = device
 
         # 6. Desktop
         if desktop:
             config = self._merge_dicts(config, self.load_profile("desktops", desktop))
+            config["desktop"] = desktop
             # Automatically include xorg package profile for graphical display server support
             if desktop not in {"minimal", "server", "cloud"}:
                 config = self._merge_dicts(config, self.load_profile("software", "xorg"))
@@ -136,6 +149,11 @@ class ConfigLoader:
             config["live_user"] = self._merge_dicts(config.get("live_user", {}), self.load_profile("live-users", live_profile))
 
         # 13. Deduplicate lists
+        if kernel and kernel not in config["software"]:
+            config["software"].append(kernel)
+        elif not kernel and "kernel-default" not in config["software"]:
+            config["software"].append("kernel-default")
+
         for key in ["software", "groups", "kernel_packages"]:
             if key in config and isinstance(config[key], list):
                 config[key] = list(dict.fromkeys(config[key]))

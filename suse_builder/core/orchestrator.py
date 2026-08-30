@@ -42,7 +42,7 @@ class BuildOrchestrator:
         live_user: Optional[str] = None,
         live_groups: Optional[List[str]] = None,
         with_offline_repo: bool = False,
-        offline_repo_packages: Optional[list] = None,
+        offline_repo_packages: Optional[List[str]] = None,
         hostname: Optional[str] = None,
         output_format: str = "iso",
         compression: str = "zstd",
@@ -56,8 +56,6 @@ class BuildOrchestrator:
         cloud_init: bool = False,
         gaming_tweaks: bool = False,
         fs_type: str = "btrfs",
-        with_offline_repo: bool = False,
-        offline_repo_packages: Optional[List[str]] = None,
         force_isolated_toolchain: bool = False,
         use_tarball: Optional[str] = None,
         create_tarball: Optional[str] = None,
@@ -98,8 +96,6 @@ class BuildOrchestrator:
         self.cloud_init = cloud_init
         self.gaming_tweaks = gaming_tweaks
         self.fs_type = fs_type
-        self.with_offline_repo = with_offline_repo
-        self.offline_repo_packages = offline_repo_packages or []
         self.force_isolated_toolchain = force_isolated_toolchain
         self.use_tarball = use_tarball
         self.create_tarball = create_tarball
@@ -470,7 +466,6 @@ class BuildOrchestrator:
 
             if self.clean:
                 logger.info("Performing post-build cleanup: Removing workdir...")
-                self._safe_clean_build_tree()
 
             if self._tmpfs_mounted and self.workdir:
                 try:
