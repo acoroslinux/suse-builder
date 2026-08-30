@@ -1,0 +1,588 @@
+{
+    "scrollbar-vert-trough.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/scrollbar-vert-trough.png",
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/scrollbar-vert-trough-rtl.png"
+    ],
+    "menu-radio.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-radio.png",
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-checkbox-insensitive.png",
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-radio-insensitive.png",
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-checkbox.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-radio.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-checkbox-insensitive.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-radio-insensitive.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-checkbox.png"
+    ],
+    "radio-mixed-active.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/radio-mixed-active.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/radio-mixed-active.png"
+    ],
+    "menu-checkbox-mixed-insensitive.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-checkbox-mixed-insensitive.png",
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-radio-mixed-insensitive.png"
+    ],
+    "scrollbar-vert-slider-active.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/scrollbar-vert-slider-active.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/scrollbar-vert-slider-active.png"
+    ],
+    "tab-down.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/tab-down.png",
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/tab-up.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/tab-down.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/tab-up.png"
+    ],
+    "radio-checked-active.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/radio-checked-active.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/radio-checked-active.png"
+    ],
+    "menubar-item-active.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menubar-item-active.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/menubar-item-active.png"
+    ],
+    "scrollbar-vert-slider.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/scrollbar-vert-slider.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/scrollbar-vert-slider.png"
+    ],
+    "scale-vert-trough.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/scale-vert-trough.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/scale-vert-trough.png"
+    ],
+    "menu-pan-down.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-pan-down.png",
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/treeview-pan-down-active.png",
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/pan-down.png"
+    ],
+    "checkbox-checked.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/checkbox-checked.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/checkbox-checked.png"
+    ],
+    "scale-horz-focus.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/scale-horz-focus.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/scale-horz-focus.png"
+    ],
+    "menu-pan-left-hover.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-pan-left-hover.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-pan-left-hover.png"
+    ],
+    "pan-up.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/pan-up.png",
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/treeview-pan-up-active.png",
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-pan-up.png"
+    ],
+    "tab-left.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/tab-left.png",
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/tab-right.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/tab-left.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/tab-right.png"
+    ],
+    "menu-pan-left-insensitive.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-pan-left-insensitive.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-pan-left-insensitive.png"
+    ],
+    "scrollbar-vert-slider-rtl.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/scrollbar-vert-slider-rtl.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/scrollbar-vert-slider-rtl.png"
+    ],
+    "radio-checked.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/radio-checked.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/radio-checked.png"
+    ],
+    "border.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/border.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/border.png"
+    ],
+    "checkbox-mixed.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/checkbox-mixed.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/checkbox-mixed.png"
+    ],
+    "scrollbar-arrow-left.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/scrollbar-arrow-left.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/scrollbar-arrow-left.png"
+    ],
+    "menu-pan-right-hover.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-pan-right-hover.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-pan-right-hover.png"
+    ],
+    "progressbar-vert-trough.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/progressbar-vert-trough.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/progressbar-vert-trough.png"
+    ],
+    "scrollbar-arrow-right.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/scrollbar-arrow-right.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/scrollbar-arrow-right.png"
+    ],
+    "treeview-pan-down.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/treeview-pan-down.png",
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/pan-down-insensitive.png"
+    ],
+    "handle.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/handle.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/handle.png"
+    ],
+    "progressbar-horz-trough.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/progressbar-horz-trough.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/progressbar-horz-trough.png"
+    ],
+    "menu-checkbox-mixed.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-checkbox-mixed.png",
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-radio-mixed.png"
+    ],
+    "pan-up-insensitive.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/pan-up-insensitive.png",
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/treeview-pan-up.png"
+    ],
+    "checkbox-mixed-active.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/checkbox-mixed-active.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/checkbox-mixed-active.png"
+    ],
+    "menu-pan-down-insensitive.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-pan-down-insensitive.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/pan-down-insensitive.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-pan-down-insensitive.png"
+    ],
+    "menu-pan-up-insensitive.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-pan-up-insensitive.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/pan-up-insensitive.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-pan-up-insensitive.png"
+    ],
+    "radio-mixed.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/radio-mixed.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/radio-mixed.png"
+    ],
+    "scrollbar-arrow-down.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/scrollbar-arrow-down.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/scrollbar-arrow-down.png"
+    ],
+    "scrollbar-horz-slider.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/scrollbar-horz-slider.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/scrollbar-horz-slider.png"
+    ],
+    "checkbox-checked-active.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/checkbox-checked-active.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/checkbox-checked-active.png"
+    ],
+    "scrollbar-vert-slider-active-rtl.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/scrollbar-vert-slider-active-rtl.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/scrollbar-vert-slider-active-rtl.png"
+    ],
+    "scale-slider-active.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/scale-slider-active.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/scale-slider-active.png"
+    ],
+    "scrollbar-arrow-up.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/scrollbar-arrow-up.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/scrollbar-arrow-up.png"
+    ],
+    "scale-horz-trough.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/scale-horz-trough.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/scale-horz-trough.png"
+    ],
+    "menu-border.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-border.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-border.png"
+    ],
+    "menu-pan-right-insensitive.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/menu-pan-right-insensitive.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-pan-right-insensitive.png"
+    ],
+    "scrollbar-horz-slider-active.png": [
+        "/themes/Yaru-grey-dark/gtk-2.0/assets/scrollbar-horz-slider-active.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/scrollbar-horz-slider-active.png"
+    ],
+    "title-2-active.png": [
+        "/themes/Yaru-grey-dark/xfwm4/title-2-active.png",
+        "/themes/Yaru-grey-dark/xfwm4/title-4-active.png",
+        "/themes/Yaru-grey-dark/xfwm4/title-5-active.png",
+        "/themes/Yaru-grey-dark/xfwm4/title-1-active.png",
+        "/themes/Yaru-grey-dark/xfwm4/title-3-active.png"
+    ],
+    "title-3-inactive.png": [
+        "/themes/Yaru-grey-dark/xfwm4/title-3-inactive.png",
+        "/themes/Yaru-grey-dark/xfwm4/title-2-inactive.png",
+        "/themes/Yaru-grey-dark/xfwm4/title-1-inactive.png",
+        "/themes/Yaru-grey-dark/xfwm4/title-4-inactive.png",
+        "/themes/Yaru-grey-dark/xfwm4/title-5-inactive.png"
+    ],
+    "4c45d53e_menu-checkbox-mixed-insensitive.png": [
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-checkbox-mixed-insensitive.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-radio-mixed-insensitive.png"
+    ],
+    "menu-checkbox-hover.png": [
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-checkbox-hover.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-radio-hover.png"
+    ],
+    "e608f177_menu-pan-down.png": [
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-pan-down.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/treeview-pan-down-active.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/pan-down.png"
+    ],
+    "f95defdb_pan-up.png": [
+        "/themes/Yaru-grey/gtk-2.0/assets/pan-up.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/treeview-pan-up-active.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-pan-up.png"
+    ],
+    "2b0f804d_menu-checkbox-mixed.png": [
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-checkbox-mixed.png",
+        "/themes/Yaru-grey/gtk-2.0/assets/menu-radio-mixed.png"
+    ],
+    "a2a0fe26_title-2-active.png": [
+        "/themes/Yaru-grey/xfwm4/title-2-active.png",
+        "/themes/Yaru-grey/xfwm4/title-4-active.png",
+        "/themes/Yaru-grey/xfwm4/title-5-active.png",
+        "/themes/Yaru-grey/xfwm4/title-1-active.png",
+        "/themes/Yaru-grey/xfwm4/title-3-active.png"
+    ],
+    "450c7617_title-3-inactive.png": [
+        "/themes/Yaru-grey/xfwm4/title-3-inactive.png",
+        "/themes/Yaru-grey/xfwm4/title-2-inactive.png",
+        "/themes/Yaru-grey/xfwm4/title-1-inactive.png",
+        "/themes/Yaru-grey/xfwm4/title-4-inactive.png",
+        "/themes/Yaru-grey/xfwm4/title-5-inactive.png"
+    ],
+    "6e6c5ee6_scrollbar-vert-trough.png": [
+        "/themes/Silvery-GTK/gtk-2.0/assets/scrollbar-vert-trough.png",
+        "/themes/Silvery-GTK/gtk-2.0/assets/scrollbar-vert-trough-rtl.png"
+    ],
+    "entry-background-insensitive.png": [
+        "/themes/Silvery-GTK/gtk-2.0/assets/entry-background-insensitive.png",
+        "/themes/Silvery-GTK/gtk-2.0/assets/entry-background.png"
+    ],
+    "086c23d1_menu-radio.png": [
+        "/themes/Silvery-GTK/gtk-2.0/assets/menu-radio.png",
+        "/themes/Silvery-GTK/gtk-2.0/assets/menu-radio-hover.png"
+    ],
+    "0363f885_menu-checkbox-hover.png": [
+        "/themes/Silvery-GTK/gtk-2.0/assets/menu-checkbox-hover.png",
+        "/themes/Silvery-GTK/gtk-2.0/assets/menu-checkbox.png"
+    ],
+    "menu-radio-checked.png": [
+        "/themes/Silvery-GTK/gtk-2.0/assets/menu-radio-checked.png",
+        "/themes/Silvery-GTK/gtk-2.0/assets/menu-radio-checked-hover.png"
+    ],
+    "entry.png": [
+        "/themes/Silvery-GTK/gtk-2.0/assets/entry.png",
+        "/themes/Silvery-GTK/gtk-2.0/assets/notebook-entry.png"
+    ],
+    "spin-ltr-up-insensitive.png": [
+        "/themes/Silvery-GTK/gtk-2.0/assets/spin-ltr-up-insensitive.png",
+        "/themes/Silvery-GTK/gtk-2.0/assets/spin-ltr-up.png"
+    ],
+    "9f36aa6c_menu-pan-left-hover.png": [
+        "/themes/Silvery-GTK/gtk-2.0/assets/menu-pan-left-hover.png",
+        "/themes/Silvery-GTK/gtk-2.0/assets/menu-pan-left.png"
+    ],
+    "notebook-entry-insensitive.png": [
+        "/themes/Silvery-GTK/gtk-2.0/assets/notebook-entry-insensitive.png",
+        "/themes/Silvery-GTK/gtk-2.0/assets/entry-insensitive.png"
+    ],
+    "menu-checkbox-checked.png": [
+        "/themes/Silvery-GTK/gtk-2.0/assets/menu-checkbox-checked.png",
+        "/themes/Silvery-GTK/gtk-2.0/assets/menu-checkbox-checked-hover.png"
+    ],
+    "notebook-entry-active.png": [
+        "/themes/Silvery-GTK/gtk-2.0/assets/notebook-entry-active.png",
+        "/themes/Silvery-GTK/gtk-2.0/assets/entry-active.png"
+    ],
+    "scale-slider.png": [
+        "/themes/Silvery-GTK/gtk-2.0/assets/scale-slider.png",
+        "/themes/Silvery-GTK/gtk-2.0/assets/scale-slider-insensitive.png"
+    ],
+    "4ae94637_menu-pan-right-hover.png": [
+        "/themes/Silvery-GTK/gtk-2.0/assets/menu-pan-right-hover.png",
+        "/themes/Silvery-GTK/gtk-2.0/assets/menu-pan-right.png"
+    ],
+    "menu-radio-mixed-hover.png": [
+        "/themes/Silvery-GTK/gtk-2.0/assets/menu-radio-mixed-hover.png",
+        "/themes/Silvery-GTK/gtk-2.0/assets/menu-radio-mixed.png"
+    ],
+    "2d3835af_menu-checkbox-mixed.png": [
+        "/themes/Silvery-GTK/gtk-2.0/assets/menu-checkbox-mixed.png",
+        "/themes/Silvery-GTK/gtk-2.0/assets/menu-checkbox-mixed-hover.png"
+    ],
+    "toolbar-button-active.png": [
+        "/themes/Silvery-GTK/gtk-2.0/assets/toolbar-button-active.png",
+        "/themes/Silvery-GTK/gtk-2.0/assets/button-hover.png"
+    ],
+    "titlebutton-minimize-hover-backdrop@2.png": [
+        "/themes/Silvery-GTK/assets/titlebutton-minimize-hover-backdrop@2.png",
+        "/themes/Silvery-GTK/assets/titlebutton-minimize-active-backdrop@2.png"
+    ],
+    "check-selectionmode-unchecked-backdrop@2.png": [
+        "/themes/Silvery-GTK/assets/check-selectionmode-unchecked-backdrop@2.png",
+        "/themes/Silvery-GTK/assets/check-selectionmode-unchecked@2.png"
+    ],
+    "menu-arrow.png": [
+        "/themes/Silvery-GTK/assets/menu-arrow.png",
+        "/themes/Silvery-GTK/assets/menu-arrow-selected.png",
+        "/themes/Silvery-GTK/assets/arrow-right.png"
+    ],
+    "scrollbar-slider-vertical.png": [
+        "/themes/Silvery-GTK/assets/scrollbar-slider-vertical.png",
+        "/themes/Silvery-GTK/assets/scrollbar-slider-vertical-hover.png"
+    ],
+    "scrollbar-slider-vertical-hover@2.png": [
+        "/themes/Silvery-GTK/assets/scrollbar-slider-vertical-hover@2.png",
+        "/themes/Silvery-GTK/assets/scrollbar-slider-vertical@2.png"
+    ],
+    "radio-mixed-active@2.png": [
+        "/themes/Silvery-GTK/assets/radio-mixed-active@2.png",
+        "/themes/Silvery-GTK/assets/radio-mixed-hover@2.png"
+    ],
+    "93a9d9b4_radio-mixed-active.png": [
+        "/themes/Silvery-GTK/assets/radio-mixed-active.png",
+        "/themes/Silvery-GTK/assets/radio-mixed-hover.png"
+    ],
+    "check-unchecked-backdrop-insensitive.png": [
+        "/themes/Silvery-GTK/assets/check-unchecked-backdrop-insensitive.png",
+        "/themes/Silvery-GTK/assets/check-unchecked-insensitive.png"
+    ],
+    "check-selectionmode-unchecked.png": [
+        "/themes/Silvery-GTK/assets/check-selectionmode-unchecked.png",
+        "/themes/Silvery-GTK/assets/check-selectionmode-unchecked-backdrop.png"
+    ],
+    "titlebutton-minimize-hover-backdrop.png": [
+        "/themes/Silvery-GTK/assets/titlebutton-minimize-hover-backdrop.png",
+        "/themes/Silvery-GTK/assets/titlebutton-minimize-active-backdrop.png"
+    ],
+    "arrow-up-hover.png": [
+        "/themes/Silvery-GTK/assets/arrow-up-hover.png",
+        "/themes/Silvery-GTK/assets/arrow-up-active.png"
+    ],
+    "radio-mixed-insensitive.png": [
+        "/themes/Silvery-GTK/assets/radio-mixed-insensitive.png",
+        "/themes/Silvery-GTK/assets/radio-mixed-backdrop-insensitive.png"
+    ],
+    "scale-slider-hover.png": [
+        "/themes/Silvery-GTK/assets/scale-slider-hover.png",
+        "/themes/Silvery-GTK/assets/scale-slider-active.png"
+    ],
+    "8a553484_radio-checked-active.png": [
+        "/themes/Silvery-GTK/assets/radio-checked-active.png",
+        "/themes/Silvery-GTK/assets/radio-checked-hover.png"
+    ],
+    "arrow-right-active.png": [
+        "/themes/Silvery-GTK/assets/arrow-right-active.png",
+        "/themes/Silvery-GTK/assets/arrow-right-hover.png"
+    ],
+    "check-selectionmode-unchecked-hover@2.png": [
+        "/themes/Silvery-GTK/assets/check-selectionmode-unchecked-hover@2.png",
+        "/themes/Silvery-GTK/assets/check-selectionmode-unchecked-active@2.png"
+    ],
+    "titlebutton-maximize-hover-backdrop@2.png": [
+        "/themes/Silvery-GTK/assets/titlebutton-maximize-hover-backdrop@2.png",
+        "/themes/Silvery-GTK/assets/titlebutton-maximize-active-backdrop@2.png"
+    ],
+    "titlebutton-maximize-hover-backdrop.png": [
+        "/themes/Silvery-GTK/assets/titlebutton-maximize-hover-backdrop.png",
+        "/themes/Silvery-GTK/assets/titlebutton-maximize-active-backdrop.png"
+    ],
+    "arrow-down-active.png": [
+        "/themes/Silvery-GTK/assets/arrow-down-active.png",
+        "/themes/Silvery-GTK/assets/arrow-down-hover.png"
+    ],
+    "titlebutton-maximize-active.png": [
+        "/themes/Silvery-GTK/assets/titlebutton-maximize-active.png",
+        "/themes/Silvery-GTK/assets/titlebutton-maximize-hover.png"
+    ],
+    "radio-unchecked-active@2.png": [
+        "/themes/Silvery-GTK/assets/radio-unchecked-active@2.png",
+        "/themes/Silvery-GTK/assets/radio-unchecked-hover@2.png"
+    ],
+    "check-mixed-active.png": [
+        "/themes/Silvery-GTK/assets/check-mixed-active.png",
+        "/themes/Silvery-GTK/assets/check-mixed-hover.png"
+    ],
+    "check-unchecked-backdrop.png": [
+        "/themes/Silvery-GTK/assets/check-unchecked-backdrop.png",
+        "/themes/Silvery-GTK/assets/check-unchecked.png"
+    ],
+    "check-unchecked-active.png": [
+        "/themes/Silvery-GTK/assets/check-unchecked-active.png",
+        "/themes/Silvery-GTK/assets/check-unchecked-hover.png"
+    ],
+    "scrollbar-slider-horizontal@2.png": [
+        "/themes/Silvery-GTK/assets/scrollbar-slider-horizontal@2.png",
+        "/themes/Silvery-GTK/assets/scrollbar-slider-horizontal-hover@2.png"
+    ],
+    "check-checked-backdrop-insensitive.png": [
+        "/themes/Silvery-GTK/assets/check-checked-backdrop-insensitive.png",
+        "/themes/Silvery-GTK/assets/check-checked-insensitive.png"
+    ],
+    "check-selectionmode-unchecked-active.png": [
+        "/themes/Silvery-GTK/assets/check-selectionmode-unchecked-active.png",
+        "/themes/Silvery-GTK/assets/check-selectionmode-unchecked-hover.png"
+    ],
+    "check-selectionmode-checked-insensitive@2.png": [
+        "/themes/Silvery-GTK/assets/check-selectionmode-checked-insensitive@2.png",
+        "/themes/Silvery-GTK/assets/check-selectionmode-checked-backdrop-insensitive@2.png"
+    ],
+    "radio-checked-hover@2.png": [
+        "/themes/Silvery-GTK/assets/radio-checked-hover@2.png",
+        "/themes/Silvery-GTK/assets/radio-checked-active@2.png"
+    ],
+    "titlebutton-maximize-maximized-hover.png": [
+        "/themes/Silvery-GTK/assets/titlebutton-maximize-maximized-hover.png",
+        "/themes/Silvery-GTK/assets/titlebutton-maximize-maximized-active.png"
+    ],
+    "menu-arrow-insensitive.png": [
+        "/themes/Silvery-GTK/assets/menu-arrow-insensitive.png",
+        "/themes/Silvery-GTK/assets/arrow-right-insensitive.png"
+    ],
+    "check-selectionmode-checked-insensitive.png": [
+        "/themes/Silvery-GTK/assets/check-selectionmode-checked-insensitive.png",
+        "/themes/Silvery-GTK/assets/check-selectionmode-checked-backdrop-insensitive.png"
+    ],
+    "check-checked-active@2.png": [
+        "/themes/Silvery-GTK/assets/check-checked-active@2.png",
+        "/themes/Silvery-GTK/assets/check-checked-hover@2.png"
+    ],
+    "radio-checked-backdrop-insensitive.png": [
+        "/themes/Silvery-GTK/assets/radio-checked-backdrop-insensitive.png",
+        "/themes/Silvery-GTK/assets/radio-checked-insensitive.png"
+    ],
+    "check-checked-insensitive@2.png": [
+        "/themes/Silvery-GTK/assets/check-checked-insensitive@2.png",
+        "/themes/Silvery-GTK/assets/check-checked-backdrop-insensitive@2.png"
+    ],
+    "titlebutton-close-active@2.png": [
+        "/themes/Silvery-GTK/assets/titlebutton-close-active@2.png",
+        "/themes/Silvery-GTK/assets/titlebutton-close-active-backdrop@2.png"
+    ],
+    "check-selectionmode-checked-hover.png": [
+        "/themes/Silvery-GTK/assets/check-selectionmode-checked-hover.png",
+        "/themes/Silvery-GTK/assets/check-selectionmode-checked-active.png"
+    ],
+    "check-unchecked-backdrop@2.png": [
+        "/themes/Silvery-GTK/assets/check-unchecked-backdrop@2.png",
+        "/themes/Silvery-GTK/assets/check-unchecked@2.png"
+    ],
+    "arrow-small-left-active.png": [
+        "/themes/Silvery-GTK/assets/arrow-small-left-active.png",
+        "/themes/Silvery-GTK/assets/arrow-small-left-hover.png"
+    ],
+    "titlebutton-maximize-active@2.png": [
+        "/themes/Silvery-GTK/assets/titlebutton-maximize-active@2.png",
+        "/themes/Silvery-GTK/assets/titlebutton-maximize-hover@2.png"
+    ],
+    "titlebutton-close-active-backdrop.png": [
+        "/themes/Silvery-GTK/assets/titlebutton-close-active-backdrop.png",
+        "/themes/Silvery-GTK/assets/titlebutton-close-active.png"
+    ],
+    "check-selectionmode-unchecked-backdrop-insensitive@2.png": [
+        "/themes/Silvery-GTK/assets/check-selectionmode-unchecked-backdrop-insensitive@2.png",
+        "/themes/Silvery-GTK/assets/check-selectionmode-unchecked-insensitive@2.png"
+    ],
+    "radio-unchecked-active.png": [
+        "/themes/Silvery-GTK/assets/radio-unchecked-active.png",
+        "/themes/Silvery-GTK/assets/radio-unchecked-hover.png"
+    ],
+    "titlebutton-close-hover@2.png": [
+        "/themes/Silvery-GTK/assets/titlebutton-close-hover@2.png",
+        "/themes/Silvery-GTK/assets/titlebutton-close-hover-backdrop@2.png"
+    ],
+    "radio-unchecked-insensitive.png": [
+        "/themes/Silvery-GTK/assets/radio-unchecked-insensitive.png",
+        "/themes/Silvery-GTK/assets/radio-unchecked-backdrop-insensitive.png"
+    ],
+    "radio-checked-insensitive@2.png": [
+        "/themes/Silvery-GTK/assets/radio-checked-insensitive@2.png",
+        "/themes/Silvery-GTK/assets/radio-checked-backdrop-insensitive@2.png"
+    ],
+    "radio-unchecked-backdrop.png": [
+        "/themes/Silvery-GTK/assets/radio-unchecked-backdrop.png",
+        "/themes/Silvery-GTK/assets/radio-unchecked.png"
+    ],
+    "radio-unchecked-backdrop-insensitive@2.png": [
+        "/themes/Silvery-GTK/assets/radio-unchecked-backdrop-insensitive@2.png",
+        "/themes/Silvery-GTK/assets/radio-unchecked-insensitive@2.png"
+    ],
+    "check-mixed-backdrop-insensitive@2.png": [
+        "/themes/Silvery-GTK/assets/check-mixed-backdrop-insensitive@2.png",
+        "/themes/Silvery-GTK/assets/check-mixed-insensitive@2.png"
+    ],
+    "titlebutton-maximize-maximized-hover-backdrop@2.png": [
+        "/themes/Silvery-GTK/assets/titlebutton-maximize-maximized-hover-backdrop@2.png",
+        "/themes/Silvery-GTK/assets/titlebutton-maximize-maximized-active-backdrop@2.png"
+    ],
+    "check-selectionmode-unchecked-backdrop-insensitive.png": [
+        "/themes/Silvery-GTK/assets/check-selectionmode-unchecked-backdrop-insensitive.png",
+        "/themes/Silvery-GTK/assets/check-selectionmode-unchecked-insensitive.png"
+    ],
+    "titlebutton-minimize-active.png": [
+        "/themes/Silvery-GTK/assets/titlebutton-minimize-active.png",
+        "/themes/Silvery-GTK/assets/titlebutton-minimize-hover.png"
+    ],
+    "titlebutton-close-hover-backdrop.png": [
+        "/themes/Silvery-GTK/assets/titlebutton-close-hover-backdrop.png",
+        "/themes/Silvery-GTK/assets/titlebutton-close-hover.png"
+    ],
+    "scrollbar-slider-horizontal-hover.png": [
+        "/themes/Silvery-GTK/assets/scrollbar-slider-horizontal-hover.png",
+        "/themes/Silvery-GTK/assets/scrollbar-slider-horizontal.png"
+    ],
+    "titlebutton-maximize-maximized-hover-backdrop.png": [
+        "/themes/Silvery-GTK/assets/titlebutton-maximize-maximized-hover-backdrop.png",
+        "/themes/Silvery-GTK/assets/titlebutton-maximize-maximized-active-backdrop.png"
+    ],
+    "arrow-small-right-active.png": [
+        "/themes/Silvery-GTK/assets/arrow-small-right-active.png",
+        "/themes/Silvery-GTK/assets/arrow-small-right-hover.png"
+    ],
+    "radio-unchecked@2.png": [
+        "/themes/Silvery-GTK/assets/radio-unchecked@2.png",
+        "/themes/Silvery-GTK/assets/radio-unchecked-backdrop@2.png"
+    ],
+    "check-selectionmode-checked-active@2.png": [
+        "/themes/Silvery-GTK/assets/check-selectionmode-checked-active@2.png",
+        "/themes/Silvery-GTK/assets/check-selectionmode-checked-hover@2.png"
+    ],
+    "check-unchecked-backdrop-insensitive@2.png": [
+        "/themes/Silvery-GTK/assets/check-unchecked-backdrop-insensitive@2.png",
+        "/themes/Silvery-GTK/assets/check-unchecked-insensitive@2.png"
+    ],
+    "arrow-small-up-active.png": [
+        "/themes/Silvery-GTK/assets/arrow-small-up-active.png",
+        "/themes/Silvery-GTK/assets/arrow-small-up-hover.png"
+    ],
+    "titlebutton-minimize-hover@2.png": [
+        "/themes/Silvery-GTK/assets/titlebutton-minimize-hover@2.png",
+        "/themes/Silvery-GTK/assets/titlebutton-minimize-active@2.png"
+    ],
+    "arrow-small-down-hover.png": [
+        "/themes/Silvery-GTK/assets/arrow-small-down-hover.png",
+        "/themes/Silvery-GTK/assets/arrow-small-down-active.png"
+    ],
+    "check-checked-hover.png": [
+        "/themes/Silvery-GTK/assets/check-checked-hover.png",
+        "/themes/Silvery-GTK/assets/check-checked-active.png"
+    ],
+    "titlebutton-maximize-maximized-hover@2.png": [
+        "/themes/Silvery-GTK/assets/titlebutton-maximize-maximized-hover@2.png",
+        "/themes/Silvery-GTK/assets/titlebutton-maximize-maximized-active@2.png"
+    ],
+    "radio-mixed-insensitive@2.png": [
+        "/themes/Silvery-GTK/assets/radio-mixed-insensitive@2.png",
+        "/themes/Silvery-GTK/assets/radio-mixed-backdrop-insensitive@2.png"
+    ],
+    "check-unchecked-hover@2.png": [
+        "/themes/Silvery-GTK/assets/check-unchecked-hover@2.png",
+        "/themes/Silvery-GTK/assets/check-unchecked-active@2.png"
+    ],
+    "arrow-left-active.png": [
+        "/themes/Silvery-GTK/assets/arrow-left-active.png",
+        "/themes/Silvery-GTK/assets/arrow-left-hover.png"
+    ],
+    "check-mixed-insensitive.png": [
+        "/themes/Silvery-GTK/assets/check-mixed-insensitive.png",
+        "/themes/Silvery-GTK/assets/check-mixed-backdrop-insensitive.png"
+    ],
+    "check-mixed-hover@2.png": [
+        "/themes/Silvery-GTK/assets/check-mixed-hover@2.png",
+        "/themes/Silvery-GTK/assets/check-mixed-active@2.png"
+    ],
+    "suse-grub-bg.jpg": [
+        "/boot/grub2/themes/suse-modern/suse-grub-bg.jpg",
+        "/boot/grub2/themes/openSUSE/suse-grub-bg.jpg",
+        "/boot/grub2/themes/openSUSE/background.jpg"
+    ]
+}
